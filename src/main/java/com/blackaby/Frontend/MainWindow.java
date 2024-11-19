@@ -1,6 +1,7 @@
 package com.blackaby.Frontend;
 
 import javax.swing.*;
+
 import java.awt.*;
 
 /**
@@ -41,15 +42,21 @@ public class MainWindow extends DuckWindow {
         setJMenuBar(menuBar);
 
         // Main section of the window
-        setLayout(new BorderLayout());
+
+        setLayout(new GridBagLayout());
+        GridBagConstraints c = new GridBagConstraints();
+
+        getContentPane().setBackground(Styling.DISPLAY_BACKGROUND_COLOR);
 
         // Display
         display = new DuckDisplay();
-        add(display, BorderLayout.CENTER);
-
-        // Black bars on the side
-        add(new PillarFiller(), BorderLayout.WEST);
-        add(new PillarFiller(), BorderLayout.EAST);
+        c.gridx = 1;
+        c.gridy = 1;
+        c.weightx = 1;
+        c.weighty = 1;
+        c.fill = GridBagConstraints.NONE;
+        c.anchor = GridBagConstraints.CENTER;
+        add(display, c);
 
         setVisible(true);
     }

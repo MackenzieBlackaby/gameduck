@@ -19,4 +19,28 @@ public class DuckDisplay extends JPanel {
         super();
         setBackground(Color.red);
     }
+
+    @Override
+    public Dimension getMinimumSize() {
+        return new Dimension(100, 100); // Or whatever minimum size you want
+    }
+
+    @Override
+    public Dimension getPreferredSize() {
+        // Get the size of the parent container
+        Container parent = getParent();
+        if (parent != null) {
+            int size = Math.min(parent.getWidth(), parent.getHeight());
+            size = Math.max(size - 20, 100); // Subtract some padding, ensure minimum size
+            return new Dimension(size, size);
+        }
+        return new Dimension(400, 400); // Default size if no parent
+    }
+
+    @Override
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
+        int size = Math.min(getWidth(), getHeight());
+        setSize(size, size);
+    }
 }
