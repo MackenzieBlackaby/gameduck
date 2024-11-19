@@ -1,2 +1,3 @@
 *.class
+.vscode
 !src/main/resources/LICENSE.txt
