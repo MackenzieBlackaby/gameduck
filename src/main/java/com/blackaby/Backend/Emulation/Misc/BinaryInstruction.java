@@ -9,9 +9,9 @@ package com.blackaby.Backend.Emulation.Misc;
  * The operands are stored as an array of integers
  */
 public class BinaryInstruction {
-    private int opcode;
+    private byte opcode;
     private int length;
-    private int operands[];
+    private byte operands[];
 
     /**
      * Constructor for BinaryInstruction
@@ -19,7 +19,7 @@ public class BinaryInstruction {
      * @param opcode   The opcode of the instruction
      * @param operands The operands of the instruction
      */
-    public BinaryInstruction(int opcode, int... operands) {
+    public BinaryInstruction(byte opcode, byte... operands) {
         this.opcode = opcode;
         this.length = operands.length + 1;
         this.operands = operands;
@@ -30,7 +30,7 @@ public class BinaryInstruction {
      * 
      * @return The opcode of the instruction
      */
-    public int getOpcode() {
+    public byte getOpcode() {
         return opcode;
     }
 
@@ -48,7 +48,7 @@ public class BinaryInstruction {
      * 
      * @return The operands of the instruction
      */
-    public int[] getOperands() {
+    public byte[] getOperands() {
         return operands;
     }
 
@@ -58,7 +58,7 @@ public class BinaryInstruction {
      * @param index The index of the operand
      * @return The operand at the given index
      */
-    public int getOperand(int index) {
+    public byte getOperand(int index) {
         return operands[index];
     }
 }

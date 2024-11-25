@@ -10,10 +10,11 @@ package com.blackaby.Backend.Emulation.CPU.Instructions;
 public enum InstructionType {
 
     // Debug instructions
-    DEBUG_DISPLAY(0xFF, "Debug Display Test", 0),
-    DEBUG_CONSOLE(0xFE, "Debug Console Test", 0),;
+    DEBUG_DISPLAY((byte) 0xFF, "Debug Display Test", 0),
+    DEBUG_CONSOLE((byte) 0xFE, "Debug Console Test", 0),
+    END_OF_FILE((byte) 0x00, "End of File", 0),;
 
-    private final int opcode;
+    private final byte opcode;
     private final String description;
     private final int operandCount;
 
@@ -23,7 +24,7 @@ public enum InstructionType {
      * @param opcode      The opcode of the instruction.
      * @param description The description of the instruction.
      */
-    InstructionType(int opcode, String description, int operandCount) {
+    InstructionType(byte opcode, String description, int operandCount) {
         this.opcode = opcode;
         this.description = description;
         this.operandCount = operandCount;
@@ -34,7 +35,7 @@ public enum InstructionType {
      * 
      * @return The opcode of the instruction.
      */
-    public int getOpcode() {
+    public byte getOpcode() {
         return opcode;
     }
 
@@ -62,12 +63,12 @@ public enum InstructionType {
      * @param opcode The opcode of the instruction.
      * @return The InstructionType with the given opcode.
      */
-    public static InstructionType fromOpcode(int opcode) {
+    public static InstructionType fromOpcode(byte opcode) {
         for (InstructionType type : values()) {
             if (type.opcode == opcode) {
                 return type;
             }
         }
-        throw new IllegalArgumentException("Unknown opcode: " + opcode);
+        throw new IllegalArgumentException(String.format("Unknown opcode: 0x%02X", opcode));
     }
 }

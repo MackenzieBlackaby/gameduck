@@ -1,7 +1,7 @@
 package com.blackaby.Backend.Emulation.Misc;
 
 import com.blackaby.Backend.Emulation.CPU.Instructions.InstructionType;
-import java.io.FileReader;
+import java.io.FileInputStream;
 import java.io.IOException;
 
 /**
@@ -16,13 +16,14 @@ public class ROM {
     public ROM(String filename) {
         this.filename = filename;
         data = new BinaryInstruction[0];
-        LoadRom();
+        if (!filename.equals(""))
+            LoadRom();
     }
 
     private void LoadRom() {
         // Get size of the file
         int size = 0;
-        try (FileReader reader = new FileReader(filename)) {
+        try (FileInputStream reader = new FileInputStream(filename)) {
             while (reader.read() != -1) {
                 size++;
             }
@@ -32,8 +33,8 @@ public class ROM {
             return;
         }
         // Read in raw data
-        char buffer[] = new char[size];
-        try (FileReader reader = new FileReader(filename)) {
+        byte buffer[] = new byte[size];
+        try (FileInputStream reader = new FileInputStream(filename)) {
             reader.read(buffer);
             reader.close();
         } catch (IOException e) {
@@ -48,8 +49,8 @@ public class ROM {
             InstructionType currentType = InstructionType.fromOpcode(buffer[i]);
             int operandCount = currentType.getOperandCount();
             // Get the opcode and operands
-            int opcode = currentType.getOpcode();
-            int[] operands = new int[operandCount];
+            byte opcode = currentType.getOpcode();
+            byte[] operands = new byte[operandCount];
             for (int j = 0; j < operands.length; j++) {
                 operands[j] = buffer[i + j + 1];
             }
@@ -75,7 +76,7 @@ public class ROM {
      * @param PC The program counter
      * @return The instruction at the given program counter
      */
-    public int getOpcode(int PC) {
+    public byte getOpcode(int PC) {
         return data[PC].getOpcode();
     }
 
@@ -85,7 +86,7 @@ public class ROM {
      * @param PC The program counter
      * @return The operands of the instruction at the given program counter
      */
-    public int[] getOperands(int PC) {
+    public byte[] getOperands(int PC) {
         return data[PC].getOperands();
     }
 }

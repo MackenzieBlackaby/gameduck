@@ -71,7 +71,7 @@ public class DuckEmulation implements Runnable {
             while (paused)
                 ;
             if (System.currentTimeMillis() - lastFrameTime >= Specifics.CYCLE_DELAY) {
-                int instruction[] = ReadNextInstruction();
+                byte instruction[] = ReadNextInstruction();
                 if (instruction[0] == 0x00) {
                     break;
                 } else {
@@ -90,19 +90,19 @@ public class DuckEmulation implements Runnable {
      * 
      * @return The next instruction as an array of integers
      */
-    private int[] ReadNextInstruction() {
+    private byte[] ReadNextInstruction() {
         // Get the next instruction from the ROM
-        int opcode, operands[];
+        byte opcode, operands[];
         try {
             opcode = rom.getOpcode(cpu.regGet(Register.PC));
             operands = rom.getOperands(cpu.regGet(Register.PC));
         } catch (ArrayIndexOutOfBoundsException e) {
-            return new int[] { 0x00, 0x00, 0x00 };
+            return new byte[] { 0x00, 0x00, 0x00 };
         }
         // Increment the PC
         cpu.regIncrement(Register.PC);
         // Parse the instruction into integers
-        int[] instruction = { 0, 0, 0 };
+        byte[] instruction = { 0, 0, 0 };
         instruction[0] = opcode;
         for (int i = 0; i < operands.length; i++) {
             instruction[i + 1] = operands[i];

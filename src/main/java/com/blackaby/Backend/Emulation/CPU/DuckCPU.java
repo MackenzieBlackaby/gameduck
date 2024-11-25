@@ -38,7 +38,7 @@ public class DuckCPU {
     /**
      * This method queues an instruction
      */
-    public void queueInstruction(int opcode, int... values) {
+    public void queueInstruction(byte opcode, int... values) {
         InstructionType type = InstructionType.fromOpcode(opcode);
         switch (type) {
             case DEBUG_DISPLAY:
