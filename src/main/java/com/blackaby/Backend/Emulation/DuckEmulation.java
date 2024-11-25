@@ -73,6 +73,7 @@ public class DuckEmulation implements Runnable {
             if (System.currentTimeMillis() - lastFrameTime >= Specifics.CYCLE_DELAY) {
                 byte instruction[] = ReadNextInstruction();
                 if (instruction[0] == 0x00) {
+                    System.out.println("End of ROM reached");
                     break;
                 } else {
                     cpu.queueInstruction(instruction[0], instruction[1], instruction[2]);
