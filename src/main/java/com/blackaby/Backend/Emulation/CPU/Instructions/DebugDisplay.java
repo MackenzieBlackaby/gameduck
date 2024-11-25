@@ -42,5 +42,6 @@ public class DebugDisplay extends GDuckstruction {
                 bound.setPixel(x, y, getColor(x), false);
             }
         }
+        bound.repaint();
     }
 }
