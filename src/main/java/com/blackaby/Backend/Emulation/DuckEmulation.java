@@ -76,7 +76,7 @@ public class DuckEmulation implements Runnable {
                 if (instruction[0] == 0x00) {
                     break;
                 } else {
-                    cpu.queueInstruction(instruction[0], instruction[1], instruction[2], instruction[3]);
+                    cpu.queueInstruction(instruction[0], instruction[1], instruction[2]);
                 }
                 cpu.executeNextInstruction();
                 lastFrameTime = System.currentTimeMillis();
@@ -98,12 +98,12 @@ public class DuckEmulation implements Runnable {
             opcode = rom.getOpcode(cpu.regGet(Register.PC));
             operands = rom.getOperands(cpu.regGet(Register.PC));
         } catch (ArrayIndexOutOfBoundsException e) {
-            return new int[] { 0x00, 0x00, 0x00, 0x00 };
+            return new int[] { 0x00, 0x00, 0x00 };
         }
         // Increment the PC
         cpu.regIncrement(Register.PC);
         // Parse the instruction into integers
-        int[] instruction = { 0, 0, 0, 0 };
+        int[] instruction = { 0, 0, 0 };
         instruction[0] = opcode;
         for (int i = 0; i < operands.length; i++) {
             instruction[i + 1] = operands[i];
