@@ -63,7 +63,7 @@ public class MainWindow extends DuckWindow {
 
         // Begin the emulation
         emulation = new DuckEmulation(display);
-        emulation.startEmulation("test.rom");
+        emulation.startEmulation("C:\\Users\\Toxik\\Documents\\Java\\gameduck\\test.rom");
 
         setVisible(true);
     }
