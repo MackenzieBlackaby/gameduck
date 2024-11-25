@@ -15,6 +15,7 @@ import java.awt.*;
 public class MainWindow extends DuckWindow {
 
     private DuckDisplay display;
+    private DuckEmulation emulation;
 
     /**
      * The menu items for the menu bar.
@@ -60,8 +61,8 @@ public class MainWindow extends DuckWindow {
         c.anchor = GridBagConstraints.CENTER;
         add(display, c);
 
-        DuckEmulation emulation = new DuckEmulation(display);
-        emulation.start();
+        // Begin the emulation
+        emulation = new DuckEmulation(display);
 
         setVisible(true);
     }
