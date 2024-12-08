@@ -9,8 +9,7 @@ package com.blackaby.Backend.Emulation.Misc;
  * The operands are stored as an array of integers
  */
 public class BinaryInstruction {
-    private byte opcode;
-    private int length;
+    private byte opcode[];
     private byte operands[];
 
     /**
@@ -19,9 +18,8 @@ public class BinaryInstruction {
      * @param opcode   The opcode of the instruction
      * @param operands The operands of the instruction
      */
-    public BinaryInstruction(byte opcode, byte... operands) {
+    public BinaryInstruction(byte opcode[], byte[] operands) {
         this.opcode = opcode;
-        this.length = operands.length + 1;
         this.operands = operands;
     }
 
@@ -30,7 +28,7 @@ public class BinaryInstruction {
      * 
      * @return The opcode of the instruction
      */
-    public byte getOpcode() {
+    public byte[] getOpcode() {
         return opcode;
     }
 
@@ -40,7 +38,7 @@ public class BinaryInstruction {
      * @return The length of the instruction
      */
     public int getLength() {
-        return length;
+        return opcode.length + operands.length;
     }
 
     /**
@@ -60,5 +58,23 @@ public class BinaryInstruction {
      */
     public byte getOperand(int index) {
         return operands[index];
+    }
+
+    /**
+     * This method returns a string representation of the instruction
+     * 
+     * @return A string representation of the instruction
+     */
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Opcode: ");
+        for (byte b : opcode) {
+            sb.append(String.format("%02X ", b));
+        }
+        sb.append("\nOperands: ");
+        for (byte b : operands) {
+            sb.append(String.format("%02X ", b));
+        }
+        return sb.toString();
     }
 }

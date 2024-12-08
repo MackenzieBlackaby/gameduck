@@ -3,6 +3,7 @@ package com.blackaby.Backend.Emulation.Misc;
 import com.blackaby.Backend.Emulation.CPU.Instructions.InstructionType;
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 
 /**
  * This class represents a ROM file.
@@ -11,11 +12,11 @@ import java.io.IOException;
  */
 public class ROM {
     private String filename;
-    private BinaryInstruction[] data;
+    private ArrayList<BinaryInstruction> data;
 
     public ROM(String filename) {
         this.filename = filename;
-        data = new BinaryInstruction[0];
+        data = new ArrayList<BinaryInstruction>();
         if (!filename.equals(""))
             LoadRom();
     }
@@ -42,22 +43,29 @@ public class ROM {
             return;
         }
 
-        // Convert raw data to instructions
-        data = new BinaryInstruction[size];
-        for (int i = 0; i < data.length; i++) {
+        for (int i = 0; i < size;) {
+            // Slice 2 bytes from the buffer
+            byte slice[] = new byte[2];
+            slice[0] = buffer[i];
             // Get the type of the instruction and the number of operands
-            InstructionType currentType = InstructionType.fromOpcode(buffer[i]);
+            InstructionType currentType = InstructionType.fromOpcode(slice);
+            System.out.println("Current type: " + currentType.getDescription());
             int operandCount = currentType.getOperandCount();
-            // Get the opcode and operands
-            byte opcode = currentType.getOpcode();
+            int opcodeLength = currentType.getOpcode().length;
+            // Get the opcode
+            byte[] opcode = new byte[opcodeLength];
+            for (int j = 0; j < opcode.length; j++) {
+                opcode[j] = buffer[i];
+            }
+            // Get the operands
             byte[] operands = new byte[operandCount];
             for (int j = 0; j < operands.length; j++) {
-                operands[j] = buffer[i + j + 1];
+                operands[j] = buffer[i + j + opcodeLength];
             }
             // Create the instruction
-            data[i] = new BinaryInstruction(opcode, operands);
-            // Increment the index by the number of operands
-            i += operandCount;
+            data.add(new BinaryInstruction(opcode, operands));
+            // Increment the index by the number of operands and the opcode length
+            i += operandCount + opcodeLength;
         }
     }
 
@@ -76,8 +84,11 @@ public class ROM {
      * @param PC The program counter
      * @return The instruction at the given program counter
      */
-    public byte getOpcode(int PC) {
-        return data[PC].getOpcode();
+    public byte[] getOpcode(int PC) {
+        if (PC >= data.size()) {
+            return new byte[0];
+        }
+        return data.get(PC).getOpcode();
     }
 
     /**
@@ -87,6 +98,9 @@ public class ROM {
      * @return The operands of the instruction at the given program counter
      */
     public byte[] getOperands(int PC) {
-        return data[PC].getOperands();
+        if (PC >= data.size()) {
+            return new byte[0];
+        }
+        return data.get(PC).getOperands();
     }
 }

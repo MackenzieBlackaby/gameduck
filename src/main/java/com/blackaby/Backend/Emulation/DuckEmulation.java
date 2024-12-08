@@ -1,6 +1,7 @@
 package com.blackaby.Backend.Emulation;
 
 import com.blackaby.Backend.Emulation.CPU.*;
+import com.blackaby.Backend.Emulation.Misc.BinaryInstruction;
 import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
 import com.blackaby.Frontend.DuckDisplay;
@@ -87,13 +88,11 @@ public class DuckEmulation implements Runnable {
             while (paused)
                 ;
             if (System.currentTimeMillis() - lastFrameTime >= Specifics.CYCLE_DELAY) {
-                byte instruction[] = ReadNextInstruction();
-                if (instruction[0] == 0x00) {
-                    System.out.println("End of ROM reached");
+                BinaryInstruction instruction = ReadNextInstruction();
+                if (instruction.getOpcode() == null) {
                     break;
-                } else {
-                    cpu.queueInstruction(instruction[0], instruction[1], instruction[2]);
                 }
+                cpu.queueInstruction(instruction);
                 cpu.executeNextInstruction();
                 lastFrameTime = System.currentTimeMillis();
             }
@@ -107,23 +106,22 @@ public class DuckEmulation implements Runnable {
      * 
      * @return The next instruction as an array of integers
      */
-    private byte[] ReadNextInstruction() {
+    private BinaryInstruction ReadNextInstruction() {
         // Get the next instruction from the ROM
-        byte opcode, operands[];
+        byte opcode[], operands[];
         try {
             opcode = rom.getOpcode(cpu.regGet(Register.PC));
             operands = rom.getOperands(cpu.regGet(Register.PC));
         } catch (ArrayIndexOutOfBoundsException e) {
-            return new byte[] { 0x00, 0x00, 0x00 };
+            return new BinaryInstruction(null, null);
         }
+
         // Increment the PC
         cpu.regIncrement(Register.PC);
-        // Parse the instruction into integers
-        byte[] instruction = { 0, 0, 0 };
-        instruction[0] = opcode;
-        for (int i = 0; i < operands.length; i++) {
-            instruction[i + 1] = operands[i];
-        }
+
+        // Parse the bytes into an instruction
+        BinaryInstruction instruction = new BinaryInstruction(opcode, operands);
+
         return instruction;
     }
 }

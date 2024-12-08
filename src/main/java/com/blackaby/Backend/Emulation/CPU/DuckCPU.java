@@ -5,6 +5,8 @@ import java.util.Queue;
 
 import com.blackaby.Backend.Emulation.DuckEmulation;
 import com.blackaby.Backend.Emulation.CPU.Instructions.*;
+import com.blackaby.Backend.Emulation.CPU.Instructions.SpecificInstructions.*;
+import com.blackaby.Backend.Emulation.Misc.BinaryInstruction;
 
 /**
  * This class represents the CPU of the GameBoy.
@@ -46,8 +48,11 @@ public class DuckCPU {
     /**
      * This method queues an instruction
      */
-    public void queueInstruction(byte opcode, int... values) {
-        InstructionType type = InstructionType.fromOpcode(opcode);
+    public void queueInstruction(BinaryInstruction instruction) {
+        InstructionType type = InstructionType.fromOpcode(instruction.getOpcode());
+        if (type == null) {
+            throw new IllegalArgumentException("No instruction found");
+        }
         switch (type) {
             case DEBUG_DISPLAY:
                 instructionQueue.add(new DebugDisplay(boundEmulator.getDisplay()));
@@ -55,8 +60,16 @@ public class DuckCPU {
             case DEBUG_CONSOLE:
                 instructionQueue.add(new DebugConsole());
                 break;
+            case NOP:
+                break;
+            case LOAD_REGISTER:
+                break;
+            case LOAD_REGISTER_IMMEDIATE:
+                break;
+            case LOAD_REGISTER_ADDRESS:
+                break;
             default:
-                throw new IllegalArgumentException("Unknown opcode: " + opcode);
+                throw new IllegalArgumentException("Unknown instruction: " + instruction.toString());
         }
     }
 

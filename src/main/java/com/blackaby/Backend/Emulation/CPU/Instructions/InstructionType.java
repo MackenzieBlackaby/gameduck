@@ -9,38 +9,42 @@ package com.blackaby.Backend.Emulation.CPU.Instructions;
  */
 public enum InstructionType {
 
-    // Debug instructions
-    DEBUG_DISPLAY((byte) 0xFF, "Debug Display Test", 0),
-    DEBUG_CONSOLE((byte) 0xFE, "Debug Console Test", 0),
-    END_OF_FILE((byte) 0x00, "End of File", 0),;
+    NOP("No Operation", 0, new Opcode(1, (byte) 0x00)),
+    DEBUG_DISPLAY("Debug Display", 0, new Opcode(1, (byte) 0xFF)),
+    DEBUG_CONSOLE("Debug Console", 0, new Opcode(1, (byte) 0xFE)),
+    LOAD_REGISTER("Load Register", 0, new SingleOpcode((byte) 0b01000000, 2, 6, 0)),
+    LOAD_REGISTER_IMMEDIATE("Load Register Immediate", 1, new SingleOpcode((byte) 0b00000110, 2, 3, 3)),
+    LOAD_REGISTER_ADDRESS("Load Register From Address in HL", 0, new SingleOpcode((byte) 0b00000010, 2, 3, 3)),;
 
-    private final byte opcode;
     private final String description;
     private final int operandCount;
+    private final Opcode opcode;
 
     /**
-     * Constructor for InstructionType.
+     * Create a new instruction type with the given description, operand count
+     * and opcode.
      * 
-     * @param opcode      The opcode of the instruction.
-     * @param description The description of the instruction.
+     * @param description  The description of the instruction.
+     * @param operandCount The number of operands the instruction has.
+     * @param opcode       The opcode of the instruction.
      */
-    InstructionType(byte opcode, String description, int operandCount) {
-        this.opcode = opcode;
+    InstructionType(String description, int operandCount, Opcode opcode) {
         this.description = description;
         this.operandCount = operandCount;
+        this.opcode = opcode;
     }
 
     /**
-     * This method returns the opcode of the instruction.
+     * Get the opcode of the instruction.
      * 
      * @return The opcode of the instruction.
      */
-    public byte getOpcode() {
-        return opcode;
+    public byte[] getOpcode() {
+        return opcode.getOpcode();
     }
 
     /**
-     * This method returns the description of the instruction.
+     * Get the description of the instruction.
      * 
      * @return The description of the instruction.
      */
@@ -49,26 +53,37 @@ public enum InstructionType {
     }
 
     /**
-     * This method returns the number of operands that the instruction takes.
+     * Get the number of operands the instruction has.
      * 
-     * @return The number of operands that the instruction takes.
+     * @return The number of operands the instruction has.
      */
     public int getOperandCount() {
         return operandCount;
     }
 
+    // Return the first n bytes of the opcode
+    private static byte[] firstN(byte[] opcode, int n) {
+        byte[] result = new byte[n];
+        for (int i = 0; i < n; i++) {
+            result[i] = opcode[i];
+        }
+        return result;
+    }
+
     /**
-     * This method returns the InstructionType with the given opcode.
+     * Get the instruction type from the given opcode.
      * 
-     * @param opcode The opcode of the instruction.
-     * @return The InstructionType with the given opcode.
+     * @param opcode The opcode to get the instruction type from.
+     * @return The instruction type.
      */
-    public static InstructionType fromOpcode(byte opcode) {
+    public static InstructionType fromOpcode(byte[] opcode) {
         for (InstructionType type : values()) {
-            if (type.opcode == opcode) {
-                return type;
+            for (int i = 0; i < opcode.length; i++) {
+                if (type.opcode.matches(firstN(opcode, i + 1))) {
+                    return type;
+                }
             }
         }
-        throw new IllegalArgumentException(String.format("Unknown opcode: 0x%02X", opcode));
+        return null;
     }
 }
