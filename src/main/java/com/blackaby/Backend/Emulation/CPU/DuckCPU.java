@@ -29,7 +29,10 @@ public class DuckCPU {
         E,
         H,
         L,
-        F
+        F,
+        HL,
+        IR,
+        IE
     }
 
     // Emulated Parts
@@ -37,7 +40,11 @@ public class DuckCPU {
     private DuckEmulation boundEmulator;
 
     // Registers
-    private int programCounter = 0;
+    private short programCounter;
+    private short stackPointer;
+    private byte[] registers = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    private byte interruptEnable;
+    private byte instructionRegister;
 
     public DuckCPU(DuckEmulation boundEmulator) {
         this.boundEmulator = boundEmulator;
@@ -90,7 +97,7 @@ public class DuckCPU {
      * @param value The value to set the register to
      * @throws IllegalArgumentException If the register is unknown
      */
-    public void regSet(Register reg, int value) throws IllegalArgumentException {
+    public void regSet(Register reg, short value) throws IllegalArgumentException {
         switch (reg) {
             case PC:
                 programCounter = value;
@@ -107,7 +114,7 @@ public class DuckCPU {
      * @return The value of the register
      * @throws IllegalArgumentException If the register is unknown
      */
-    public int regGet(Register reg) throws IllegalArgumentException {
+    public short regGet(Register reg) throws IllegalArgumentException {
         switch (reg) {
             case PC:
                 return programCounter;
@@ -122,7 +129,7 @@ public class DuckCPU {
      * @param reg The register to increment
      */
     public void regIncrement(Register reg) {
-        int value = regGet(reg);
-        regSet(reg, value + 1);
+        short value = regGet(reg);
+        regSet(reg, (short) (value + 1));
     }
 }
