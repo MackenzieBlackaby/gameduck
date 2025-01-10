@@ -115,7 +115,12 @@ public class DuckEmulation implements Runnable {
         }
         if (debugMode) {
             System.out.println("Emulation Stopped");
-            System.out.println("Final accumulator value: " + cpu.regGet(Register.A));
+            System.out.println("Register values:");
+            System.out.println("{");
+            for (Register reg : Register.values()) {
+                System.out.println("    " + reg + ": " + cpu.regGetInt(reg));
+            }
+            System.out.println("}");
         }
     }
 
