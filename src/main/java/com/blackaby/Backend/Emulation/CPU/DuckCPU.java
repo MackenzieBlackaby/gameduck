@@ -329,4 +329,47 @@ public class DuckCPU {
                 throw new IllegalArgumentException("Invalid 16-bit register: " + reg);
         }
     }
+
+    /**
+     * This method gets the value of any register as an integer
+     * 
+     * @param reg The register to get
+     * @return The value of the register as an integer
+     */
+    public int regGetInt(Register reg) {
+        switch (reg) {
+            case A:
+                return accumulator;
+            case F:
+                return flags;
+            case B:
+                return byteRegs[0];
+            case C:
+                return byteRegs[1];
+            case D:
+                return byteRegs[2];
+            case E:
+                return byteRegs[3];
+            case H:
+                return byteRegs[4];
+            case L:
+                return byteRegs[5];
+            case IR:
+                return instructionRegister;
+            case IE:
+                return interruptEnable;
+            case SP:
+                return stackPointer;
+            case PC:
+                return programCounter;
+            case BC:
+                return (byteRegs[0] << 8) | byteRegs[1];
+            case DE:
+                return (byteRegs[2] << 8) | byteRegs[3];
+            case HL:
+                return (byteRegs[4] << 8) | byteRegs[5];
+            default:
+                return 0;
+        }
+    }
 }
