@@ -58,12 +58,12 @@ public class GUIActions implements ActionListener {
                 break;
             case LOADROM:
                 // Open a file chooser dialog
-                FileDialog fileChooser = new FileDialog(mainWindow, "Select a ROM file", FileDialog.LOAD);
+                FileDialog fileDialog = new FileDialog(mainWindow, "Select a ROM file", FileDialog.LOAD);
 
-                fileChooser.setAlwaysOnTop(true);
-                fileChooser.setFilenameFilter((_, name) -> name.endsWith(".gb") || name.endsWith(".gbc"));
-                fileChooser.setVisible(true);
-                File file = fileChooser.getFiles()[0];
+                fileDialog.setAlwaysOnTop(true);
+                fileDialog.setFilenameFilter((_, name) -> name.endsWith(".gb") || name.endsWith(".gbc"));
+                fileDialog.setVisible(true);
+                File file = fileDialog.getFiles()[0];
                 if (file != null) {
                     attachedEmulation.startEmulation(file.getAbsolutePath());
                 }
