@@ -96,6 +96,21 @@ public class DuckEmulation implements Runnable {
         return display;
     }
 
+    /**
+     * This method prints out all registers in the CPU
+     */
+    public void printRegisters() {
+        System.out.println("Register values:");
+        System.out.println("{");
+        for (Register reg : Register.values()) {
+            System.out.println("    " + reg + ": " + cpu.regGetInt(reg));
+        }
+        System.out.println("}");
+    }
+
+    /**
+     * This method runs the emulation
+     */
     @Override
     public void run() {
         running = true;
@@ -114,13 +129,7 @@ public class DuckEmulation implements Runnable {
             }
         }
         if (debugMode) {
-            System.out.println("Emulation Stopped");
-            System.out.println("Register values:");
-            System.out.println("{");
-            for (Register reg : Register.values()) {
-                System.out.println("    " + reg + ": " + cpu.regGetInt(reg));
-            }
-            System.out.println("}");
+            printRegisters();
         }
     }
 
