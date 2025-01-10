@@ -2,6 +2,7 @@ package com.blackaby.Backend.Emulation.CPU.Instructions;
 
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
+import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.CPU.Instructions.InstructionTypeManager.InstructionType;
 
@@ -171,7 +172,7 @@ public class Duckstruction {
                 short offset = (short) (values[0]);
                 short result = (short) (spValue + offset);
                 cpu.regSet16(Register.HL, result);
-                // TODO: Set the flags from this
+                cpu.clearFlags(Flag.Z, Flag.N);
                 break;
             default:
                 System.err.println("Unsupported load type: " + type);
