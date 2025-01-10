@@ -44,8 +44,9 @@ public class DuckCPU {
         BC(11), // 00
         DE(12), // 01
         HL(13), // 10
-        SP(14), // 11
-        PC(15);
+        AF(14), // 11
+        SP(15),
+        PC(16);
 
         private final int id;
 
@@ -61,7 +62,7 @@ public class DuckCPU {
         }
 
         public static Register get16Bit(short id) {
-            if (id < 11 || id > 15) { // Updated range check for 16-bit registers
+            if (id < 11 || id > 16) { // Updated range check for 16-bit registers
                 throw new IllegalArgumentException("Invalid 16-bit register ID: " + id);
             }
             return Register.values()[id];
@@ -77,7 +78,7 @@ public class DuckCPU {
                 case 0b10:
                     return Register.HL;
                 case 0b11:
-                    return Register.SP;
+                    return Register.AF;
                 default:
                     throw new IllegalArgumentException("Invalid 16-bit register ID: " + bitID);
             }
@@ -315,6 +316,9 @@ public class DuckCPU {
             case HL:
                 regSet16(Register.HL, (short) (regGet16(Register.HL) + 1));
                 break;
+            case AF:
+                regSet16(Register.AF, (short) (regGet16(Register.AF) + 1));
+                break;
             default:
                 throw new IllegalArgumentException("Unknown register: " + reg);
         }
@@ -338,6 +342,8 @@ public class DuckCPU {
                 return (short) ((byteRegs[Register.D.id] << 8) | byteRegs[Register.E.id]);
             case HL:
                 return (short) ((byteRegs[Register.H.id] << 8) | byteRegs[Register.L.id]);
+            case AF:
+                return (short) ((accumulator << 8) | flags);
             default:
                 throw new IllegalArgumentException("Invalid 16-bit register: " + reg);
         }
@@ -368,6 +374,10 @@ public class DuckCPU {
             case HL:
                 byteRegs[4] = (byte) (value >> 8);
                 byteRegs[5] = (byte) value;
+                break;
+            case AF:
+                accumulator = (byte) (value >> 8);
+                flags = (byte) value;
                 break;
             default:
                 throw new IllegalArgumentException("Invalid 16-bit register: " + reg);
@@ -412,6 +422,8 @@ public class DuckCPU {
                 return (byteRegs[2] << 8) | byteRegs[3];
             case HL:
                 return (byteRegs[4] << 8) | byteRegs[5];
+            case AF:
+                return (accumulator << 8) | flags;
             default:
                 return 0;
         }
