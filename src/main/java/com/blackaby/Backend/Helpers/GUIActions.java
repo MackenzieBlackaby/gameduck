@@ -1,11 +1,12 @@
 package com.blackaby.Backend.Helpers;
 
 import java.awt.event.ActionListener;
-
-import javax.swing.JFileChooser;
+import java.io.File;
 
 import com.blackaby.Backend.Emulation.DuckEmulation;
+import com.blackaby.Frontend.MainWindow;
 
+import java.awt.FileDialog;
 import java.awt.event.ActionEvent;
 
 /**
@@ -35,14 +36,16 @@ public class GUIActions implements ActionListener {
 
     private Action action;
     private DuckEmulation attachedEmulation;
+    private MainWindow mainWindow;
 
     /**
      * This constructor creates a new GUIActions with the given action.
      * 
      * @param action The action to be performed
      */
-    public GUIActions(Action action, DuckEmulation attachedEmulation) {
+    public GUIActions(MainWindow mainWindow, Action action, DuckEmulation attachedEmulation) {
         super();
+        this.mainWindow = mainWindow;
         this.action = action;
         this.attachedEmulation = attachedEmulation;
     }
@@ -55,10 +58,14 @@ public class GUIActions implements ActionListener {
                 break;
             case LOADROM:
                 // Open a file chooser dialog
-                JFileChooser fileChooser = new JFileChooser();
-                int returnValue = fileChooser.showOpenDialog(null);
-                if (returnValue == JFileChooser.APPROVE_OPTION) {
-                    attachedEmulation.startEmulation(fileChooser.getSelectedFile().getAbsolutePath());
+                FileDialog fileChooser = new FileDialog(mainWindow, "Select a ROM file", FileDialog.LOAD);
+
+                fileChooser.setAlwaysOnTop(true);
+                fileChooser.setFilenameFilter((_, name) -> name.endsWith(".gb") || name.endsWith(".gbc"));
+                fileChooser.setVisible(true);
+                File file = fileChooser.getFiles()[0];
+                if (file != null) {
+                    attachedEmulation.startEmulation(file.getAbsolutePath());
                 }
                 break;
             case PAUSEGAME:
