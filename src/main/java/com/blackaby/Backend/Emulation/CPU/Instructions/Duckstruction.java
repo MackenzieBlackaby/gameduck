@@ -6,7 +6,11 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.CPU.Instructions.InstructionTypeManager.InstructionType;
 
 /**
- * 
+ * This class represents an instruction for the CPU
+ * It has a method for executing the instruction, and multiple different types
+ * of instructions that can be executed
+ * The instruction is created with a CPU, Memory, instruction type, opcode, and
+ * operands
  */
 public class Duckstruction {
 
@@ -16,6 +20,16 @@ public class Duckstruction {
     private byte[] values = { 0, 0, 0 };
     private InstructionType type;
 
+    /**
+     * Creates a new Duckstruction with the specified CPU, Memory, instruction type,
+     * opcode, and operands
+     * 
+     * @param cpu      the CPU to use
+     * @param memory   the Memory to use
+     * @param type     the type of instruction
+     * @param opcode   the opcode of the instruction
+     * @param operands the operands of the instruction
+     */
     public Duckstruction(DuckCPU cpu, DuckMemory memory, InstructionType type, byte opcode, byte[] operands) {
         this.cpu = cpu;
         this.memory = memory;
@@ -53,8 +67,7 @@ public class Duckstruction {
     }
 
     /**
-     * This method executes the instruction
-     * It loads a value into a register
+     * This method executes the instruction based on the type of instruction
      */
     public void execute() {
         System.out.println("Executing instruction: " + type);

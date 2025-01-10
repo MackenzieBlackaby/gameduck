@@ -17,6 +17,12 @@ import com.blackaby.Backend.Emulation.Memory.DuckMemory;
  */
 public class DuckCPU {
 
+    /**
+     * This enum represents the registers of the CPU.
+     * It has values for all 8-bit and 16-bit registers.
+     * It also has values for special registers like the flags and the instruction
+     * register.
+     */
     public enum Register {
 
         // 8 bit registers
