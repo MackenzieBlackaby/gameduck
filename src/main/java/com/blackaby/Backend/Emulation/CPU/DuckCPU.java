@@ -3,7 +3,6 @@ package com.blackaby.Backend.Emulation.CPU;
 import java.util.LinkedList;
 import java.util.Queue;
 
-import com.blackaby.Backend.Emulation.CPU.Instructions.Duckstruction;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
 /**
@@ -52,6 +51,12 @@ public class DuckCPU {
 
         Register(int id) {
             this.id = id;
+        }
+
+        public boolean is8Bit() {
+            if (id < 0 || id > 10)
+                return false;
+            return true;
         }
 
         public static Register get8Bit(short id) {
@@ -163,10 +168,15 @@ public class DuckCPU {
     private byte interruptEnable = 0;
     private byte instructionRegister = 0;
 
+    public final DuckALU alu;
+    public final DuckIDU idu;
+
     public DuckCPU() {
         instructionQueue = new LinkedList<>();
         stackPointer = (short) DuckMemory.HRAM_END;
         programCounter = 0;
+        alu = new DuckALU(this);
+        idu = new DuckIDU(this);
     }
 
     /**
@@ -265,66 +275,6 @@ public class DuckCPU {
     }
 
     /**
-     * This method increments the value of the given register
-     * 
-     * @param reg The register to increment
-     */
-    public void regIncrement(Register reg) {
-        switch (reg) {
-            case A:
-                accumulator++;
-                break;
-            case F:
-                flags++;
-                break;
-            case B:
-                byteRegs[0]++;
-                break;
-            case C:
-                byteRegs[1]++;
-                break;
-            case D:
-                byteRegs[2]++;
-                break;
-            case E:
-                byteRegs[3]++;
-                break;
-            case H:
-                byteRegs[4]++;
-                break;
-            case L:
-                byteRegs[5]++;
-                break;
-            case IR:
-                instructionRegister++;
-                break;
-            case IE:
-                interruptEnable++;
-                break;
-            case SP:
-                stackPointer++;
-                break;
-            case PC:
-                programCounter++;
-                break;
-            case BC:
-                regSet16(Register.BC, (short) (regGet16(Register.BC) + 1));
-                break;
-            case DE:
-                regSet16(Register.DE, (short) (regGet16(Register.DE) + 1));
-                break;
-            case HL:
-                regSet16(Register.HL, (short) (regGet16(Register.HL) + 1));
-                break;
-            case AF:
-                regSet16(Register.AF, (short) (regGet16(Register.AF) + 1));
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown register: " + reg);
-        }
-    }
-
-    /**
      * This method gets a specified 16-bit register
      * 
      * @param reg the 16-bit register to get
@@ -385,7 +335,8 @@ public class DuckCPU {
     }
 
     /**
-     * This method gets the value of any register as an integer
+     * This method gets the value of any register as an integer.
+     * This is useful for debugging and logging.
      * 
      * @param reg The register to get
      * @return The value of the register as an integer
@@ -434,10 +385,34 @@ public class DuckCPU {
      * 
      * @param flagsToSet The flags to activate
      */
-    public void setFlags(Flag... flagsToSet) {
+    public void activateFlags(Flag... flagsToSet) {
         for (Flag flag : flagsToSet) {
             this.flags |= 1 << flag.getBit();
         }
+    }
+
+    /**
+     * This method sets the value of a flag in the flags register
+     * 
+     * @param flag  The flag to set
+     * @param value The value to set the flag to
+     */
+    public void setFlag(Flag flag, boolean value) {
+        if (value) {
+            this.flags |= 1 << flag.getBit();
+        } else {
+            this.flags &= ~(1 << flag.getBit());
+        }
+    }
+
+    /**
+     * This method gets the value of a flag in the flags register
+     * 
+     * @param flag The flag to get
+     * @return The value of the flag
+     */
+    public byte getFlag(Flag flag) {
+        return (flags & (1 << flag.getBit())) == 0 ? (byte) 0b0 : (byte) 0b1;
     }
 
     /**
@@ -445,7 +420,7 @@ public class DuckCPU {
      * 
      * @param flagsToClear The flags to deactivate
      */
-    public void clearFlags(Flag... flagsToClear) {
+    public void deactivateFlags(Flag... flagsToClear) {
         for (Flag flag : flagsToClear) {
             this.flags &= ~(1 << flag.getBit());
         }
