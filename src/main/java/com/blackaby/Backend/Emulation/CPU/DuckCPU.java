@@ -415,6 +415,10 @@ public class DuckCPU {
         return (flags & (1 << flag.getBit())) == 0 ? (byte) 0b0 : (byte) 0b1;
     }
 
+    public boolean getFlagBoolean(Flag flag) {
+        return (flags & (1 << flag.getBit())) != 0;
+    }
+
     /**
      * This method deactivates given flags in the flags register
      * 
