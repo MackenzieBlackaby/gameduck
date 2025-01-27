@@ -305,15 +305,287 @@ public class Duckstruction {
                 byte result = (byte) ((byte) cpu.regGet(Register.A)
                         & (byte) cpu.regGet(Register.getRegFrom3Bit(values[0])));
                 cpu.regSet(Register.A, result);
-                if (result == 0) {
-                    cpu.setFlag(Flag.Z, true);
-                }
+                cpu.setFlag(Flag.Z, result == 0);
                 cpu.setFlag(Flag.H, true);
                 cpu.deactivateFlags(Flag.N, Flag.C);
                 break;
             }
+            case AND_MEMORY_HL: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) & (byte) memory.read(cpu.regGet16(Register.HL)));
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.setFlag(Flag.H, true);
+                cpu.deactivateFlags(Flag.N, Flag.C);
+                break;
+            }
+            case AND_IMMEDIATE: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) & (byte) values[0]);
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.setFlag(Flag.H, true);
+                cpu.deactivateFlags(Flag.N, Flag.C);
+                break;
+            }
+            case OR_REGISTER: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A)
+                        | (byte) cpu.regGet(Register.getRegFrom3Bit(values[0])));
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case OR_MEMORY_HL: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) | (byte) memory.read(cpu.regGet16(Register.HL)));
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case OR_IMMEDIATE: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) | (byte) values[0]);
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case XOR_REGISTER: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A)
+                        ^ (byte) cpu.regGet(Register.getRegFrom3Bit(values[0])));
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case XOR_MEMORY_HL: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) ^ (byte) memory.read(cpu.regGet16(Register.HL)));
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case XOR_IMMEDIATE: {
+                byte result = (byte) ((byte) cpu.regGet(Register.A) ^ (byte) values[0]);
+                cpu.regSet(Register.A, result);
+                cpu.setFlag(Flag.Z, result == 0);
+                cpu.deactivateFlags(Flag.N, Flag.H, Flag.C);
+                break;
+            }
+            case CCF: {
+                cpu.deactivateFlags(Flag.N, Flag.H);
+                cpu.setFlag(Flag.C, !cpu.getFlagBoolean(Flag.C));
+                break;
+            }
+            case SCF: {
+                cpu.deactivateFlags(Flag.N, Flag.H);
+                cpu.setFlag(Flag.C, true);
+                break;
+            }
+            case DAA: {
+                // TODO: Research and implement DAA function
+                break;
+            }
+            case CPL: {
+                cpu.regSet(Register.A, (byte) ~cpu.regGet(Register.A));
+                cpu.setFlag(Flag.N, true);
+                cpu.setFlag(Flag.H, true);
+                break;
+            }
+            // 16-bit arithmetic instructions
+            case INC_REGISTER_16: {
+                Register reg = Register.getRegFrom2Bit(values[0]);
+                cpu.regSet16(reg, (short) (cpu.regGet16(reg) + 1));
+                break;
+            }
+            case DEC_REGISTER_16: {
+                Register reg = Register.getRegFrom2Bit(values[0]);
+                cpu.regSet16(reg, (short) (cpu.regGet16(reg) - 1));
+                break;
+            }
+            case ADD_PAIR_TO_HL: {
+                short value = cpu.regGet16(Register.getRegFrom2Bit(values[0]));
+                cpu.regSet16(Register.HL, (short) (cpu.regGet16(Register.HL) + value));
+                cpu.deactivateFlags(Flag.N);
+                cpu.setFlag(Flag.H, (value & 0xFFF) + (cpu.regGet16(Register.HL) & 0xFFF) > 0xFFF);
+                cpu.setFlag(Flag.C, (value & 0xFFFF) + (cpu.regGet16(Register.HL) & 0xFFFF) > 0xFFFF);
+            }
+            case ADD_BYTE_TO_SP: {
+                short result = (short) (cpu.regGet16(Register.SP) + (byte) values[0]);
+                cpu.regSet16(Register.SP, result);
+                cpu.deactivateFlags(Flag.Z, Flag.N);
+                cpu.setFlag(Flag.H, (cpu.regGet16(Register.SP) & 0xF) + (values[0] & 0xF) > 0xF);
+                cpu.setFlag(Flag.C, (cpu.regGet16(Register.SP) & 0xFF) + (values[0] & 0xFF) > 0xFF);
+            }
+            case ROTATE_LEFT_CIRCLE_ACCUMULATOR: {
+                // TODO: Implement rotate left circle accumulator
+                break;
+            }
+            case ROTATE_RIGHT_CIRCLE_ACCUMULATOR: {
+                // TODO: Implement rotate right circle accumulator
+                break;
+            }
+            case ROTATE_LEFT_ACCUMULATOR: {
+                // TODO: Implement rotate left accumulator
+                break;
+            }
+            case ROTATE_RIGHT_ACCUMULATOR: {
+                // TODO: Implement rotate right accumulator
+                break;
+            }
+            case ROTATE_LEFT_CIRCLE_REGISTER: {
+                // TODO: Implement rotate left circle register
+                break;
+            }
+            case ROTATE_LEFT_CIRCLE_HL: {
+                // TODO: Implement rotate left circle HL
+                break;
+            }
+            case ROTATE_RIGHT_CIRCLE_REGISTER: {
+                // TODO: Implement rotate right circle register
+                break;
+            }
+            case ROTATE_RIGHT_CIRCLE_HL: {
+                // TODO: Implement rotate right circle HL
+                break;
+            }
+            case ROTATE_LEFT_REGISTER: {
+                // TODO: Implement rotate left register
+                break;
+            }
+            case ROTATE_LEFT_HL: {
+                // TODO: Implement rotate left HL
+                break;
+            }
+            case ROTATE_RIGHT_REGISTER: {
+                // TODO: Implement rotate right register
+                break;
+            }
+            case ROTATE_RIGHT_HL: {
+                // TODO: Implement rotate right HL
+                break;
+            }
+            case SHIFT_LEFT_ARITHMETIC_REGISTER: {
+                // TODO: Implement shift left arithmetic
+                break;
+            }
+            case SHIFT_LEFT_ARITHMETIC_HL: {
+                // TODO: Implement shift left arithmetic
+                break;
+            }
+            case SHIFT_RIGHT_ARITHMETIC_REGISTER: {
+                // TODO: Implement shift right arithmetic
+                break;
+            }
+            case SHIFT_RIGHT_ARITHMETIC_HL: {
+                // TODO: Implement shift right arithmetic
+                break;
+            }
+            case SWAP_NIBBLES_REGISTER: {
+                // TODO: Implement swap nibbles
+                break;
+            }
+            case SWAP_NIBBLES_HL: {
+                // TODO: Implement swap nibbles
+                break;
+            }
+            case SHIFT_RIGHT_LOGICAL_REGISTER: {
+                // TODO: Implement shift right logical
+                break;
+            }
+            case SHIFT_RIGHT_LOGICAL_HL: {
+                // TODO: Implement shift right logical
+                break;
+            }
+            case TEST_BIT_REGISTER: {
+                // TODO: Implement bit test register
+                break;
+            }
+            case TEST_BIT_HL: {
+                // TODO: Implement bit test HL
+                break;
+            }
+            case RESET_BIT_REGISTER: {
+                // TODO: Implement bit reset register
+                break;
+            }
+            case RESET_BIT_HL: {
+                // TODO: Implement bit reset HL
+                break;
+            }
+            case SET_BIT_REGISTER: {
+                // TODO: Implement bit set register
+                break;
+            }
+            case SET_BIT_HL: {
+                // TODO: Implement bit set HL
+                break;
+            }
+            // Control flow instructions
+            case JUMP_UNCONDITIONAL: {
+                // TODO: Implement jump unconditional
+                break;
+            }
+            case JUMP_HL: {
+                // TODO: Implement jump HL
+                break;
+            }
+            case JUMP_CONDITIONAL: {
+                // TODO: Implement jump conditional
+                break;
+            }
+            case JUMP_RELATIVE_UNCONDITIONAL: {
+                // TODO: Implement jump relative unconditional
+                break;
+            }
+            case JUMP_RELATIVE_CONDITIONAL: {
+                // TODO: Implement jump relative conditional
+                break;
+            }
+            case CALL_UNCONDITIONAL: {
+                // TODO: Implement call unconditional
+                break;
+            }
+            case CALL_CONDITIONAL: {
+                // TODO: Implement call conditional
+                break;
+            }
+            case RETURN_UNCONDITIONAL: {
+                // TODO: Implement return unconditional
+                break;
+            }
+            case RETURN_CONDITIONAL: {
+                // TODO: Implement return conditional
+                break;
+            }
+            case RETURN_INTERRUPT: {
+                // TODO: Implement return interrupt
+                break;
+            }
+            case RESTART_UNCONDITIONAL: {
+                // TODO: Implement restart unconditional
+                break;
+            }
+            case HALT: {
+                // TODO: Implement halt
+                break;
+            }
+            case STOP: {
+                // TODO: Implement stop
+                break;
+            }
+            case DISABLE_INTERRUPTS: {
+                // TODO: Implement disable interrupts
+                break;
+            }
+            case ENABLE_INTERRUPTS: {
+                // TODO: Implement enable interrupts
+                break;
+            }
+            case NOP: {
+                // Do nothing
+                break;
+            }
             default: {
-                System.err.println("Unsupported load type: " + type);
+                System.err.println("Unsupported instruction type: " + type);
             }
         }
 
