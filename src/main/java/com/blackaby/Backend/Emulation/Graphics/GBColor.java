@@ -26,6 +26,17 @@ public class GBColor {
     }
 
     /**
+     * Creates a new GBColor with the specified hex string
+     * 
+     * @param hex Hex string
+     */
+    public GBColor(String hex) {
+        this.r = Integer.parseInt(hex.substring(1, 3), 16);
+        this.g = Integer.parseInt(hex.substring(3, 5), 16);
+        this.b = Integer.parseInt(hex.substring(5, 7), 16);
+    }
+
+    /**
      * Returns the red component of the color
      * 
      * @return Red component
