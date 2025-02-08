@@ -1,3 +1,5 @@
 *.class
 .vscode
+.gb
+.gbc
 !src/main/resources/LICENSE.txt
