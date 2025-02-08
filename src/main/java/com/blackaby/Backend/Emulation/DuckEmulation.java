@@ -18,6 +18,7 @@ public class DuckEmulation implements Runnable {
     private DuckCPU cpu;
     private DuckMemory memory;
     private DuckDisplay display;
+    private DuckPPU ppu;
     private ROM rom;
 
     // Threading Variables
@@ -34,6 +35,7 @@ public class DuckEmulation implements Runnable {
     public DuckEmulation(DuckDisplay display, boolean debugMode) {
         memory = new DuckMemory();
         cpu = new DuckCPU(memory);
+        ppu = new DuckPPU(cpu, memory, display);
         this.display = display;
         this.debugMode = debugMode;
     }
@@ -112,18 +114,19 @@ public class DuckEmulation implements Runnable {
     @Override
     public void run() {
         running = true;
-        long lastFrameTime = System.currentTimeMillis();
+        double lastCycleTime = System.currentTimeMillis();
         while (running) {
             while (paused)
                 ;
-            if (System.currentTimeMillis() - lastFrameTime >= Specifics.CYCLE_DELAY) {
+            if (System.currentTimeMillis() - lastCycleTime >= Specifics.CYCLE_DELAY) {
                 Duckstruction instruction = ReadNextInstruction();
                 if (instruction == null) {
                     break;
                 }
                 cpu.queueInstruction(instruction);
                 cpu.executeNextInstruction();
-                lastFrameTime = System.currentTimeMillis();
+                lastCycleTime = System.currentTimeMillis();
+                ppu.step();
             }
         }
         if (debugMode) {
@@ -140,7 +143,7 @@ public class DuckEmulation implements Runnable {
      */
     private Duckstruction ReadNextInstruction() {
         // Ignore CB prefixes as all instructions processed as one
-        byte opcode = (byte)0xcb;
+        byte opcode = (byte) 0xcb;
         try {
             while (opcode == (byte) 0xcb)
                 opcode = rom.getByte(cpu.regGet16(Register.PC));
