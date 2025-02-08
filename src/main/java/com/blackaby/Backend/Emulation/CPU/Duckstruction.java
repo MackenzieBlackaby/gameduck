@@ -113,7 +113,8 @@ public class Duckstruction {
                 break;
             }
             case MEMORY_ACCUMULATOR_IMMEDIATE: {
-                cpu.regSet(Register.A, memory.read((values[1] << 8) | values[0]));
+                short address = (short) ((values[1] << 8) | (values[0] & 0xFF));
+                cpu.regSet(Register.A, memory.read(address));
                 break;
             }
             case ACCUMULATOR_MEMORY_IMMEDIATE: {
@@ -513,6 +514,11 @@ public class Duckstruction {
             }
             case SET_BIT_REGISTER: {
                 // TODO: Implement bit set register
+                int bitPosition = values[0];
+                Register reg = Register.getRegFrom3Bit(values[1]);
+                byte value = cpu.regGet(reg);
+                value |= (1 << bitPosition);
+                cpu.regSet(reg, value);
                 break;
             }
             case SET_BIT_HL: {
@@ -600,7 +606,7 @@ public class Duckstruction {
                 short address = (short) ((msb << 8) | lsb);
                 cpu.regSet16(Register.SP, (short) (cpu.regGet16(Register.SP) + 2));
                 cpu.regSet16(Register.PC, address);
-                // IME = 1
+                cpu.regSet(Register.IR, (byte) 1);
                 break;
             }
             case RESTART_UNCONDITIONAL: {
@@ -622,11 +628,11 @@ public class Duckstruction {
                 break;
             }
             case DISABLE_INTERRUPTS: {
-                // IME = 0
+                cpu.regSet(Register.IR, (byte) 0);
                 break;
             }
             case ENABLE_INTERRUPTS: {
-                // IME = 1
+                cpu.regSet(Register.IR, (byte) 1);
                 break;
             }
             case NOP: {
