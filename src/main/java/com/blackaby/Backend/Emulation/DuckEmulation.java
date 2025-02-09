@@ -114,6 +114,7 @@ public class DuckEmulation implements Runnable {
     @Override
     public void run() {
         running = true;
+        cpu.regSet16(Register.PC, (short)0x0100);
         double lastCycleTime = System.currentTimeMillis();
         while (running) {
             while (paused)
