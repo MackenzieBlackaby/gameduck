@@ -46,6 +46,16 @@ public class DuckPPU {
 
     private void setMode(PPUMode mode) {
         this.mode = mode;
+        int stat = memory.read(0xFF41);
+
+        // Set PPU mode bits (bits 0 and 1)
+        stat = (stat & 0xFC) | mode.ordinal();
+        memory.write(0xFF41, (byte) stat);
+
+        // Trigger STAT interrupt if enabled
+        boolean statInterrupt = (stat & (1 << (3 + mode.ordinal()))) != 0;
+        if (statInterrupt)
+            cpu.requestInterrupt(Interrupt.LCD_STAT);
     }
 
     public void step() {
@@ -82,29 +92,32 @@ public class DuckPPU {
                     cycle = 0;
                     scanline = 0;
                     setMode(PPUMode.OAM);
+                    display.repaint();
                 }
                 break;
         }
     }
 
     private void renderScanline() {
-        for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
-            // Fetch tile data from VRAM
-            int tileIndex = (scanline / 8) * 32 + (x / 8);
-            int tileAddress = DuckMemory.VRAM_START + tileIndex * 16;
-            int line = scanline % 8;
-            int byte1 = memory.read(tileAddress + line * 2);
-            int byte2 = memory.read(tileAddress + line * 2 + 1);
+        int lcdc = memory.read(0xFF40);
+        int tileMapBase = (lcdc & 0x08) != 0 ? 0x9C00 : 0x9800;
 
-            // Calculate pixel color
+        for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
+            int tileIndex = (scanline / 8) * 32 + (x / 8);
+            int tileAddress = tileMapBase + tileIndex;
+            int tileID = memory.read(tileAddress);
+            int tileDataAddress = DuckMemory.VRAM_START + tileID * 16;
+
+            int line = scanline % 8;
+            int byte1 = memory.read(tileDataAddress + line * 2);
+            int byte2 = memory.read(tileDataAddress + line * 2 + 1);
+
             int bit = 7 - (x % 8);
             int colorIndex = ((byte1 >> bit) & 1) | (((byte2 >> bit) & 1) << 1);
             GBColor color = getColorFromPalette(colorIndex);
 
-            // Set pixel on display
-            display.setPixel(x, scanline, color.toColor(), false);
+            display.setPixel(x, scanline, color.toColor(), true);
         }
-        display.repaint();
     }
 
     private GBColor getColorFromPalette(int colorIndex) {
@@ -118,7 +131,7 @@ public class DuckPPU {
             case 3:
                 return Settings.GB_COLOR_3_OBJ;
             default:
-                return null;
+                return Settings.GB_COLOR_0_OBJ; // Default to background color
         }
     }
 }
