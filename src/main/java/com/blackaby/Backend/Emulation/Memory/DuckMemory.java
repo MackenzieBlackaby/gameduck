@@ -30,6 +30,7 @@ public class DuckMemory {
     public static final int IO_REGISTERS_END = 0xFF7F;
     public static final int HRAM_START = 0xFF80;
     public static final int HRAM_END = 0xFFFE;
+    public static final int STACK_POINTER_START = HRAM_END;
     public static final int INTERRUPT_ENABLE = 0xFFFF;
 
     // Memory Array
@@ -51,9 +52,18 @@ public class DuckMemory {
      * @return The byte at the specified address
      */
     public byte read(int address) {
-        address = address & 0xFFFFFFFF;
-        validate(address);
+        address = validate(address);
         return memory[address];
+    }
+
+    /**
+     * Reads a byte from the specified address
+     * 
+     * @param address The address to read from
+     * @return The byte at the specified address
+     */
+    public byte read(short address) {
+        return read((int) address & 0xFFFF);
     }
 
     /**
@@ -63,42 +73,50 @@ public class DuckMemory {
      * @param value   The value to write
      */
     public void write(int address, byte value) {
-
-        validate(address);
-        if (readOnlyCheck(address)) {
-            return;
-        }
+        address = validate(address);
         memory[address] = value;
     }
 
     /**
-     * Writes a byte to the stack with the specified offset
+     * Writes a byte to the specified address
      * 
-     * @param address The offset from the end of the stack to write to
+     * @param address The address to write to
      * @param value   The value to write
      */
-    public void stackWrite(int offset, byte value) {
-        write(HRAM_END + offset, value);
+    public void write(short address, byte value) {
+        write((int) address & 0xFFFF, value);
     }
 
     /**
-     * Reads a byte from the stack with the specified offset
+     * Pushes a byte onto the stack and updates the stack pointer.
      * 
-     * @param address The offset from the end of the stack to read from
-     * @return The byte at the specified offset
+     * @param sp    The current stack pointer address
+     * @param value The byte to push onto the stack
+     * @return The updated stack pointer after the push operation
      */
-    public byte stackRead(int offset) {
-        return read(HRAM_END + offset);
+    public int stackPush(int sp, byte value) {
+        sp = (sp - 1) & 0xFFFF; // Decrement stack pointer (wrap around 16-bit)
+        write(sp, value);
+        return sp;
     }
 
-    private void validate(int address) {
-        if (address < 0 || address >= MEMORY_SIZE) {
-            throw new IllegalArgumentException("Invalid memory address: " + address);
-        }
+    /**
+     * Pops a byte from the stack and updates the stack pointer.
+     * 
+     * @param sp The current stack pointer address
+     * @return The byte popped from the stack
+     */
+    public byte stackPop(int sp) {
+        byte value = read(sp);
+        sp = (sp + 1) & 0xFFFF; // Increment stack pointer (wrap around 16-bit)
+        return value;
     }
 
-    private boolean readOnlyCheck(int address) {
-        return (address >= ROM_BANK_0_START && address <= ROM_BANK_N_END) ||
-                (address >= NOT_USABLE_START && address <= NOT_USABLE_END);
+    private int validate(int address) {
+        if (address < 0)
+            return STACK_POINTER_START + address;
+        if (address >= MEMORY_SIZE)
+            return address % MEMORY_SIZE;
+        return address;
     }
 }
