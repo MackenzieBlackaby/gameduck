@@ -10,12 +10,16 @@ import java.io.IOException;
  */
 public class ROM {
     private String filename;
-    private byte data[];
+    private int data[];
 
     public ROM(String filename) {
         this.filename = filename;
         if (!filename.equals(""))
             LoadRom();
+    }
+
+    public int[] getData() {
+        return data;
     }
 
     private void LoadRom() {
@@ -32,13 +36,17 @@ public class ROM {
         }
 
         // Read in data
-        data = new byte[size];
+        byte tempData[] = new byte[size];
         try (FileInputStream reader = new FileInputStream(filename)) {
-            reader.read(data);
+            reader.read(tempData);
             reader.close();
         } catch (IOException e) {
             e.printStackTrace();
             return;
+        }
+        data = new int[size];
+        for (int i = 0; i < size; i++) {
+            data[i] = 0xFF & tempData[i];
         }
     }
 
@@ -57,21 +65,19 @@ public class ROM {
      * @param location The program counter
      * @return The instruction at the given program counter
      */
-    public byte getByte(int location) {
-        if (location >= data.length) {
-            return 0;
-        }
-        return data[location];
+    public int getByte(int address) {
+        return data[address];
     }
 
     /**
      * This method reads a number of bytes from the ROM
+     * 
      * @param location The location to start reading from
-     * @param count The number of bytes to read
+     * @param count    The number of bytes to read
      * @return The bytes read
      */
-    public byte[] getBytes(int location, int count) {
-        byte[] bytes = new byte[count];
+    public int[] getBytes(int location, int count) {
+        int[] bytes = new int[count];
         for (int i = 0; i < count; i++) {
             bytes[i] = getByte(location + i);
         }

@@ -54,7 +54,7 @@ public class GUIActions implements ActionListener {
     public void actionPerformed(ActionEvent e) {
         switch (action) {
             case DEBUG:
-                System.out.println("Debugging");
+                // DebugLogger.logn("Debugging");
                 break;
             case LOADROM:
                 // Open a file chooser dialog
@@ -91,7 +91,7 @@ public class GUIActions implements ActionListener {
             case ABOUT:
                 break;
             default:
-                System.out.println("Invalid action");
+                // DebugLogger.logn("Invalid action");
                 break;
         }
     }

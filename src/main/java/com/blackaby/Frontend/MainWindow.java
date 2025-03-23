@@ -62,7 +62,7 @@ public class MainWindow extends DuckWindow {
         add(display, c);
 
         // Attach the emulation
-        emulation = new DuckEmulation(display, true);
+        emulation = new DuckEmulation(display);
 
         // Initialising the menu bar
         JMenuBar menuBar = new JMenuBar();
