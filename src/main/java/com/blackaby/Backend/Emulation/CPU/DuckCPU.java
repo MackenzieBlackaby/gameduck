@@ -2,7 +2,6 @@ package com.blackaby.Backend.Emulation.CPU;
 
 import com.blackaby.Frontend.DebugLogger;
 import com.blackaby.Backend.Emulation.DuckEmulation;
-import com.blackaby.Backend.Emulation.CPU.InstructionTypeManager.InstructionType;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
 /**

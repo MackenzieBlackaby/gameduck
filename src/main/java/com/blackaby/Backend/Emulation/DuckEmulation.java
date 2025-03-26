@@ -27,8 +27,6 @@ public class DuckEmulation implements Runnable {
     private int clockCounter = 0;
     private volatile boolean running = false;
     private volatile boolean paused = false;
-    private boolean bootRom = false;
-    private boolean debugDelay = false;
 
     /**
      * This constructor creates a new DuckEmulation
@@ -184,7 +182,6 @@ public class DuckEmulation implements Runnable {
             System.exit(1);
         } else if (type == InstructionType.ENABLE_INTERRUPTS) {
             DebugLogger.logn("Enable interrupts recognised\n\n\n\n\n\n\n\n\n\n\n\n\n");
-            debugDelay = true;
             DebugLogger.logn(cpu.toString());
         }
 
