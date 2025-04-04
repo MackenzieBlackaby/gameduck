@@ -5,8 +5,6 @@ import javax.swing.*;
 import com.blackaby.Backend.Emulation.DuckEmulation;
 import com.blackaby.Backend.Helpers.GUIActions;
 import com.blackaby.Backend.Helpers.GUIActions.Action;
-import java.awt.event.KeyEvent;
-import java.awt.event.InputEvent;
 
 import java.awt.*;
 

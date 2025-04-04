@@ -2,7 +2,6 @@ package com.blackaby.Backend.Emulation.Memory;
 
 import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Peripherals.DuckTimer;
-import com.blackaby.Frontend.DebugLogger;
 
 /**
  * Represents the Game Boy's memory system.
