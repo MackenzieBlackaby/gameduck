@@ -35,22 +35,26 @@ public class Jump extends Instruction {
             int condCode = opcodeValues[0] & 0b11;
             boolean jumpConditionMet = false;
             switch (condCode) {
-                case 0b00: // Z flag set
+                case 0b00:
+                    // Z flag set
                     // DebugLogger.logn("BRNZ");
                     // DebugLogger.logn("Z flag as bool: " + cpu.getFlagBoolean(Flag.Z));
                     jumpConditionMet = !cpu.getFlagBoolean(Flag.Z);
                     break;
-                case 0b01: // Z flag clear
+                case 0b01:
+                    // Z flag clear
                     // DebugLogger.logn("BRZ");
                     // DebugLogger.logn("Z flag as bool: " + cpu.getFlagBoolean(Flag.Z));
                     jumpConditionMet = cpu.getFlagBoolean(Flag.Z);
                     break;
-                case 0b10: // C flag set
+                case 0b10:
+                    // C flag set
                     // DebugLogger.logn("BRNC");
                     // DebugLogger.logn("C flag as bool: " + cpu.getFlagBoolean(Flag.C));
                     jumpConditionMet = !cpu.getFlagBoolean(Flag.C);
                     break;
-                case 0b11: // C flag clear
+                case 0b11:
+                    // C flag clear
                     // DebugLogger.logn("BRC");
                     // DebugLogger.logn("C flag as bool: " + cpu.getFlagBoolean(Flag.C));
                     jumpConditionMet = cpu.getFlagBoolean(Flag.C);
@@ -59,9 +63,9 @@ public class Jump extends Instruction {
             if (!jumpConditionMet) {
                 // Condition not met: use unsuccessful cycle count.
                 if (isRelative) {
-                    cycles = 2; // Relative conditional not taken: 2 cycles
+                    cycles = 2;
                 } else {
-                    cycles = 3; // Absolute conditional not taken: 3 cycles
+                    cycles = 3;
                 }
                 // DebugLogger.logn("Conditional jump not taken; PC remains " +
                 // Integer.toHexString(pc));
@@ -69,19 +73,19 @@ public class Jump extends Instruction {
             } else {
                 // Condition met: use the longer timing.
                 if (isRelative) {
-                    cycles = 3; // Relative conditional taken: 3 cycles
+                    cycles = 3;
                 } else {
-                    cycles = 4; // Absolute conditional taken: 4 cycles
+                    cycles = 4;
                 }
             }
         } else {
             // Unconditional jump
             if (isHL) {
-                cycles = 1; // HL jumps always 1 cycle
+                cycles = 1;
             } else if (isRelative) {
-                cycles = 3; // Unconditional relative: 3 cycles
+                cycles = 3;
             } else {
-                cycles = 4; // Unconditional absolute: 4 cycles
+                cycles = 4;
             }
         }
 

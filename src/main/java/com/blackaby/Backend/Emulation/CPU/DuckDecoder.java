@@ -15,7 +15,7 @@ import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.Instructions.Math.Arithmetic.ArithmeticType;
 import com.blackaby.Backend.Emulation.CPU.Instructions.Math.Bitwise.BitwiseType;
 
-public class InstructionTypeManager {
+public class DuckDecoder {
     public enum InstructionType {
         // Load instructions. Main mask specifies which values are excluded from the
         // opcode
@@ -94,7 +94,7 @@ public class InstructionTypeManager {
         ROTATE_RIGHT_CIRCLE_ACCUMULATOR(0x0F, 0x00, 0, false),
         ROTATE_LEFT_ACCUMULATOR(0x17, 0x00, 0, false),
         ROTATE_RIGHT_ACCUMULATOR(0x1F, 0x00, 0, false),
-        ROTATE_LEFT_CIRCLE_REGISTER(0x00, 0x07, 0, true), // CB PREFIX
+        ROTATE_LEFT_CIRCLE_REGISTER(0x00, 0x07, 0, true), // CB from now on
         ROTATE_LEFT_CIRCLE_HL(0x06, 0x00, 0, true),
         ROTATE_RIGHT_CIRCLE_REGISTER(0x08, 0x07, 0, true),
         ROTATE_RIGHT_CIRCLE_HL(0x0E, 0x00, 0, true),
@@ -218,11 +218,11 @@ public class InstructionTypeManager {
         instructionMap.put(InstructionType.ACCUMULATOR_MEMORY_MSB_0xFF_IMMEDIATE,
                 new AccumulatorMemoryMaskImmediate(cpu, memory));
         instructionMap.put(InstructionType.MEMORY_ACCUMULATOR_HL_DECREMENT,
-                new MemoryHLAccumulatorChange(cpu, memory, false)); // MemoryHLAccumulatorChange
+                new MemoryHLAccumulatorChange(cpu, memory, false));
         instructionMap.put(InstructionType.ACCUMULATOR_MEMORY_HL_DECREMENT,
                 new AccumulatorMemoryHLChange(cpu, memory, false));
         instructionMap.put(InstructionType.MEMORY_ACCUMULATOR_HL_INCREMENT,
-                new MemoryHLAccumulatorChange(cpu, memory, true)); // MemoryHLAccumulatorChange
+                new MemoryHLAccumulatorChange(cpu, memory, true));
         instructionMap.put(InstructionType.ACCUMULATOR_MEMORY_HL_INCREMENT,
                 new AccumulatorMemoryHLChange(cpu, memory, true));
         instructionMap.put(InstructionType.IMMEDIATE_PAIR, new ImmediateRegisterPair(cpu, memory));

@@ -12,7 +12,6 @@ public class BitSet extends Instruction {
     private boolean activate;
     private boolean test;
 
-    // Register = 2, hl test = 3, hl = 4
     public BitSet(DuckCPU cpu, DuckMemory memory, boolean isActive, boolean isRegister, boolean isTest) {
         super(cpu, memory, isRegister ? 2 : 4);
         if (isTest)
@@ -32,27 +31,24 @@ public class BitSet extends Instruction {
         } else {
             value = memory.read(cpu.getHLValue());
         }
-        int bitPos = opcodeValues[0] & 0b111; // Extract the bit position (0-7)
-        int mask = 0xFF & (1 << bitPos); // Create the bitmask (only a single bit)
-
+        int bitPos = opcodeValues[0] & 0b111;
+        int mask = 0xFF & (1 << bitPos);
         if (test) {
-            // Test the bit, set flags accordingly
-            boolean isSet = (value & mask) != 0; // Check if the bit is set
-            cpu.setFlag(Flag.Z, !isSet); // Set Z flag if the bit is not set
-            cpu.setFlag(Flag.H, true); // Set H flag (for half-carry)
-            cpu.deactivateFlags(Flag.N); // Deactivate N flag (for subtraction)
+            boolean isSet = (value & mask) != 0;
+            cpu.setFlag(Flag.Z, !isSet);
+            cpu.setFlag(Flag.H, true);
+            cpu.deactivateFlags(Flag.N);
         } else {
-            // Set or clear the bit in the value
             if (activate) {
-                value |= mask; // Set the bit
+                value |= mask;
             } else {
-                value &= ~mask; // Clear the bit
+                value &= ~mask;
             }
 
             if (isRegister) {
-                cpu.regSet(reg, (byte) value); // Set the register value
+                cpu.regSet(reg, (byte) value);
             } else {
-                memory.write(cpu.getHLValue(), (byte) value); // Write to memory
+                memory.write(cpu.getHLValue(), (byte) value);
             }
         }
 

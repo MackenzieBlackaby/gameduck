@@ -17,7 +17,8 @@ public class Rotate extends Instruction {
     // Constructor: cycle count is initially set to 2, but adjusted in run()
     // For accumulator rotates, cycle count will be 1; for HL rotates, 4; for
     // register rotates, 2.
-    public Rotate(DuckCPU cpu, DuckMemory memory, boolean left, boolean circle, boolean accumulator, boolean hl, boolean isCBPrefix) {
+    public Rotate(DuckCPU cpu, DuckMemory memory, boolean left, boolean circle, boolean accumulator, boolean hl,
+            boolean isCBPrefix) {
         super(cpu, memory, 2);
         this.left = left;
         this.circle = circle;
@@ -41,19 +42,17 @@ public class Rotate extends Instruction {
             value = cpu.regGet(Register.getRegFrom3Bit(opcodeValues[0]));
         }
 
-        // We'll use two different branches: one for circular rotate and one for
-        // through-carry.
         if (circle) {
             // Circular rotate: the shifted-out bit is reinserted.
             boolean shiftedOut;
             if (left) {
-                shiftedOut = (value & 0x80) != 0; // extract bit 7
+                shiftedOut = (value & 0x80) != 0;
                 value = (value << 1) & 0xFF;
                 if (shiftedOut) {
                     value |= 0x01;
                 }
             } else {
-                shiftedOut = (value & 0x01) != 0; // extract bit 0
+                shiftedOut = (value & 0x01) != 0;
                 value = (value >>> 1) & 0xFF;
                 if (shiftedOut) {
                     value |= 0x80;
@@ -95,7 +94,6 @@ public class Rotate extends Instruction {
             cpu.setFlag(Flag.Z, false);
         else
             cpu.setFlag(Flag.Z, value == 0);
-        // Clear the H and N flags.
         cpu.deactivateFlags(Flag.H, Flag.N);
     }
 }

@@ -13,17 +13,11 @@ import com.blackaby.Frontend.DebugLogger;
  */
 public class DuckPPU {
 
-    // Mode durations for visible lines:
-    public static final int OAM_DURATION = 80; // OAM scan
-    public static final int VRAM_DURATION = 172; // VRAM scan
-    public static final int HBLANK_DURATION = 204; // H-Blank
-    // Each visible line is 80 + 172 + 204 = 456 cycles total.
+    public static final int OAM_DURATION = 80;
+    public static final int VRAM_DURATION = 172;
+    public static final int HBLANK_DURATION = 204;
 
-    // The total number of cycles each scanline (including V-Blank) should take:
     private static final int SCANLINE_CYCLES = 456;
-
-    // The total lines on the Game Boy are 154 (0–153).
-    // Lines 0–143 = visible, lines 144–153 = V-Blank.
 
     private enum PPUMode {
         HBLANK,
@@ -36,8 +30,8 @@ public class DuckPPU {
     private DuckMemory memory;
     private DuckDisplay display;
     private PPUMode mode;
-    private int scanline; // current LY
-    private int cycle; // how many cycles have elapsed in the current mode
+    private int scanline;
+    private int cycle;
 
     /**
      * Constructor for the DuckPPU class.
@@ -53,7 +47,7 @@ public class DuckPPU {
         this.scanline = 0;
         this.cycle = 0;
         this.mode = PPUMode.OAM;
-        // You may want to initialize mode to OAM directly, or call ActivatePPU().
+
     }
 
     /**
@@ -63,12 +57,9 @@ public class DuckPPU {
         this.mode = mode;
         int stat = memory.read(0xFF41) & 0xFF;
 
-        // Clear the last two bits, then set them according to the new mode ordinal.
         stat = (stat & 0xFC) | mode.ordinal();
         memory.write(0xFF41, (byte) stat);
 
-        // If the corresponding STAT interrupt bit is enabled, request a STAT interrupt.
-        // (bit 3 + mode.ordinal())
         boolean statInterrupt = (stat & (1 << (3 + mode.ordinal()))) != 0;
         if (statInterrupt) {
             DebugLogger.logn("[PPU DEBUG] STAT interrupt triggered for mode " + mode);
@@ -93,7 +84,7 @@ public class DuckPPU {
                 if (cycle >= VRAM_DURATION) {
                     cycle = 0;
                     setMode(PPUMode.HBLANK);
-                    // Render the current scanline after VRAM access completes.
+
                     renderScanline(scanline);
                 }
                 break;
@@ -102,7 +93,7 @@ public class DuckPPU {
                 if (cycle >= HBLANK_DURATION) {
                     cycle = 0;
                     scanline++;
-                    // Once we hit line 144, enter VBLANK and fire interrupt.
+
                     if (scanline == 144) {
                         setMode(PPUMode.VBLANK);
                         cpu.requestInterrupt(Interrupt.VBLANK);
@@ -113,22 +104,19 @@ public class DuckPPU {
                 break;
 
             case VBLANK:
-                // In VBLANK, each of lines 144–153 should still last 456 cycles.
+
                 if (cycle >= SCANLINE_CYCLES) {
                     cycle = 0;
                     scanline++;
-                    // Once we reach line 154, we wrap back to line 0 (start new frame).
                     if (scanline >= 154) {
                         scanline = 0;
                         setMode(PPUMode.OAM);
                     }
-                    // Repaint the entire frame each time we advance a line in V-Blank.
                     display.repaint();
                 }
                 break;
         }
 
-        // Update LY register (current scanline) and compare with LYC for interrupts.
         memory.write(DuckMemory.LY, (byte) scanline);
         updateLYCCompare();
     }
@@ -138,12 +126,10 @@ public class DuckPPU {
      * (You could also add sprite rendering, window, etc.)
      */
     public void renderScanline(int scanline) {
-        // LCDC register controls whether BG is on/off, which tile map, etc.
         int lcdc = memory.read(0xFF40) & 0xFF;
 
-        // If BG display is disabled, fill the line with white and return.
         if ((lcdc & 0x01) == 0) {
-            GBColor defaultColor = new GBColor(255, 255, 255); // White
+            GBColor defaultColor = new GBColor(255, 255, 255);
             for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
                 display.setPixel(x, scanline, defaultColor.toColor(), false);
             }
@@ -154,7 +140,7 @@ public class DuckPPU {
         int scrollY = memory.read(0xFF42) & 0xFF;
         int scrollX = memory.read(0xFF43) & 0xFF;
 
-        // "World" position in the BG map:
+        // World position in the BG map:
         int worldY = (scanline + scrollY) & 0xFF;
 
         // Determine base addresses for tile map and tile data.
@@ -175,9 +161,8 @@ public class DuckPPU {
             int tileIndexAddr = tileMapBase + (tileRow * 32) + tileColumn;
             int tileID = memory.read(tileIndexAddr) & 0xFF;
 
-            // In 0x8800 mode, the tile ID is signed (-128..127). Adjust base if so.
             if (!use8000) {
-                tileID = (byte) tileID; // interpret as signed
+                tileID = (byte) tileID;
             }
 
             // Each tile is 16 bytes, 2 bytes per row.
@@ -188,7 +173,6 @@ public class DuckPPU {
             int byte2 = memory.read(tileAddr + (tileLine * 2 + 1)) & 0xFF;
             int bitIndex = 7 - (worldX % 8);
 
-            // Combine bits from the two tile bytes to form a color index [0..3].
             int colorValue = (((byte2 >> bitIndex) & 1) << 1) |
                     ((byte1 >> bitIndex) & 1);
 
@@ -228,14 +212,11 @@ public class DuckPPU {
         int stat = memory.read(0xFF41) & 0xFF;
 
         if (ly == lyc) {
-            // Set the coincidence flag (bit 2).
             stat |= 0x04;
-            // If the LY=LYC interrupt (bit 6) is enabled, request a STAT interrupt.
             if ((stat & 0x40) != 0) {
                 cpu.requestInterrupt(DuckCPU.Interrupt.LCD_STAT);
             }
         } else {
-            // Clear the coincidence flag.
             stat &= ~0x04;
         }
         memory.write(0xFF41, (byte) stat);

@@ -55,9 +55,9 @@ public class Return extends Instruction {
             }
         }
         int sp = cpu.getSP();
-        int low = memory.stackPop(sp); // high is at SP
+        int low = memory.stackPop(sp);
         sp++;
-        int high = memory.stackPop(sp); // low is at SP+1
+        int high = memory.stackPop(sp);
         sp++;
         cpu.setSP(sp);
         int pc = (high << 8) | low;

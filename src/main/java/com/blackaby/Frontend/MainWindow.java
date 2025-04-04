@@ -5,6 +5,8 @@ import javax.swing.*;
 import com.blackaby.Backend.Emulation.DuckEmulation;
 import com.blackaby.Backend.Helpers.GUIActions;
 import com.blackaby.Backend.Helpers.GUIActions.Action;
+import java.awt.event.KeyEvent;
+import java.awt.event.InputEvent;
 
 import java.awt.*;
 
@@ -18,23 +20,31 @@ public class MainWindow extends DuckWindow {
 
     private DuckDisplay display;
     private DuckEmulation emulation;
+    private JLabel fpsLabel;
 
     /**
      * The menu items for the menu bar.
      */
     private final String[][] menuItems = {
-            { "File", "Open Game", "Pause Game", "Close Game", "", "Save State", "Load State", "", "Options", "Exit",
-                    "" },
-            { "Game", "" },
-            { "View", "Fullscreen", "Windowed", "" },
-            { "Help", "Tutorial", "About", "", }
+            { "File", "Options", "", "Exit", "" },
+            { "Game", "Open Game", "Pause Game", "Close Game", "", "Save State", "Load State", "" },
+            { "View", "Toggle Fullscreen", "Toggle Maximise", "", "Frame Counter" },
+            { "Help", "About", "", }
     };
     private final Action menuActions[][] = {
-            { Action.LOADROM, Action.PAUSEGAME, Action.CLOSEGAME, Action.SAVESTATE, Action.LOADSTATE, Action.OPTIONS,
-                    Action.EXIT },
-            { Action.DEBUG },
-            { Action.FULLSCREEN, Action.WINDOWED },
-            { Action.TUTORIAL, Action.ABOUT }
+            { Action.OPTIONS, Action.EXIT },
+            { Action.LOADROM,
+                    Action.PAUSEGAME, Action.CLOSEGAME, Action.SAVESTATE, Action.LOADSTATE },
+            { Action.FULLSCREEN, Action.MAXIMISE, Action.FRAMECOUNTER },
+            { Action.ABOUT }
+    };
+    private final KeyStroke[][] menuKeyStrokes = {
+            { KeyStroke.getKeyStroke("F8"), KeyStroke.getKeyStroke("control Q") },
+            { KeyStroke.getKeyStroke("control N"), KeyStroke.getKeyStroke("control P"),
+                    KeyStroke.getKeyStroke("control C"), KeyStroke.getKeyStroke("control Y"), KeyStroke.getKeyStroke(
+                            "control U") },
+            { KeyStroke.getKeyStroke("F11"), KeyStroke.getKeyStroke("F12"), KeyStroke.getKeyStroke("F7") },
+            { null }
     };
 
     /**
@@ -51,6 +61,18 @@ public class MainWindow extends DuckWindow {
 
         getContentPane().setBackground(Styling.DISPLAY_BACKGROUND_COLOR);
 
+        fpsLabel = new JLabel("FPS: 0");
+        fpsLabel.setFont(Styling.MENU_FONT);
+        fpsLabel.setForeground(Styling.FPS_FOREGROUND_COLOR);
+        fpsLabel.setOpaque(true);
+        fpsLabel.setBackground(Styling.FPS_BACKGROUND_COLOR);
+        fpsLabel.setVisible(false);
+        c.gridx = 2;
+        c.gridy = 0;
+        c.anchor = GridBagConstraints.NORTHEAST;
+        c.insets = new Insets(10, 10, 10, 10);
+        add(fpsLabel, c);
+
         // Display
         display = new DuckDisplay();
         c.gridx = 1;
@@ -62,7 +84,7 @@ public class MainWindow extends DuckWindow {
         add(display, c);
 
         // Attach the emulation
-        emulation = new DuckEmulation(display);
+        emulation = new DuckEmulation(this, display);
 
         // Initialising the menu bar
         JMenuBar menuBar = new JMenuBar();
@@ -70,7 +92,7 @@ public class MainWindow extends DuckWindow {
         menuBar.setForeground(Styling.MENU_FOREGROUND_COLOR);
         menuBar.setFont(Styling.MENU_FONT);
         for (int i = 0; i < menuItems.length; i++) {
-            addMenu(menuBar, menuItems[i], menuActions[i]);
+            addMenu(menuBar, menuItems[i], menuActions[i], menuKeyStrokes[i]);
         }
         setJMenuBar(menuBar);
 
@@ -84,10 +106,13 @@ public class MainWindow extends DuckWindow {
      * @param menu The menu to add the item to.
      * @param item The name of the item to add.
      */
-    private void addMenuItem(JMenu menu, String item, Action action) {
+    private void addMenuItem(JMenu menu, String item, Action action, KeyStroke keyStroke) {
         JMenuItem menuItem = new JMenuItem(item);
         menuItem.addActionListener(new GUIActions(this, action, emulation));
         menuItem.setFont(Styling.MENU_FONT);
+        if (keyStroke != null) {
+            menuItem.setAccelerator(keyStroke);
+        }
         menu.add(menuItem);
     }
 
@@ -99,7 +124,7 @@ public class MainWindow extends DuckWindow {
      * @param items   The title of the menu in items[0] and the rest of the items to
      *                add to the menu. Breaks designated by empty strings.
      */
-    private void addMenu(JMenuBar menuBar, String[] items, Action[] actions) {
+    private void addMenu(JMenuBar menuBar, String[] items, Action[] actions, KeyStroke[] keyStrokes) {
         JMenu menu = new JMenu(items[0]);
         // remove the first item from items
         String[] tempItems = new String[items.length - 1];
@@ -113,10 +138,22 @@ public class MainWindow extends DuckWindow {
             if (items[i].equals("")) {
                 menu.addSeparator();
             } else {
-                addMenuItem(menu, items[i], actions[actionCount]);
+                addMenuItem(menu, items[i], actions[actionCount], keyStrokes[actionCount]);
                 actionCount++;
             }
         }
         menuBar.add(menu);
+    }
+
+    public void updateFrameCounter(int frames) {
+        fpsLabel.setText("FPS: " + frames);
+    }
+
+    public void toggleFrameCounter() {
+        if (fpsLabel.isVisible()) {
+            fpsLabel.setVisible(false);
+        } else {
+            fpsLabel.setVisible(true);
+        }
     }
 }
