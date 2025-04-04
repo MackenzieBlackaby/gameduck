@@ -10,9 +10,10 @@ public class Styling {
 
     // Main window styling
     public static final Color BACKGROUND_COLOR = Color.WHITE;
-    
+
     // Menu Bar styling
     public static final Font MENU_FONT = new Font("Roboto", Font.PLAIN, 12);
+    public static final Font TITLE_FONT = new Font("Roboto", Font.BOLD, 36);
     public static final Color MENU_BACKGROUND_COLOR = new Color(0, 0, 0, 0);
     public static final Color MENU_FOREGROUND_COLOR = Color.BLACK;
     public static final Color MENU_SELECTION_BACKGROUND_COLOR = new Color(0, 0, 0, 0);
@@ -20,5 +21,7 @@ public class Styling {
 
     // Display styling
     public static final Color DISPLAY_BACKGROUND_COLOR = Color.BLACK;
+    public static final Color FPS_BACKGROUND_COLOR = new Color(0, 0, 0, 192);
+    public static final Color FPS_FOREGROUND_COLOR = Color.WHITE;
 
 }
