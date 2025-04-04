@@ -48,16 +48,34 @@ public class DuckCPU {
 
         private final int id;
 
+        /**
+         * This constructor creates a new register with the given ID
+         * 
+         * @param id The ID of the register
+         */
         Register(int id) {
             this.id = id;
         }
 
+        /**
+         * Returns true if the register is an 8-bit register.
+         * The ID is masked to ensure it is within the valid range (0-10).
+         * 
+         * @return True if the register is an 8-bit register, false otherwise.
+         */
         public boolean is8Bit() {
             if (id < 0 || id > 10)
                 return false;
             return true;
         }
 
+        /**
+         * Returns the 8-bit register associated with a given ID.
+         * The ID is masked to ensure it is within the valid range (0-10).
+         * 
+         * @param id The ID of the register.
+         * @return The corresponding 8-bit register.
+         */
         public static Register get8Bit(int id) {
             if (id < 0 || id > 10) {
                 throw new IllegalArgumentException("Invalid 8-bit register ID: " + id);
@@ -65,6 +83,13 @@ public class DuckCPU {
             return Register.values()[id];
         }
 
+        /**
+         * Returns the 16-bit register associated with a given ID.
+         * The ID is masked to ensure it is within the valid range (11-16).
+         *
+         * @param id The ID of the register.
+         * @return The corresponding 16-bit register.
+         */
         public static Register get16Bit(int id) {
             if (id < 11 || id > 16) {
                 throw new IllegalArgumentException("Invalid 16-bit register ID: " + id);
@@ -72,6 +97,13 @@ public class DuckCPU {
             return Register.values()[id];
         }
 
+        /**
+         * Returns the 16-bit register associated with a 2-bit ID.
+         * The ID is masked to ensure it is within the valid range (0-3).
+         *
+         * @param bitID The 2-bit ID of the register.
+         * @return The corresponding 16-bit register.
+         */
         public static Register getRegFrom2Bit(int bitID, boolean isAFContext) {
             bitID &= 0b11;
             switch (bitID) {
@@ -88,6 +120,13 @@ public class DuckCPU {
             }
         }
 
+        /**
+         * Returns the 8-bit register associated with a 3-bit ID.
+         * The ID is masked to ensure it is within the valid range (0-7).
+         *
+         * @param bitID The 3-bit ID of the register.
+         * @return The corresponding 8-bit register.
+         */
         public static Register getRegFrom3Bit(int bitID) {
             bitID &= 0b111;
             switch (bitID) {
@@ -112,6 +151,11 @@ public class DuckCPU {
             }
         }
 
+        /**
+         * Returns the internal ID associated with this register.
+         *
+         * @return The numeric ID of the register.
+         */
         public byte getId() {
             return (byte) id;
         }
@@ -150,6 +194,13 @@ public class DuckCPU {
             return bit;
         }
 
+        /**
+         * This method returns the flag associated with a given bit ID.
+         * The ID is masked to ensure it is within the valid range (0-3).
+         * 
+         * @param bitID The bit ID of the flag
+         * @return The corresponding flag
+         */
         public static Flag getFlagFrom2Bit(byte bitID) {
             bitID &= 0b11;
             switch (bitID) {
@@ -189,14 +240,31 @@ public class DuckCPU {
             this.address = (short) address;
         }
 
+        /**
+         * This method returns the mask value of the interrupt
+         * 
+         * @return The mask value of the interrupt
+         */
         public int getMask() {
             return mask;
         }
 
+        /**
+         * This method returns the address of the interrupt
+         * 
+         * @return The address of the interrupt
+         */
         public short getAddress() {
             return address;
         }
 
+        /**
+         * This method returns the interrupt associated with a given index.
+         * The index is masked to ensure it is within the valid range (0-4).
+         * 
+         * @param index The index of the interrupt
+         * @return The corresponding interrupt
+         */
         public static Interrupt getInterrupt(int index) {
             switch (index) {
                 case 0:
@@ -235,26 +303,54 @@ public class DuckCPU {
     private boolean isHalted = false;
     private boolean isStopped = false;
 
+    // Memory and emulation references
     public final DuckMemory memory;
     public final DuckEmulation emulation;
 
+    /**
+     * This constructor creates a new CPU with the given memory and emulation
+     * references
+     * 
+     * @param memory    The memory reference
+     * @param emulation The emulation reference
+     */
     public DuckCPU(DuckMemory memory, DuckEmulation emulation) {
         this.memory = memory;
         this.emulation = emulation;
     }
 
+    /**
+     * This method sets halted
+     * 
+     * @param halted The value to set halted to
+     */
     public void setHalted(boolean halted) {
         isHalted = halted;
     }
 
+    /**
+     * This method sets stopped
+     * 
+     * @param stopped The value to set stopped to
+     */
     public void setStopped(boolean stopped) {
         isStopped = stopped;
     }
 
+    /**
+     * This method returns the value of stopped
+     * 
+     * @return The value of stopped
+     */
     public boolean isStopped() {
         return isStopped;
     }
 
+    /**
+     * This method returns the value of halted
+     * 
+     * @return The value of halted
+     */
     public boolean isHalted() {
         return isHalted;
     }
@@ -279,6 +375,11 @@ public class DuckCPU {
         return instruction.getCycleCount();
     }
 
+    /**
+     * This method returns the string representation of the CPU state
+     * 
+     * @return The string representation of the CPU state
+     */
     public String toString() {
         String af = String.format("0x%02X%02X", accumulator, flags);
         String bc = String.format("0x%04X", getBCValue());
@@ -427,7 +528,7 @@ public class DuckCPU {
      * @param value the value to set the register to
      */
     public void regSet16(Register reg, int value) {
-        value &= 0xFFFF; 
+        value &= 0xFFFF;
         switch (reg) {
             case PC:
                 programCounter = value;
@@ -482,6 +583,11 @@ public class DuckCPU {
         return bc;
     }
 
+    /**
+     * Sets the value of the BC register pair.
+     *
+     * @param value The 16-bit value to assign to BC.
+     */
     public void setBC(int value) {
         registerB = (value >> 8) & 0xFF;
         registerC = 0xFF & value;
@@ -540,11 +646,21 @@ public class DuckCPU {
         registerL = 0xFF & value;
     }
 
+    /**
+     * This method sets the value of the AF register
+     * 
+     * @param value The value to set the AF register to
+     */
     public void setAF(int value) {
         accumulator = (value >> 8) & 0xFF;
         flags = 0xFF & value;
     }
 
+    /**
+     * This method sets the value of the DE register
+     * 
+     * @param value The value to set the DE register to
+     */
     public void setDE(int value) {
         registerD = (value >> 8) & 0xFF;
         registerE = 0xFF & value;
@@ -579,10 +695,21 @@ public class DuckCPU {
         return 0xFF & registerC;
     }
 
+    /**
+     * This method sets the value of the SP register
+     * 
+     * @param value The value to set the SP register to
+     */
     public void setSP(int value) {
         stackPointer = 0xFFFF & value;
     }
 
+    /**
+     * This method gets the value of the flags register as a byte
+     * Provides Quick access to flags register without a switch case
+     * 
+     * @return The value of the flags register as a byte
+     */
     public int getF() {
         return flags;
     }
@@ -598,10 +725,20 @@ public class DuckCPU {
         }
     }
 
+    /**
+     * This method gets the value of the halt bug
+     * 
+     * @return The value of the halt bug
+     */
     public void setHaltBug(boolean value) {
         haltBug = value;
     }
 
+    /**
+     * This method gets the value of the halt bug
+     * 
+     * @return The value of the halt bug
+     */
     public boolean getHaltBug() {
         return haltBug;
     }
@@ -641,12 +778,17 @@ public class DuckCPU {
         }
     }
 
+    /**
+     * This method requests an interrupt
+     * 
+     * @param interrupt The interrupt to request
+     */
     public void requestInterrupt(Interrupt interrupt) {
         int interruptFlag = memory.read(DuckMemory.INTERRUPT_FLAG);
         memory.write(DuckMemory.INTERRUPT_FLAG, interruptFlag | interrupt.getMask());
     }
 
-    public void handleInterrupts() {
+    private void handleInterrupts() {
         if (!interruptMasterEnable)
             return;
         int interruptEnable = memory.read(DuckMemory.IE);
@@ -665,7 +807,7 @@ public class DuckCPU {
         }
     }
 
-    public void handleInterrupt(int interruptBit) {
+    private void handleInterrupt(int interruptBit) {
         DebugLogger.log("Handling interrupt: " + Interrupt.getInterrupt(interruptBit));
         int address = Interrupt.getInterrupt(interruptBit).getAddress();
         int interruptFlag = memory.read(DuckMemory.INTERRUPT_FLAG);
@@ -678,6 +820,11 @@ public class DuckCPU {
         programCounter = address;
     }
 
+    /**
+     * This method sets the interrupt master enable flag
+     * 
+     * @param enabled The value to set the interrupt master enable flag to
+     */
     public void setInterruptEnable(boolean enabled) {
         if (enabled)
             interruptMasterEnableCounter = 1;
@@ -687,10 +834,20 @@ public class DuckCPU {
         }
     }
 
+    /**
+     * This method gets the value of the interrupt master enable flag
+     * 
+     * @return The value of the interrupt master enable flag
+     */
     public boolean isInterruptMasterEnable() {
         return interruptMasterEnable;
     }
 
+    /**
+     * This method sets the interrupt master enable flag directly
+     * 
+     * @param enabled The value to set the interrupt master enable flag to
+     */
     public void setInterruptMasterEnable(boolean enabled) {
         interruptMasterEnable = enabled;
     }

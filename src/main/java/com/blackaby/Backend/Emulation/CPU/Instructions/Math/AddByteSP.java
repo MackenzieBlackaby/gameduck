@@ -5,11 +5,34 @@ import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the ADD SP, e instruction.
+ * 
+ * Adds a signed 8-bit immediate value to the stack pointer (SP),
+ * storing the result back in SP and setting flags accordingly.
+ */
 public class AddByteSP extends Instruction {
+    /**
+     * Constructs the instruction to add an immediate signed byte to SP.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public AddByteSP(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 4);
     }
 
+    /**
+     * Executes the instruction.
+     * 
+     * Adds a signed 8-bit immediate value to SP.
+     * 
+     * Flags:
+     * - Z: Cleared
+     * - N: Cleared
+     * - H: Set if lower nibble overflow occurs
+     * - C: Set if lower byte overflow occurs
+     */
     @Override
     public void run() {
         int sp = cpu.getSP();

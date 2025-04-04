@@ -5,11 +5,33 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the PUSH rr instruction.
+ * 
+ * Pushes a 16-bit register pair onto the stack.
+ * 
+ * If the register is AF, the lower nibble of F is cleared before pushing.
+ */
 public class StackPush extends Instruction {
+    /**
+     * Constructs a PUSH instruction.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public StackPush(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 4);
     }
 
+    /**
+     * Executes the PUSH instruction.
+     * 
+     * - Retrieves the 16-bit value from the specified register pair.
+     * - Pushes the upper byte first, then the lower byte, to the stack.
+     * - Adjusts the stack pointer accordingly.
+     * 
+     * For AF, the lower nibble of F is zeroed before the value is stored.
+     */
     @Override
     public void run() {
         int sp = cpu.getSP();

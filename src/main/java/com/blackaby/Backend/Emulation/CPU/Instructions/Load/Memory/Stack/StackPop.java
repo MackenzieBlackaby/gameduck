@@ -5,15 +5,36 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the POP rr instruction.
+ * 
+ * Pops two bytes from the stack and stores them in a 16-bit register pair.
+ * 
+ * Special handling is applied for AF, as the lower nibble of F must be zeroed.
+ */
 public class StackPop extends Instruction {
+    /**
+     * Constructs a POP instruction.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public StackPop(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 3);
     }
 
+    /**
+     * Executes the POP instruction.
+     * 
+     * - Reads two bytes from the stack and combines them into a 16-bit value.
+     * - Stores the value in the target register pair.
+     * - In the case of AF, the lower nibble of F is cleared.
+     * 
+     * Updates the stack pointer accordingly.
+     */
     @Override
     public void run() {
         int sp = cpu.getSP();
-        // DebugLogger.logn("SP: " + sp);
         Register register = Register.getRegFrom2Bit(opcodeValues[0], true);
 
         int lsb = memory.stackPop(sp);

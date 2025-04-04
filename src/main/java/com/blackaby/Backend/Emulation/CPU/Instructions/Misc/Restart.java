@@ -4,8 +4,20 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the RST (Restart) instructions.
+ * 
+ * RST is a call to a fixed address in memory, acting like a shorthand
+ * subroutine call.
+ * The current PC is pushed to the stack, and control jumps to one of 8 fixed
+ * addresses.
+ */
 public class Restart extends Instruction {
 
+    /**
+     * Enum representing the possible restart vector addresses for the RST
+     * instruction.
+     */
     public enum RestartType {
         RST00(0x00),
         RST08(0x08),
@@ -22,15 +34,30 @@ public class Restart extends Instruction {
             this.address = address;
         }
 
+        /**
+         * @return The fixed memory address this RST type jumps to.
+         */
         public int getAddress() {
             return address;
         }
     }
 
+    /**
+     * Constructs a RST instruction.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public Restart(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 4);
     }
 
+    /**
+     * Executes the RST instruction.
+     * 
+     * Pushes the current PC + 1 onto the stack and jumps to the
+     * restart vector determined by the opcode.
+     */
     @Override
     public void run() {
         System.out.printf("Running RST, PC=0x%04X, SP=0x%04X, Addr=0x%02X\n", cpu.getPC(), cpu.getSP(),

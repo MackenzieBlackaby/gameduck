@@ -5,20 +5,33 @@ import java.io.IOException;
 import java.io.File;
 
 /**
- * This class represents a ROM file.
- * It has a filename and the data of the ROM.
- * The data is stored as a byte array and can be read with the given function
+ * Represents a Game Boy ROM file.
+ * <p>
+ * Loads the contents of the ROM from disk and provides access to the ROM's
+ * binary data and metadata (filename, display name).
+ * </p>
  */
 public class ROM {
     private String filename;
     private int data[];
 
+    /**
+     * Constructs a ROM object with the given file path.
+     * Automatically loads the ROM data into memory.
+     *
+     * @param filename The path to the ROM file.
+     */
     public ROM(String filename) {
         this.filename = filename;
         if (!filename.equals(""))
             LoadRom();
     }
 
+    /**
+     * Returns the raw ROM data as an array of unsigned 8-bit values.
+     *
+     * @return An array containing the ROM contents.
+     */
     public int[] getData() {
         return data;
     }
@@ -58,6 +71,11 @@ public class ROM {
         return filename;
     }
 
+    /**
+     * Returns the display name of the ROM file (without path or extension).
+     *
+     * @return The ROM's base name.
+     */
     public String getName() {
         File file = new File(filename);
         String name = file.getName();

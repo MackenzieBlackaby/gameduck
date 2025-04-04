@@ -6,6 +6,14 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 
+/**
+ * Implements the rotate instructions (RL, RR, RLC, RRC).
+ * 
+ * Supports both circular rotates and rotates through carry, for:
+ * - The accumulator (A)
+ * - HL memory
+ * - General-purpose registers
+ */
 public class Rotate extends Instruction {
 
     private boolean left;
@@ -14,9 +22,19 @@ public class Rotate extends Instruction {
     private boolean circle; // true = circular rotate; false = rotate through carry
     private boolean forceZ;
 
-    // Constructor: cycle count is initially set to 2, but adjusted in run()
-    // For accumulator rotates, cycle count will be 1; for HL rotates, 4; for
-    // register rotates, 2.
+    /**
+     * Constructs a rotate instruction.
+     *
+     * @param cpu         Reference to the DuckCPU instance
+     * @param memory      Reference to memory
+     * @param left        True for left rotation, false for right
+     * @param circle      True for circular rotate, false for rotate through carry
+     * @param accumulator True if the instruction targets the accumulator (A)
+     * @param hl          True if the instruction targets the address pointed to by
+     *                    HL
+     * @param isCBPrefix  True if this is a CB-prefixed instruction (affects zero
+     *                    flag behaviour)
+     */
     public Rotate(DuckCPU cpu, DuckMemory memory, boolean left, boolean circle, boolean accumulator, boolean hl,
             boolean isCBPrefix) {
         super(cpu, memory, 2);
@@ -31,6 +49,18 @@ public class Rotate extends Instruction {
             cycles = 4;
     }
 
+    /**
+     * Executes the rotate instruction.
+     * 
+     * - Circular rotates reinsert the shifted-out bit at the opposite end.
+     * - Rotates through carry use the carry flag as input and set it from the
+     * shifted-out bit.
+     * 
+     * Updates flags accordingly:
+     * - Z: Set if result is zero (unless overridden by instruction type)
+     * - C: Set if bit was shifted out
+     * - N and H: Always cleared
+     */
     @Override
     public void run() {
         int value;

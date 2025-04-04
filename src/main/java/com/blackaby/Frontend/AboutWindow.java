@@ -3,7 +3,15 @@ package com.blackaby.Frontend;
 import java.awt.*;
 import javax.swing.*;
 
+/**
+ * This class represents the about window of the emulator.
+ * It contains information about the emulator and the author.
+ */
 public class AboutWindow extends DuckWindow {
+    /**
+     * This constructor creates a new AboutWindow with the specified title and size.
+     * It sets the default close operation and layout of the window.
+     */
     public AboutWindow() {
         super("About", 400, 300, false);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);

@@ -4,12 +4,31 @@ import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the LD (nn), SP instruction.
+ * 
+ * Stores the current stack pointer (SP) into the given 16-bit immediate memory
+ * address.
+ * The value is stored in little-endian order: low byte first, then high byte.
+ */
 public class ImmediateSPMemory extends Instruction {
 
+    /**
+     * Constructs an SP store instruction.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public ImmediateSPMemory(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 5);
     }
 
+    /**
+     * Executes the instruction.
+     * 
+     * Writes the current stack pointer to the specified address in memory,
+     * storing the lower byte first, followed by the upper byte.
+     */
     @Override
     public void run() {
         int sp = cpu.getSP();

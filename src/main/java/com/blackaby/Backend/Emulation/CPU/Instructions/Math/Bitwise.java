@@ -6,14 +6,35 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements 8-bit bitwise operations for the accumulator (A).
+ * 
+ * Supported operations:
+ * - AND: Logical AND with A
+ * - OR: Logical OR with A
+ * - XOR: Logical XOR with A
+ * 
+ * Operands may be registers, immediate values, or HL memory.
+ */
 public class Bitwise extends Instruction {
     private ValueType valueType;
     private BitwiseType bitwiseType;
 
+    /**
+     * Specifies the type of bitwise operation.
+     */
     public enum BitwiseType {
         AND, OR, XOR
     }
 
+    /**
+     * Constructs a bitwise instruction for A with a specified operand type.
+     *
+     * @param cpu         Reference to the DuckCPU instance
+     * @param memory      Reference to memory
+     * @param valueType   Source of the operand (register, HL memory, or immediate)
+     * @param bitwiseType Type of bitwise operation to perform
+     */
     public Bitwise(DuckCPU cpu, DuckMemory memory, ValueType valueType, BitwiseType bitwiseType) {
         super(cpu, memory, 2);
         this.valueType = valueType;
@@ -22,6 +43,16 @@ public class Bitwise extends Instruction {
             cycles = 1;
     }
 
+    /**
+     * Executes the bitwise instruction.
+     * 
+     * Performs the specified logical operation between A and the operand.
+     * 
+     * Flags:
+     * - Z: Set if result is zero
+     * - H: Set only for AND
+     * - N, C: Cleared
+     */
     @Override
     public void run() {
         int value = 0;

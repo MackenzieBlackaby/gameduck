@@ -3,6 +3,17 @@ package com.blackaby.Backend.Emulation.Peripherals;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Emulates the Game Boy's programmable timer peripheral.
+ * <p>
+ * The timer consists of:
+ * <ul>
+ * <li>A 16-bit internal counter (used to drive DIV and TIMA)</li>
+ * <li>A programmable frequency and enable control via TAC</li>
+ * <li>A modulo register (TMA) used to reload TIMA on overflow</li>
+ * </ul>
+ * This class handles overflow, reload delay, and interrupt triggering.
+ */
 public class DuckTimer {
     private int internalCounter = 0;
     private boolean previousTimerBit = false;
@@ -13,11 +24,24 @@ public class DuckTimer {
     private DuckMemory memory;
     private DuckCPU cpu;
 
+    /**
+     * Constructs a DuckTimer linked to the CPU and memory.
+     *
+     * @param cpu    the Game Boy CPU instance
+     * @param memory the shared memory bus
+     */
     public DuckTimer(DuckCPU cpu, DuckMemory memory) {
         this.cpu = cpu;
         this.memory = memory;
     }
 
+    /**
+     * Advances the timer by one cycle.
+     * <p>
+     * Handles internal counter increment, DIV update, TIMA incrementing,
+     * and pending overflow resolution.
+     * </p>
+     */
     public void tick() {
         // 1. If there's an overflow pending from the *previous* cycle, reload now
         if (overflowCounter == 1) {
@@ -80,10 +104,19 @@ public class DuckTimer {
         previousTimerBit = currentTimerBit;
     }
 
+    /**
+     * Resets the internal counter and clears the DIV register.
+     * Called when writing to DIV.
+     */
     public void resetDIV() {
         internalCounter = 0;
     }
 
+    /**
+     * Returns the current value of the internal 16-bit counter.
+     *
+     * @return the internal counter value
+     */
     public int getInternalCounter() {
         return internalCounter;
     }

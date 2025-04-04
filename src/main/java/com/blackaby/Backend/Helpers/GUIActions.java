@@ -54,6 +54,12 @@ public class GUIActions implements ActionListener {
         this.attachedEmulation = attachedEmulation;
     }
 
+    /**
+     * This method is called when the action is performed.
+     * It performs the action based on the action enum value.
+     * 
+     * @param e The event that triggered the action
+     */
     @Override
     public void actionPerformed(ActionEvent e) {
         switch (action) {

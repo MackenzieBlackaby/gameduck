@@ -2,6 +2,12 @@ package com.blackaby.Misc;
 
 import com.blackaby.Backend.Emulation.Graphics.GBColor;
 
+/**
+ * This class contains the default colors for the GameBoy screen.
+ * It also contains methods to reset the colors to their default values.
+ * This class is used by the PaletteManager to set the colors of the GameBoy
+ * screen.
+ */
 public class Settings {
     public static final String GB_COLOR_0 = "#E0F8D0";
     public static final String GB_COLOR_1 = "#88C070";
