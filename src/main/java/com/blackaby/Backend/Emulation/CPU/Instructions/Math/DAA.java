@@ -18,7 +18,7 @@ public class DAA extends Instruction {
         boolean h = cpu.getFlagBoolean(DuckCPU.Flag.H);
         int correction = 0;
 
-        if (n) { // Subtraction
+        if (n) { 
             if (c) {
                 correction += 0x60;
             }
@@ -27,7 +27,7 @@ public class DAA extends Instruction {
             }
 
             a = (a - correction) & 0xFF;
-        } else { // Addition
+        } else { 
             if (c || a > 0x99) {
                 correction += 0x60;
                 c = true;

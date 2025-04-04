@@ -26,7 +26,7 @@ public class Arithmetic extends Instruction {
     @Override
     public void run() {
         int value = 0;
-        Register sourceReg = null; // To track the source register if applicable
+        Register sourceReg = null;
         switch (valueType) {
             case REGISTER: {
                 sourceReg = Register.getRegFrom3Bit(opcodeValues[0]);

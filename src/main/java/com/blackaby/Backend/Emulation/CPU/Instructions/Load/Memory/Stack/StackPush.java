@@ -20,13 +20,13 @@ public class StackPush extends Instruction {
         int msb = (value >> 8) & 0xFF;
         int lsb = value & 0xFF;
 
-        sp--; // Step 1: Decrement SP by 1
-        memory.stackPush(sp, msb); // Store LSB at new SP
+        sp--;
+        memory.stackPush(sp, msb);
 
-        sp--; // Step 2: Decrement SP by 1 again
-        memory.stackPush(sp, lsb); // Store MSB at new SP
+        sp--;
+        memory.stackPush(sp, lsb);
 
-        cpu.setSP(sp); // Update SP
+        cpu.setSP(sp);
 
     }
 

@@ -2,6 +2,7 @@ package com.blackaby.Backend.Emulation.Misc;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.io.File;
 
 /**
  * This class represents a ROM file.
@@ -23,7 +24,6 @@ public class ROM {
     }
 
     private void LoadRom() {
-        // Get size of the file
         int size = 0;
         try (FileInputStream reader = new FileInputStream(filename)) {
             while (reader.read() != -1) {
@@ -35,7 +35,6 @@ public class ROM {
             return;
         }
 
-        // Read in data
         byte tempData[] = new byte[size];
         try (FileInputStream reader = new FileInputStream(filename)) {
             reader.read(tempData);
@@ -55,32 +54,17 @@ public class ROM {
      * 
      * @return The filename of the ROM
      */
-    public String getFilename() {
+    public String getPath() {
         return filename;
     }
 
-    /**
-     * This method reads an instruction from the ROM
-     * 
-     * @param location The program counter
-     * @return The instruction at the given program counter
-     */
-    public int getByte(int address) {
-        return data[address];
-    }
-
-    /**
-     * This method reads a number of bytes from the ROM
-     * 
-     * @param location The location to start reading from
-     * @param count    The number of bytes to read
-     * @return The bytes read
-     */
-    public int[] getBytes(int location, int count) {
-        int[] bytes = new int[count];
-        for (int i = 0; i < count; i++) {
-            bytes[i] = getByte(location + i);
+    public String getName() {
+        File file = new File(filename);
+        String name = file.getName();
+        int dotIndex = name.lastIndexOf('.');
+        if (dotIndex != -1) {
+            name = name.substring(0, dotIndex);
         }
-        return bytes;
+        return name;
     }
 }

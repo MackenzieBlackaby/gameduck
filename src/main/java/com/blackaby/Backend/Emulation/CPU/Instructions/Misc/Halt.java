@@ -14,10 +14,10 @@ public class Halt extends Instruction {
         boolean interruptPending = (memory.read(DuckMemory.IE) & memory.read(DuckMemory.INTERRUPT_FLAG) & 0x1F) != 0;
 
         if (!cpu.isInterruptMasterEnable() && interruptPending) {
-            // IME is disabled and an interrupt is pending: HALT bug!
+            // IME is disabled and an interrupt is pending: halt bug
             cpu.setHaltBug(true);
         } else {
-            // Normal HALT: CPU stops execution until an interrupt occurs
+            // Normal halt
             cpu.setHalted(true);
         }
     }

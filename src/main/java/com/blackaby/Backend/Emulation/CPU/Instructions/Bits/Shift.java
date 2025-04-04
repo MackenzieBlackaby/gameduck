@@ -36,14 +36,14 @@ public class Shift extends Instruction {
         } else {
             if (arithmetic) {
                 boolean bit7 = (value & 0x80) != 0;
-                value >>= 1; // Arithmetic shift right
+                value >>= 1;
                 if (bit7) {
-                    value |= 0x80; // Restore the most significant bit
+                    value |= 0x80;
                 }
             } else {
-                value >>>= 1; // Logical shift right
+                value >>>= 1;
             }
-            value = (value & 0xFF); // Possibly after the shift
+            value = (value & 0xFF);
         }
 
         if (register) {

@@ -59,21 +59,21 @@ public class DuckCPU {
         }
 
         public static Register get8Bit(int id) {
-            if (id < 0 || id > 10) { // Updated range check for 8-bit registers
+            if (id < 0 || id > 10) {
                 throw new IllegalArgumentException("Invalid 8-bit register ID: " + id);
             }
             return Register.values()[id];
         }
 
         public static Register get16Bit(int id) {
-            if (id < 11 || id > 16) { // Updated range check for 16-bit registers
+            if (id < 11 || id > 16) {
                 throw new IllegalArgumentException("Invalid 16-bit register ID: " + id);
             }
             return Register.values()[id];
         }
 
         public static Register getRegFrom2Bit(int bitID, boolean isAFContext) {
-            bitID &= 0b11; // Mask to 2 bits
+            bitID &= 0b11;
             switch (bitID) {
                 case 0b00:
                     return Register.BC;
@@ -89,7 +89,7 @@ public class DuckCPU {
         }
 
         public static Register getRegFrom3Bit(int bitID) {
-            bitID &= 0b111; // Mask to 3 bits
+            bitID &= 0b111;
             switch (bitID) {
                 case 0b000:
                     return Register.B;
@@ -125,10 +125,10 @@ public class DuckCPU {
      * The flags register is used to store the status of the CPU.
      */
     public enum Flag {
-        Z(7), // Z
-        N(6), // N
-        H(5), // H
-        C(4); // C
+        Z(7),
+        N(6),
+        H(5),
+        C(4);
 
         private final int bit;
 
@@ -151,7 +151,7 @@ public class DuckCPU {
         }
 
         public static Flag getFlagFrom2Bit(byte bitID) {
-            bitID &= 0b11; // Mask to 2 bits
+            bitID &= 0b11;
             switch (bitID) {
                 case 0b00:
                     return Z;
@@ -280,7 +280,6 @@ public class DuckCPU {
     }
 
     public String toString() {
-        // Using String.format for consistent hex formatting:
         String af = String.format("0x%02X%02X", accumulator, flags);
         String bc = String.format("0x%04X", getBCValue());
         String de = String.format("0x%04X", getDEValue());
@@ -290,7 +289,6 @@ public class DuckCPU {
         String ir = String.format("0x%02X", instructionRegister);
         String ie = String.format("0x%02X", memory.read(DuckMemory.IE));
 
-        // Extract individual flags (assuming your Flag enum uses bits as defined)
         boolean flagZ = getFlagBoolean(Flag.Z);
         boolean flagN = getFlagBoolean(Flag.N);
         boolean flagH = getFlagBoolean(Flag.H);
@@ -326,7 +324,7 @@ public class DuckCPU {
      * @throws IllegalArgumentException If the register is unknown
      */
     public void regSet(Register reg, int value) {
-        value &= 0xFF; // Mask to 8-bit value
+        value &= 0xFF;
         switch (reg) {
             case A:
                 accumulator = value;
@@ -429,7 +427,7 @@ public class DuckCPU {
      * @param value the value to set the register to
      */
     public void regSet16(Register reg, int value) {
-        value &= 0xFFFF; // Mask to 16-bit value
+        value &= 0xFFFF; 
         switch (reg) {
             case PC:
                 programCounter = value;

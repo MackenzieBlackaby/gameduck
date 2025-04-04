@@ -1,11 +1,14 @@
 package com.blackaby.Backend.Emulation;
 
 import com.blackaby.Frontend.DebugLogger;
+import com.blackaby.Main;
 import com.blackaby.Backend.Emulation.CPU.*;
 import com.blackaby.Backend.Emulation.Misc.ROM;
+import com.blackaby.Backend.Emulation.Misc.Specifics;
 import com.blackaby.Backend.Emulation.Peripherals.DuckTimer;
 import com.blackaby.Frontend.DuckDisplay;
-import com.blackaby.Backend.Emulation.CPU.InstructionTypeManager.InstructionType;
+import com.blackaby.Frontend.MainWindow;
+import com.blackaby.Backend.Emulation.CPU.DuckDecoder.InstructionType;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
 /**
@@ -21,6 +24,7 @@ public class DuckEmulation implements Runnable {
     private DuckPPU ppu;
     private ROM rom;
     private DuckTimer timerSet;
+    private MainWindow mainWindow;
 
     // Threading Variables
     private Thread emulationThread;
@@ -28,14 +32,18 @@ public class DuckEmulation implements Runnable {
     private volatile boolean running = false;
     private volatile boolean paused = false;
     private Instruction instruction = null;
+    private int frames = 0;
+    private int prevLY = 0;
+    private String romName = null;
 
     /**
      * This constructor creates a new DuckEmulation
      * 
      * @param display The display to be used in the emulation
      */
-    public DuckEmulation(DuckDisplay display) {
+    public DuckEmulation(MainWindow window, DuckDisplay display) {
         this.display = display;
+        this.mainWindow = window;
     }
 
     /**
@@ -48,14 +56,16 @@ public class DuckEmulation implements Runnable {
         paused = false;
         // Initialise hardware
         rom = new ROM(romfile);
+        romName = rom.getName();
         memory = new DuckMemory();
         cpu = new DuckCPU(memory, this);
-        InstructionTypeManager.initialiseMap(cpu, memory, this);
+        DuckDecoder.initialiseMap(cpu, memory, this);
         ppu = new DuckPPU(cpu, memory, display);
         timerSet = new DuckTimer(cpu, memory);
         memory.setTimerSet(timerSet);
         // Set hardware references
         // Start emulation thread
+        mainWindow.subtitle(romName, "[" + frames + " FPS]");
         emulationThread = new Thread(this);
         emulationThread.start();
     }
@@ -65,6 +75,11 @@ public class DuckEmulation implements Runnable {
      */
     public void pauseEmulation() {
         paused = !paused;
+        if (paused) {
+            mainWindow.subtitle("Paused");
+        } else {
+            mainWindow.subtitle(romName, "[" + frames + " FPS]");
+        }
     }
 
     /**
@@ -73,6 +88,7 @@ public class DuckEmulation implements Runnable {
     public void stopEmulation() {
         running = false;
         paused = false;
+        mainWindow.subtitle();
     }
 
     public void run() {
@@ -88,13 +104,29 @@ public class DuckEmulation implements Runnable {
         memory.write(0xFF00, 0xFF);
         // Load rom
         memory.loadROM(rom);
+        startFrameCounter();
         // Main loop for emulation
+        long prevTime = System.nanoTime();
+        double leftOvers = 0;
         while (running) {
             try {
-                InstructionTick(false);
+                long rn = System.nanoTime();
+                double delta = rn - prevTime + leftOvers;
+                int ticks = (int) (delta / Specifics.US_PER_CYCLE);
+                leftOvers = delta - (ticks * Specifics.US_PER_CYCLE);
+                prevTime = rn;
+                while (ticks > 0) {
+                    ticks -= InstructionTick(false);
+                    int newLY = memory.read(DuckMemory.LY);
+                    // Check if the LY register has changed
+                    if (newLY < prevLY)
+                        countFrame();
+                    prevLY = newLY;
+                }
                 if (paused) {
                     while (paused)
                         Thread.sleep(100);
+                    startFrameCounter();
                 }
             } catch (InterruptedException e) {
                 e.printStackTrace();
@@ -110,7 +142,7 @@ public class DuckEmulation implements Runnable {
         emulationThread = null;
     }
 
-    private void InstructionTick(boolean skipStops) throws InterruptedException {
+    private int InstructionTick(boolean skipStops) throws InterruptedException {
         // check if an interrupt is pending
         boolean interruptPending = (memory.getIE() & memory.getIF() & 0x1F) != 0;
         if (cpu.isStopped() && !skipStops) {
@@ -118,44 +150,41 @@ public class DuckEmulation implements Runnable {
             if ((memory.getIE() & memory.getIF() & 0x10) != 0) {
                 cpu.setStopped(false);
             }
-            return;
+            return 0;
         } else if (cpu.isHalted()) {
             if (interruptPending) {
                 cpu.setHalted(false);
                 // CPU resumes; if IME is enabled, interrupt will be serviced next cycle
             }
-            clockCounter = 1; // idle cycle during HALT
+            clockCounter = 1;
         } else {
             instruction = ReadNextInstruction();
             clockCounter = 4 * instruction.getCycleCount();
             cpu.execute(instruction);
         }
-        // Always tick hardware (PPU, timers, serial) normally
+        int prevClockCounter = clockCounter;
+        // Always tick hardware normally
         for (; clockCounter > 0; clockCounter--) {
             timerSet.tick();
             ppu.step();
             handleSerial();
             memory.tickDMA();
         }
+        return prevClockCounter;
     }
 
     private void handleSerial() {
         int serialControl = memory.read(DuckMemory.SERIAL_CONTROL);
         int serialData = memory.read(DuckMemory.SERIAL_DATA);
 
-        // If transfer start flag (bit 7) is set AND internal clock (bit 0) is used
         if ((serialControl & 0x81) == 0x81) {
 
-            // Optionally log it or store it elsewhere
             DebugLogger.serialOutput(serialData);
 
-            // Write received data back (0xFF is common for unconnected)
             memory.write(DuckMemory.SERIAL_DATA, 0xFF);
 
-            // Clear transfer start flag (bit 7)
             memory.write(DuckMemory.SERIAL_CONTROL, serialControl & ~0x80);
 
-            // Optionally request the Serial interrupt (optional in test ROMs)
             // cpu.requestInterrupt(DuckCPU.Interrupt.SERIAL);
         }
     }
@@ -184,7 +213,7 @@ public class DuckEmulation implements Runnable {
         }
 
         // Get operand type
-        InstructionType type = InstructionTypeManager.getType(opcode, isCB);
+        InstructionType type = DuckDecoder.getType(opcode, isCB);
         // Check for unknown opcode
         if (type == null) {
             DebugLogger.logn("Unknown opcode: 0x" + Integer.toHexString(opcode));
@@ -221,9 +250,36 @@ public class DuckEmulation implements Runnable {
         // Update PC
         if (!cpu.getHaltBug())
             cpu.setPC(pc);
+        else
+            cpu.setHaltBug(false);
 
         // Construct instruction
-        return InstructionTypeManager.constructInstruction(type, opcode,
+        return DuckDecoder.constructInstruction(type, opcode,
                 operands);
+    }
+
+    public void countFrame() {
+        frames++;
+    }
+
+    public void startFrameCounter() {
+        // Reset frame counter
+        frames = 0;
+        // Start frame counter thread
+        Thread frameCounterThread = new Thread(() -> {
+            while (running && !paused) {
+                try {
+                    Thread.sleep(1000);
+                    if (paused)
+                        continue;
+                    mainWindow.updateFrameCounter(frames);
+                    mainWindow.subtitle(romName, "[" + frames + " FPS]");
+                    frames = 0;
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            }
+        });
+        frameCounterThread.start();
     }
 }

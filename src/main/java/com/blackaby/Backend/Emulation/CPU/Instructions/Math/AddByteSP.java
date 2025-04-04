@@ -13,18 +13,16 @@ public class AddByteSP extends Instruction {
     @Override
     public void run() {
         int sp = cpu.getSP();
-        int offset = (byte) operands[0]; // -128..+127
+        int offset = (byte) operands[0];
 
-        // For the 8-bit carry checks, mask offset to 0..255
         int spLow = sp & 0xFF;
-        int offsetLow = offset & 0xFF; // ignoring sign here
+        int offsetLow = offset & 0xFF;
 
         boolean halfCarry = ((spLow & 0x0F) + (offsetLow & 0x0F)) > 0x0F;
         boolean carry = (spLow + offsetLow) > 0xFF;
 
-        // Now do the signed 16-bit addition for SP
-        int result = sp + offset; // This is the real SP update
-        cpu.setSP(result & 0xFFFF); // typically mask to 16 bits
+        int result = sp + offset;
+        cpu.setSP(result & 0xFFFF);
 
         cpu.deactivateFlags(Flag.Z, Flag.N);
         cpu.setFlag(Flag.H, halfCarry);
