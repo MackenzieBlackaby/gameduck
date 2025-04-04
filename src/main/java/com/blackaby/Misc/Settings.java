@@ -8,8 +8,15 @@ public class Settings {
     public static final String GB_COLOR_2 = "#346856";
     public static final String GB_COLOR_3 = "#081820";
 
-    public static final GBColor GB_COLOR_0_OBJ = new GBColor(GB_COLOR_0);
-    public static final GBColor GB_COLOR_1_OBJ = new GBColor(GB_COLOR_1);
-    public static final GBColor GB_COLOR_2_OBJ = new GBColor(GB_COLOR_2);
-    public static final GBColor GB_COLOR_3_OBJ = new GBColor(GB_COLOR_3);
+    public static GBColor GB_COLOR_0_OBJ = new GBColor(GB_COLOR_0);
+    public static GBColor GB_COLOR_1_OBJ = new GBColor(GB_COLOR_1);
+    public static GBColor GB_COLOR_2_OBJ = new GBColor(GB_COLOR_2);
+    public static GBColor GB_COLOR_3_OBJ = new GBColor(GB_COLOR_3);
+
+    public static void reset() {
+        GB_COLOR_0_OBJ = new GBColor(GB_COLOR_0);
+        GB_COLOR_1_OBJ = new GBColor(GB_COLOR_1);
+        GB_COLOR_2_OBJ = new GBColor(GB_COLOR_2);
+        GB_COLOR_3_OBJ = new GBColor(GB_COLOR_3);
+    }
 }
