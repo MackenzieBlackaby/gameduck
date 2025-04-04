@@ -83,6 +83,10 @@ public class DuckWindow extends JFrame {
         this(title, width, height, true);
     }
 
+    /**
+     * This method toggles the maximised state of the window.
+     * It sets the window to maximised or exits maximised mode.
+     */
     public void toggleMaximise() {
         if (isMaximised) {
             setExtendedState(JFrame.NORMAL);
@@ -96,6 +100,10 @@ public class DuckWindow extends JFrame {
         isMaximised = !isMaximised;
     }
 
+    /**
+     * This method toggles the fullscreen mode of the window.
+     * It sets the window to fullscreen or exits fullscreen mode.
+     */
     public void toggleFullScreen() {
         GraphicsDevice g = GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice();
 
@@ -121,6 +129,11 @@ public class DuckWindow extends JFrame {
         isFullscreen = !isFullscreen;
     }
 
+    /**
+     * This method sets the title of the window.
+     * 
+     * @param title The title of the window.
+     */
     public void subtitle(String... subtitle) {
         StringBuilder sb = new StringBuilder(title);
         for (String s : subtitle) {

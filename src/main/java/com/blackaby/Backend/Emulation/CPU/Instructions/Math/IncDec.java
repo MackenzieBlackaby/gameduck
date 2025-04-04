@@ -6,16 +6,39 @@ import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 
+/**
+ * Implements the INC and DEC instructions.
+ * 
+ * Increments or decrements an 8-bit register or the memory location at HL,
+ * updating flags accordingly.
+ */
 public class IncDec extends Instruction {
     private ValueType valueType;
     private boolean increment;
 
+    /**
+     * Constructs an INC or DEC instruction.
+     *
+     * @param cpu       Reference to the DuckCPU instance
+     * @param memory    Reference to memory
+     * @param valueType Operand type (register or HL memory)
+     * @param increment True for INC; false for DEC
+     */
     public IncDec(DuckCPU cpu, DuckMemory memory, ValueType valueType, boolean increment) {
         super(cpu, memory, 3);
         this.valueType = valueType;
         this.increment = increment;
     }
 
+    /**
+     * Executes the INC or DEC instruction.
+     * 
+     * - Updates the specified operand
+     * - Flags:
+     * - Z: Set if result is zero
+     * - N: Set on DEC, cleared on INC
+     * - H: Set if lower nibble overflows (INC) or borrows (DEC)
+     */
     @Override
     public void run() {
         int value = 0;

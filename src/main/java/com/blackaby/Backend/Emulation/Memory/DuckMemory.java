@@ -4,8 +4,23 @@ import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Peripherals.DuckTimer;
 import com.blackaby.Frontend.DebugLogger;
 
+/**
+ * Represents the Game Boy's memory system.
+ * <p>
+ * Provides read/write access to all memory regions, including handling for:
+ * - Echo RAM
+ * - DMA transfers
+ * - Stack operations
+ * - Special register behaviour (e.g., DIV reset, DMA trigger)
+ * </p>
+ * Supports loading a ROM and provides access to memory-mapped IO.
+ */
+
 public class DuckMemory {
 
+    /**
+     * Represents the Memory Bank Controller (MBC) type in use by the cartridge.
+     */
     public enum MBCType {
         ROM_ONLY, MBC1, MBC2, MBC3, MBC5, UNKNOWN
     }
@@ -64,32 +79,36 @@ public class DuckMemory {
     private int dmaCounter = 0;
     private int dmaSource = 0;
 
+    /**
+     * Constructs a new memory instance and clears RAM.
+     */
     public DuckMemory() {
         this.ram = new int[MEMORY_SIZE];
     }
 
+    /**
+     * Sets the attached timer component used for timing registers.
+     *
+     * @param timerSet The timer to bind.
+     */
     public void setTimerSet(DuckTimer timerSet) {
         this.timerSet = timerSet;
     }
 
+    /**
+     * Clears the rom from address range 0x0000–0x3FFF.
+     */
     public void unmapRom() {
         for (int i = ROM_BANK_0_START; i <= ROM_BANK_0_END; i++) {
             ram[i] = 0;
         }
     }
 
-    public void printStack(int sp) {
-        for (int i = WORK_RAM_END; i >= sp; i--) {
-            DebugLogger.logn("0x" + Integer.toHexString(ram[i]));
-        }
-    }
-
-    public void printMemory() {
-        for (int i = 0; i < MEMORY_SIZE; i++) {
-            DebugLogger.log(Integer.toHexString(ram[i]) + " ");
-        }
-    }
-
+    /**
+     * Loads a ROM into memory, copying ROM contents into address space.
+     *
+     * @param rom The ROM object containing cartridge data.
+     */
     public void loadROM(ROM rom) {
         this.rom = rom.getData();
 
@@ -166,6 +185,13 @@ public class DuckMemory {
         // DebugLogger.logn("Total RAM Banks: " + totalRamBanks);
     }
 
+    /**
+     * Reads a byte from memory, with special handling for echo RAM and special
+     * registers.
+     *
+     * @param address The memory address to read from.
+     * @return The 8-bit value at that address.
+     */
     public int read(int address) {
         if (address == DuckMemory.DIV) {
             return timerSet.getInternalCounter() >> 8;
@@ -179,6 +205,13 @@ public class DuckMemory {
         return 0xFF & ram[address];
     }
 
+    /**
+     * Writes a byte to memory, with handling for echo RAM, DIV resets and DMA
+     * triggers.
+     *
+     * @param address The memory address to write to.
+     * @param value   The 8-bit value to write.
+     */
     public void write(int address, int value) {
         if (address >= NOT_USABLE_START && address <= NOT_USABLE_END) {
             return;
@@ -200,6 +233,9 @@ public class DuckMemory {
         }
     }
 
+    /**
+     * Emulates a single DMA transfer cycle, copying one byte to OAM.
+     */
     public void tickDMA() {
         if (!dmaActive)
             return;
@@ -211,14 +247,33 @@ public class DuckMemory {
         }
     }
 
+    /**
+     * Pushes a byte onto the stack at the given address.
+     *
+     * @param address The stack address.
+     * @param value   The value to push.
+     */
     public void stackPush(int address, int value) {
         write(address, value);
     }
 
+    /**
+     * Pops a byte from the stack at the given address.
+     *
+     * @param address The address to pop from.
+     * @return The 8-bit value.
+     */
     public int stackPop(int address) {
         return read(address);
     }
 
+    /**
+     * Reads a sequence of bytes from memory.
+     *
+     * @param start The start address.
+     * @param count The number of bytes to read.
+     * @return An array of 8-bit values.
+     */
     public int[] readBytes(int start, int count) {
         int[] bytes = new int[count];
         for (int i = 0; i < count; i++) {
@@ -227,19 +282,20 @@ public class DuckMemory {
         return bytes;
     }
 
-    public void printVRAM() {
-        for (int i = VRAM_START; i <= VRAM_END; i++) {
-            // DebugLogger.log(Integer.toHexString(read(i)) + " ");
-            if ((i + 1) % 16 == 0) {
-                // DebugLogger.logn();
-            }
-        }
-    }
-
+    /**
+     * Returns the value of the Interrupt Enable register.
+     *
+     * @return The IE register value.
+     */
     public int getIE() {
         return read(IE);
     }
 
+    /**
+     * Returns the value of the Interrupt Flag register.
+     *
+     * @return The IF register value.
+     */
     public int getIF() {
         return read(INTERRUPT_FLAG);
     }

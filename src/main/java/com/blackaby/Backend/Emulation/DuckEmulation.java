@@ -91,6 +91,9 @@ public class DuckEmulation implements Runnable {
         mainWindow.subtitle();
     }
 
+    /**
+     * This method is the main loop of the emulation
+     */
     public void run() {
         memory.write(DuckMemory.LCDC, 0x91);
         // Set initial values
@@ -233,20 +236,6 @@ public class DuckEmulation implements Runnable {
             pc += operandCount;
         }
 
-        // // * Debug Print
-        // if (cpu.isInterruptMasterEnable() || cpu.getPC() < 0x100) {
-        // DebugLogger.log("[DECODING INSTRUCTION] PC: 0x" +
-        // Integer.toHexString(cpu.getPC()) + " ");
-        // DebugLogger.log("Opcode: 0x" + Integer.toHexString(opcode) + " ");
-        // DebugLogger.log("Operands: { ");
-        // for (int i = 0; i < operandCount; i++) {
-        // DebugLogger.log("0x" + Integer.toHexString(operands[i]) + " ");
-        // }
-        // DebugLogger.logn("} Type: " + type);
-        // DebugLogger.logn(cpu.toString());
-        // }
-        // // *
-
         // Update PC
         if (!cpu.getHaltBug())
             cpu.setPC(pc);
@@ -258,11 +247,11 @@ public class DuckEmulation implements Runnable {
                 operands);
     }
 
-    public void countFrame() {
+    private void countFrame() {
         frames++;
     }
 
-    public void startFrameCounter() {
+    private void startFrameCounter() {
         // Reset frame counter
         frames = 0;
         // Start frame counter thread

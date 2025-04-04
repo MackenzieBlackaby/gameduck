@@ -15,7 +15,30 @@ import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.Instructions.Math.Arithmetic.ArithmeticType;
 import com.blackaby.Backend.Emulation.CPU.Instructions.Math.Bitwise.BitwiseType;
 
+/**
+ * The DuckDecoder class is responsible for decoding Game Boy CPU opcodes and
+ * mapping them to their corresponding Instruction instances.
+ * <p>
+ * It defines an {@link InstructionType} enumeration that categorises all
+ * supported
+ * instruction formats by opcode patterns, operand count, and CB-prefix status.
+ * The class also provides static methods for initialising a map of opcodes to
+ * instructions, determining an InstructionType from an opcode, and constructing
+ * a fully configured Instruction instance from its opcode and operands.
+ * </p>
+ */
 public class DuckDecoder {
+    /**
+     * The InstructionType enum enumerates all the supported opcode patterns and
+     * associated instruction metadata.
+     * <p>
+     * Each instance holds the base opcode, a main mask (or masks) used for matching
+     * and
+     * operand extraction, the number of operand bytes required, and a flag
+     * indicating
+     * whether this is a CB-prefixed instruction.
+     * </p>
+     */
     public enum InstructionType {
         // Load instructions. Main mask specifies which values are excluded from the
         // opcode
@@ -143,6 +166,15 @@ public class DuckDecoder {
         private final int operandCount;
         private final boolean cbStatus;
 
+        /**
+         * Constructs an InstructionType with multiple masks.
+         *
+         * @param opcode       The base opcode value.
+         * @param mainMask     The main mask used to exclude variable bits.
+         * @param masks        Additional masks for operand extraction.
+         * @param operandCount The number of operand bytes.
+         * @param cbStatus     True if this instruction is CB-prefixed.
+         */
         InstructionType(int opcode, int mainMask, int masks[], int operandCount, boolean cbStatus) {
             this.opcode = opcode;
             this.masks = masks;
@@ -151,6 +183,14 @@ public class DuckDecoder {
             this.cbStatus = cbStatus;
         }
 
+        /**
+         * Constructs an InstructionType with a single mask.
+         *
+         * @param opcode       The base opcode value.
+         * @param mainMask     The mask used for both matching and operand extraction.
+         * @param operandCount The number of operand bytes.
+         * @param cbStatus     True if this instruction is CB-prefixed.
+         */
         InstructionType(int opcode, int mainMask, int operandCount, boolean cbStatus) {
             this.opcode = opcode;
             this.masks = new int[] { mainMask };
@@ -159,14 +199,31 @@ public class DuckDecoder {
             this.cbStatus = cbStatus;
         }
 
+        /**
+         * Returns the base opcode associated with this instruction type.
+         *
+         * @return The opcode integer value.
+         */
         public int getOpcode() {
             return opcode;
         }
 
+        /**
+         * Returns the number of operand bytes required by this instruction.
+         *
+         * @return The operand count.
+         */
         public int getOperandCount() {
             return operandCount;
         }
 
+        /**
+         * Calculates the number of right shifts needed to isolate a value from a given
+         * bitmask.
+         *
+         * @param mask The bitmask used to extract bits from the opcode.
+         * @return The number of bits to shift.
+         */
         public static int getShiftAmount(int mask) {
             int shift = 0;
             while ((mask & 1) == 0) {
@@ -176,14 +233,34 @@ public class DuckDecoder {
             return shift;
         }
 
+        /**
+         * Determines if the given opcode matches this instruction type's pattern.
+         *
+         * @param inputOpcode The full 8-bit opcode to test.
+         * @return True if the opcode matches this type; false otherwise.
+         */
         public boolean matches(int inputOpcode) {
             return (inputOpcode & ~mainMask) == (opcode & ~mainMask);
         }
 
+        /**
+         * Extracts the value from the input opcode using the specified bitmask.
+         *
+         * @param inputOpcode The opcode from which to extract the value.
+         * @param bitMask     The bitmask used for extraction.
+         * @return The extracted value.
+         */
         private int extractValue(int inputOpcode, int bitMask) {
             return (inputOpcode & bitMask) >> getShiftAmount(bitMask);
         }
 
+        /**
+         * Extracts encoded bitfield values from the opcode using this instruction
+         * type's masks.
+         *
+         * @param opcode The full 8-bit opcode.
+         * @return An array of values decoded from the opcode.
+         */
         public int[] getValues(int opcode) {
             int[] values = new int[masks.length];
             if (masks[0] != 0) {
@@ -198,6 +275,14 @@ public class DuckDecoder {
 
     private static Map<InstructionType, Instruction> instructionMap;
 
+    /**
+     * Initialises the instruction map by associating each InstructionType with its
+     * corresponding Instruction instance.
+     *
+     * @param cpu       The DuckCPU instance.
+     * @param memory    The DuckMemory instance.
+     * @param emulation The DuckEmulation instance.
+     */
     public static void initialiseMap(DuckCPU cpu, DuckMemory memory, DuckEmulation emulation) {
         instructionMap = new HashMap<InstructionType, Instruction>();
         instructionMap.put(InstructionType.REGISTER_REGISTER, new LoadToRegister(cpu, memory, false));
@@ -380,6 +465,13 @@ public class DuckDecoder {
         instructionMap.put(InstructionType.NOP, new Nop(cpu, memory));
     }
 
+    /**
+     * Determines the InstructionType corresponding to the given opcode.
+     *
+     * @param opcode The 8-bit opcode.
+     * @param isCB   True if the opcode is CB-prefixed; false otherwise.
+     * @return The matching InstructionType, or null if no match is found.
+     */
     public static InstructionType getType(int opcode, boolean isCB) {
         opcode &= 0xFF;
         for (InstructionType type : InstructionType.values()) {
@@ -390,6 +482,15 @@ public class DuckDecoder {
         return null;
     }
 
+    /**
+     * Constructs a fully configured Instruction instance based on the given
+     * InstructionType, opcode, and operands.
+     *
+     * @param type     The InstructionType to use.
+     * @param opcode   The 8-bit opcode.
+     * @param operands An array of operand values.
+     * @return A fully configured Instruction instance ready for execution.
+     */
     public static Instruction constructInstruction(InstructionType type, int opcode, int[] operands) {
         InstructionType instructionType = type;
         Instruction instruction = instructionMap.get(instructionType);

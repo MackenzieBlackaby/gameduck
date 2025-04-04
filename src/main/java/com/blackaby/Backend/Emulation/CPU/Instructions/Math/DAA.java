@@ -4,12 +4,35 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
+/**
+ * Implements the DAA (Decimal Adjust Accumulator) instruction.
+ * 
+ * Adjusts the accumulator (A) for BCD (Binary-Coded Decimal) representation,
+ * based on the result of the previous arithmetic operation.
+ */
 public class DAA extends Instruction {
 
+    /**
+     * Constructs the DAA instruction.
+     *
+     * @param cpu    Reference to the DuckCPU instance
+     * @param memory Reference to memory
+     */
     public DAA(DuckCPU cpu, DuckMemory memory) {
         super(cpu, memory, 1);
     }
 
+    /**
+     * Executes the DAA instruction.
+     * 
+     * Applies a correction to the accumulator (A) to form a valid BCD value,
+     * depending on the N (subtract), H (half-carry), and C (carry) flags.
+     * 
+     * Flags:
+     * - Z: Set if the result is zero
+     * - H: Always cleared
+     * - C: Set if the adjustment included 0x60
+     */
     @Override
     public void run() {
         int a = cpu.getAccumulator();
@@ -18,7 +41,7 @@ public class DAA extends Instruction {
         boolean h = cpu.getFlagBoolean(DuckCPU.Flag.H);
         int correction = 0;
 
-        if (n) { 
+        if (n) {
             if (c) {
                 correction += 0x60;
             }
@@ -27,7 +50,7 @@ public class DAA extends Instruction {
             }
 
             a = (a - correction) & 0xFF;
-        } else { 
+        } else {
             if (c || a > 0x99) {
                 correction += 0x60;
                 c = true;

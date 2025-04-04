@@ -9,16 +9,40 @@ import com.blackaby.Misc.Settings;
 import com.blackaby.Frontend.DebugLogger;
 
 /**
- * DuckPPU class with corrected VBLANK timing.
+ * Emulates the Pixel Processing Unit (PPU) of the Game Boy.
+ * <p>
+ * The PPU is responsible for rendering the screen by progressing through
+ * timed scanline phases (OAM, VRAM, HBLANK, and VBLANK). It interacts
+ * with video memory to fetch background tiles and writes pixels to the
+ * display buffer. It also handles STAT and VBLANK interrupt generation.
+ * </p>
+ * <p>
+ * Currently supports background rendering only. Window and sprite rendering
+ * can be added later.
+ * </p>
  */
 public class DuckPPU {
 
+    /** Duration (in cycles) of the OAM scanline phase. */
     public static final int OAM_DURATION = 80;
+
+    /** Duration (in cycles) of the VRAM scanline phase. */
     public static final int VRAM_DURATION = 172;
+
+    /** Duration (in cycles) of the HBLANK scanline phase. */
     public static final int HBLANK_DURATION = 204;
 
+    /** Total number of cycles per scanline. */
     private static final int SCANLINE_CYCLES = 456;
 
+    /**
+     * Represents the current mode of the PPU.
+     * Each mode corresponds to a specific phase in the LCD scanline timing:
+     * - OAM: Scanline is fetching sprite data
+     * - VRAM: Scanline is fetching tile data
+     * - HBLANK: Horizontal blanking after scanline render
+     * - VBLANK: Vertical blanking after all visible scanlines
+     */
     private enum PPUMode {
         HBLANK,
         VBLANK,

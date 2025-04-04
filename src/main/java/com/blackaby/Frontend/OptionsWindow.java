@@ -7,9 +7,17 @@ import com.blackaby.Misc.Config;
 import javax.swing.*;
 import java.awt.*;
 
+/**
+ * This class represents the options window of the application.
+ * It allows the user to change the color palette and save/load palettes.
+ */
 public class OptionsWindow extends DuckWindow {
     private final JPanel[] colorPreviews = new JPanel[4];
 
+    /**
+     * Constructor for the OptionsWindow.
+     * Sets up the layout, components, and event listeners.
+     */
     public OptionsWindow() {
         super("Options", 600, 600, false);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -134,6 +142,12 @@ public class OptionsWindow extends DuckWindow {
         setVisible(true);
     }
 
+    /**
+     * Updates the settings color based on the selected color.
+     *
+     * @param index The index of the color to update (0-3).
+     * @param color The new color to set.
+     */
     private void updateSettingsColor(int index, Color color) {
         String hex = String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
         switch (index) {

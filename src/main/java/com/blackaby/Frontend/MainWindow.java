@@ -145,10 +145,18 @@ public class MainWindow extends DuckWindow {
         menuBar.add(menu);
     }
 
+    /**
+     * Updates the frame counter label with the current frame count.
+     * @param frames The current frame count.
+     */
     public void updateFrameCounter(int frames) {
         fpsLabel.setText("FPS: " + frames);
     }
 
+    /**
+     * Toggles the visibility of the frame counter label.
+     * If the label is visible, it will be hidden. If it is hidden, it will be shown.
+     */
     public void toggleFrameCounter() {
         if (fpsLabel.isVisible()) {
             fpsLabel.setVisible(false);

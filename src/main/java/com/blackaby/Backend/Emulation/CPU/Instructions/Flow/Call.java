@@ -5,22 +5,44 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 
+/**
+ * Implements the CALL instruction.
+ * 
+ * Performs an unconditional or conditional subroutine call.
+ * 
+ * - If conditional, the decision is based on Z or C flags.
+ * - On success, pushes the current PC onto the stack and jumps to the target
+ * address.
+ */
 public class Call extends Instruction {
 
     boolean conditional;
 
-    // Call unconditional 6 cycles
-    // Call conditional 3 cycles if fail, 6 cycles if success
+    /**
+     * Constructs a CALL instruction.
+     *
+     * @param cpu         Reference to the DuckCPU instance
+     * @param memory      Reference to memory
+     * @param conditional True if the CALL is conditional; false for unconditional
+     */
     public Call(DuckCPU cpu, DuckMemory memory, boolean conditional) {
         super(cpu, memory, 3);
         this.conditional = conditional;
     }
 
+    /**
+     * Executes the CALL instruction.
+     * 
+     * If the condition is met (or unconditional), the current program counter is
+     * pushed to the stack and control jumps to the 16-bit target address.
+     * 
+     * Updates:
+     * - Stack pointer (SP) is decremented and used to store return address
+     * - Program counter (PC) is set to the call target
+     * - Adds 3 cycles if the call is executed
+     */
     @Override
     public void run() {
-        // DebugLogger.logn("Executing CALL instruction...");
-
-        // Handle conditional call
         if (conditional) {
             int condition = opcodeValues[0] & 0b11;
             switch (condition) {
@@ -53,27 +75,17 @@ public class Call extends Instruction {
 
         cycles += 3;
 
-        // Extract the target address from instruction operands
         int address = (operands[1] << 8) | (operands[0] & 0xFF);
-        // DebugLogger.logn("CALL target address: " + String.format("0x%04X",
-        // address));
 
-        // Save the current PC onto the stack
         int sp = cpu.getSP();
         int returnAddress = cpu.getPC();
-        // DebugLogger.logn("Current SP: " + String.format("0x%04X", sp));
-        // DebugLogger.logn("Pushing return address onto stack: " +
-        // String.format("0x%04X", returnAddress));
 
         sp--;
         memory.stackPush(sp, (returnAddress >> 8) & 0xFF);
         sp--;
         memory.stackPush(sp, returnAddress & 0xFF);
         cpu.setSP(sp);
-        // DebugLogger.logn("Updated SP after push: " + String.format("0x%04X",
-        // cpu.getSP()));
 
-        // Set PC to the new address
         cpu.setPC(address);
     }
 }

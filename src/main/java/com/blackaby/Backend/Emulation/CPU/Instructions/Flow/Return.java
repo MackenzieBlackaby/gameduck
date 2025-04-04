@@ -5,6 +5,14 @@ import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
 
+/**
+ * Implements the RET and RETI instructions.
+ * 
+ * Handles:
+ * - Unconditional returns
+ * - Conditional returns based on Z and C flags
+ * - RETI (return from interrupt), which re-enables interrupt handling
+ */
 public class Return extends Instruction {
 
     boolean conditional;
@@ -13,12 +21,29 @@ public class Return extends Instruction {
     // Return unconditional: 4 cycles
     // Return conditional: 5 cycles in success, 2 cycles in fail
     // Return from interrupt: 4 cycles
+    /**
+     * Constructs a Return instruction.
+     *
+     * @param cpu         Reference to the DuckCPU instance
+     * @param memory      Reference to memory
+     * @param conditional True if the return is conditional
+     * @param interrupt   True if this is a RETI instruction
+     */
     public Return(DuckCPU cpu, DuckMemory memory, boolean conditional, boolean interrupt) {
         super(cpu, memory, conditional ? 5 : 4);
         this.conditional = conditional;
         this.interrupt = interrupt;
     }
 
+    /**
+     * Executes the return instruction.
+     * 
+     * - If conditional and the condition is not met, the return is skipped and
+     * cycles adjusted.
+     * - Otherwise, the return address is popped from the stack and execution
+     * resumes.
+     * - If RETI, interrupt master enable is set.
+     */
     @Override
     public void run() {
         if (conditional) {

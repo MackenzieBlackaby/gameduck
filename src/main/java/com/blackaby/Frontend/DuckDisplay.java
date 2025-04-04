@@ -6,9 +6,17 @@ import javax.swing.*;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
 import com.blackaby.Backend.Emulation.Graphics.GBImage;
 
+/**
+ * A custom JPanel for rendering Game Boy display output.
+ * Handles pixel manipulation, image scaling, and drawing logic.
+ */
 public class DuckDisplay extends JPanel {
     private BufferedImage image;
 
+    /**
+     * Constructs a DuckDisplay with a black background and
+     * initialises the image buffer to the standard Game Boy resolution.
+     */
     public DuckDisplay() {
         super();
         setBackground(Color.BLACK);
@@ -17,12 +25,13 @@ public class DuckDisplay extends JPanel {
     }
 
     /**
-     * Sets a pixel at the specified coordinates
-     * 
-     * @param x       X coordinate
-     * @param y       Y coordinate
-     * @param color   Color to set
-     * @param repaint Whether to repaint the component after setting the pixel
+     * Sets the colour of a pixel at the specified coordinates.
+     * Optionally triggers a repaint of the component.
+     *
+     * @param x       X coordinate of the pixel
+     * @param y       Y coordinate of the pixel
+     * @param color   Colour to apply
+     * @param repaint Whether to repaint the component afterwards
      */
     public void setPixel(int x, int y, Color color, boolean repaint) {
         if (image != null && x >= 0 && x < image.getWidth() && y >= 0 && y < image.getHeight()) {
@@ -34,43 +43,46 @@ public class DuckDisplay extends JPanel {
     }
 
     /**
-     * Sets a pixel at the specified coordinates
-     * 
-     * @param x     X coordinate
-     * @param y     Y coordinate
-     * @param color Color to set
+     * Sets the colour of a pixel and repaints the component.
+     *
+     * @param x     X coordinate of the pixel
+     * @param y     Y coordinate of the pixel
+     * @param color Colour to apply
      */
     public void setPixel(int x, int y, Color color) {
         setPixel(x, y, color, true);
     }
 
     /**
-     * Sets a pixel at the specified coordinates
-     * 
-     * @param x        X coordinate
-     * @param y        Y coordinate
-     * @param hexColor Hexadecimal color to set
-     * @param repaint  Whether to repaint the component after setting the pixel
+     * Sets the colour of a pixel using a hexadecimal string.
+     * Optionally triggers a repaint of the component.
+     *
+     * @param x        X coordinate of the pixel
+     * @param y        Y coordinate of the pixel
+     * @param hexColor Colour in hexadecimal format (e.g., "#FFFFFF")
+     * @param repaint  Whether to repaint the component afterwards
      */
     public void setPixel(int x, int y, String hexColor, boolean repaint) {
         setPixel(x, y, Color.decode(hexColor), repaint);
     }
 
     /**
-     * Sets a pixel at the specified coordinates
-     * 
-     * @param x        X coordinate
-     * @param y        Y coordinate
-     * @param hexColor Hexadecimal color to set
+     * Sets the colour of a pixel using a hexadecimal string
+     * and repaints the component.
+     *
+     * @param x        X coordinate of the pixel
+     * @param y        Y coordinate of the pixel
+     * @param hexColor Colour in hexadecimal format (e.g., "#FFFFFF")
      */
     public void setPixel(int x, int y, String hexColor) {
         setPixel(x, y, hexColor, true);
     }
 
     /**
-     * Sets the image to the specified GBImage
-     * 
-     * @param image GBImage to set
+     * Sets the image buffer to the pixel data provided by a GBImage.
+     * Does not repaint after each pixel change for performance.
+     *
+     * @param image GBImage instance containing the pixel data
      */
     public void setImage(GBImage image) {
         for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
@@ -81,7 +93,8 @@ public class DuckDisplay extends JPanel {
     }
 
     /**
-     * Clears the display
+     * Clears the display by setting all pixels to black,
+     * then repaints the component.
      */
     public void clear() {
         for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
@@ -92,6 +105,12 @@ public class DuckDisplay extends JPanel {
         repaint();
     }
 
+    /**
+     * Repaints the component with the current image,
+     * scaling it to fit the component while maintaining aspect ratio.
+     *
+     * @param g Graphics context used for rendering
+     */
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
@@ -113,7 +132,8 @@ public class DuckDisplay extends JPanel {
     }
 
     /**
-     * Resizes the image buffer when the component is resized
+     * Resizes the internal image buffer to match the
+     * standard Game Boy resolution, preserving existing content if possible.
      */
     public void resizeImage() {
         // Keep the original GB resolution
@@ -133,11 +153,22 @@ public class DuckDisplay extends JPanel {
         }
     }
 
+    /**
+     * Returns the minimum size for this component.
+     *
+     * @return Minimum dimension (100x100)
+     */
     @Override
     public Dimension getMinimumSize() {
         return new Dimension(100, 100);
     }
 
+    /**
+     * Returns the preferred size of this component.
+     * Based on the size of the parent container, maintaining a square shape.
+     *
+     * @return Preferred dimension
+     */
     @Override
     public Dimension getPreferredSize() {
         Container parent = getParent();

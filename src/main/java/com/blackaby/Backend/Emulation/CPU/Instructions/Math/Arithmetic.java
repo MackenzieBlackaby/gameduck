@@ -6,16 +6,38 @@ import com.blackaby.Backend.Emulation.CPU.Instruction;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 
+/**
+ * Implements 8-bit arithmetic instructions for the accumulator (A).
+ * 
+ * Supported operations:
+ * - ADD / ADC: Add value to A (optionally including carry)
+ * - SUB / SBC: Subtract value from A (optionally including carry)
+ * - CP: Compare value with A without storing result
+ * 
+ * Supports operands from registers, immediate values, and HL memory.
+ */
 public class Arithmetic extends Instruction {
 
     private ArithmeticType arithmeticType;
     private ValueType valueType;
     private boolean carry;
 
+    /**
+     * Type of arithmetic operation to perform.
+     */
     public enum ArithmeticType {
         ADD, SUBTRACT, CP;
     }
 
+    /**
+     * Constructs an arithmetic instruction targeting the accumulator (A).
+     *
+     * @param cpu       Reference to the DuckCPU instance
+     * @param memory    Reference to memory
+     * @param aType     Type of arithmetic operation (ADD, SUBTRACT, or CP)
+     * @param valueType Source of the value (register, immediate, or HL memory)
+     * @param carry     True if this instruction includes the carry flag (ADC/SBC)
+     */
     public Arithmetic(DuckCPU cpu, DuckMemory memory, ArithmeticType aType, ValueType valueType, boolean carry) {
         super(cpu, memory, valueType == ValueType.REGISTER ? 1 : 2);
         this.arithmeticType = aType;
@@ -23,6 +45,14 @@ public class Arithmetic extends Instruction {
         this.carry = carry;
     }
 
+    /**
+     * Executes the arithmetic instruction.
+     * 
+     * Performs the specified operation between A and the selected value source.
+     * 
+     * - Updates Z, N, H, and C flags appropriately.
+     * - Result is stored in A unless the operation is CP (compare).
+     */
     @Override
     public void run() {
         int value = 0;
