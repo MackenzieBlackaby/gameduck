@@ -497,7 +497,6 @@ public class DuckDecoder {
         int extractedValues[] = instructionType.getValues(opcode);
 
         instruction.setValues(extractedValues, operands);
-        instruction.setType(instructionType);
         return instruction;
     }
 }

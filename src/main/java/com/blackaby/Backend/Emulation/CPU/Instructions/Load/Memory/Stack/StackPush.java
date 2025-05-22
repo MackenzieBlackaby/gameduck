@@ -43,10 +43,10 @@ public class StackPush extends Instruction {
         int lsb = value & 0xFF;
 
         sp--;
-        memory.stackPush(sp, msb);
+        memory.write(sp, msb);
 
         sp--;
-        memory.stackPush(sp, lsb);
+        memory.write(sp, lsb);
 
         cpu.setSP(sp);
 

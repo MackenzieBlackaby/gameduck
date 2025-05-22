@@ -80,9 +80,9 @@ public class Return extends Instruction {
             }
         }
         int sp = cpu.getSP();
-        int low = memory.stackPop(sp);
+        int low = memory.read(sp);
         sp++;
-        int high = memory.stackPop(sp);
+        int high = memory.read(sp);
         sp++;
         cpu.setSP(sp);
         int pc = (high << 8) | low;

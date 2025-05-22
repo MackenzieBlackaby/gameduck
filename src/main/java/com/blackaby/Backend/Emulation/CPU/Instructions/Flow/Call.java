@@ -81,9 +81,9 @@ public class Call extends Instruction {
         int returnAddress = cpu.getPC();
 
         sp--;
-        memory.stackPush(sp, (returnAddress >> 8) & 0xFF);
+        memory.write(sp, (returnAddress >> 8) & 0xFF);
         sp--;
-        memory.stackPush(sp, returnAddress & 0xFF);
+        memory.write(sp, returnAddress & 0xFF);
         cpu.setSP(sp);
 
         cpu.setPC(address);

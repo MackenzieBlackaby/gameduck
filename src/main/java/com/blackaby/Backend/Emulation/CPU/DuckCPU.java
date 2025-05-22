@@ -690,27 +690,6 @@ public class DuckCPU {
     }
 
     /**
-     * This method gets the value of the flags register as a byte
-     * Provides Quick access to flags register without a switch case
-     * 
-     * @return The value of the flags register as a byte
-     */
-    public int getF() {
-        return flags;
-    }
-
-    /**
-     * This method activates given flags in the flags register
-     * 
-     * @param flagsToSet The flags to activate
-     */
-    public void activateFlags(Flag... flagsToSet) {
-        for (Flag flag : flagsToSet) {
-            this.flags |= 1 << flag.getBit();
-        }
-    }
-
-    /**
      * This method gets the value of the halt bug
      * 
      * @return The value of the halt bug

@@ -95,15 +95,6 @@ public class DuckMemory {
     }
 
     /**
-     * Clears the rom from address range 0x0000–0x3FFF.
-     */
-    public void unmapRom() {
-        for (int i = ROM_BANK_0_START; i <= ROM_BANK_0_END; i++) {
-            ram[i] = 0;
-        }
-    }
-
-    /**
      * Loads a ROM into memory, copying ROM contents into address space.
      *
      * @param rom The ROM object containing cartridge data.
@@ -247,26 +238,6 @@ public class DuckMemory {
             dmaActive = false;
             dmaCounter = 0;
         }
-    }
-
-    /**
-     * Pushes a byte onto the stack at the given address.
-     *
-     * @param address The stack address.
-     * @param value   The value to push.
-     */
-    public void stackPush(int address, int value) {
-        write(address, value);
-    }
-
-    /**
-     * Pops a byte from the stack at the given address.
-     *
-     * @param address The address to pop from.
-     * @return The 8-bit value.
-     */
-    public int stackPop(int address) {
-        return read(address);
     }
 
     /**
