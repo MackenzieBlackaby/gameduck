@@ -37,12 +37,12 @@ public class StackPop extends Instruction {
         int sp = cpu.getSP();
         Register register = Register.getRegFrom2Bit(opcodeValues[0], true);
 
-        int lsb = memory.stackPop(sp);
+        int lsb = memory.read(sp);
         if (register == Register.AF)
             lsb &= 0xF0;
 
         sp += 1;
-        int msb = memory.stackPop(sp);
+        int msb = memory.read(sp);
         sp += 1;
 
         int value = ((msb & 0xFF) << 8) | (lsb & 0xFF);

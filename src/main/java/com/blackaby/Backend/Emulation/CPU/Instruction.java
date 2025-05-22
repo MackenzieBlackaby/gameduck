@@ -1,6 +1,5 @@
 package com.blackaby.Backend.Emulation.CPU;
 
-import com.blackaby.Backend.Emulation.CPU.DuckDecoder.InstructionType;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
 /**
@@ -37,7 +36,6 @@ public abstract class Instruction implements Runnable {
      * May be adjusted dynamically at runtime in subclasses.
      */
     protected int cycles;
-    private InstructionType type;
 
     /**
      * Constructs a new instruction.
@@ -77,24 +75,6 @@ public abstract class Instruction implements Runnable {
      */
     public int getCycleCount() {
         return cycles;
-    }
-
-    /**
-     * Sets the instruction type associated with this instance.
-     *
-     * @param type The instruction type from the decoder.
-     */
-    public void setType(InstructionType type) {
-        this.type = type;
-    }
-
-    /**
-     * Returns the instruction type assigned to this instance.
-     *
-     * @return The {@link InstructionType} of this instruction.
-     */
-    public InstructionType getType() {
-        return type;
     }
 
     /**

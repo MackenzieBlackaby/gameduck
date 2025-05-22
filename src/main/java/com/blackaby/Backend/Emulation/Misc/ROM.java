@@ -23,8 +23,31 @@ public class ROM {
      */
     public ROM(String filename) {
         this.filename = filename;
-        if (!filename.equals(""))
-            LoadRom();
+        if (!filename.equals("")) {
+            int size = 0;
+            try (FileInputStream reader = new FileInputStream(filename)) {
+                while (reader.read() != -1) {
+                    size++;
+                }
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+
+            byte tempData[] = new byte[size];
+            try (FileInputStream reader = new FileInputStream(filename)) {
+                reader.read(tempData);
+                reader.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+                return;
+            }
+            data = new int[size];
+            for (int i = 0; i < size; i++) {
+                data[i] = 0xFF & tempData[i];
+            }
+        }
     }
 
     /**
@@ -34,41 +57,6 @@ public class ROM {
      */
     public int[] getData() {
         return data;
-    }
-
-    private void LoadRom() {
-        int size = 0;
-        try (FileInputStream reader = new FileInputStream(filename)) {
-            while (reader.read() != -1) {
-                size++;
-            }
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-
-        byte tempData[] = new byte[size];
-        try (FileInputStream reader = new FileInputStream(filename)) {
-            reader.read(tempData);
-            reader.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-            return;
-        }
-        data = new int[size];
-        for (int i = 0; i < size; i++) {
-            data[i] = 0xFF & tempData[i];
-        }
-    }
-
-    /**
-     * This method returns the filename of the ROM
-     * 
-     * @return The filename of the ROM
-     */
-    public String getPath() {
-        return filename;
     }
 
     /**

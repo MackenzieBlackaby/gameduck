@@ -62,8 +62,8 @@ public class Restart extends Instruction {
     public void run() {
         int pc = cpu.getPC() + 1;
         int sp = cpu.getSP();
-        memory.stackPush(sp - 1, pc & 0xFF);
-        memory.stackPush(sp - 2, ((pc >> 8) & 0xFF));
+        memory.write(sp - 1, pc & 0xFF);
+        memory.write(sp - 2, ((pc >> 8) & 0xFF));
         RestartType type = RestartType.values()[opcodeValues[0]];
         cpu.setPC(type.getAddress());
         cpu.setSP(sp - 2);

@@ -8,9 +8,9 @@ import java.awt.Color;
  * This class is used by GBImage to represent pixels.
  */
 public class GBColor {
-    private int r;
-    private int g;
-    private int b;
+    public int r;
+    public int g;
+    public int b;
 
     /**
      * Creates a new GBColor with the specified RGB values
@@ -34,33 +34,6 @@ public class GBColor {
         this.r = Integer.parseInt(hex.substring(1, 3), 16);
         this.g = Integer.parseInt(hex.substring(3, 5), 16);
         this.b = Integer.parseInt(hex.substring(5, 7), 16);
-    }
-
-    /**
-     * Returns the red component of the color
-     * 
-     * @return Red component
-     */
-    public int getR() {
-        return r;
-    }
-
-    /**
-     * Returns the green component of the color
-     * 
-     * @return Green component
-     */
-    public int getG() {
-        return g;
-    }
-
-    /**
-     * Returns the blue component of the color
-     * 
-     * @return Blue component
-     */
-    public int getB() {
-        return b;
     }
 
     /**

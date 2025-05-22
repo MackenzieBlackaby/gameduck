@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.image.*;
 import javax.swing.*;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
-import com.blackaby.Backend.Emulation.Graphics.GBImage;
 
 /**
  * A custom JPanel for rendering Game Boy display output.
@@ -76,20 +75,6 @@ public class DuckDisplay extends JPanel {
      */
     public void setPixel(int x, int y, String hexColor) {
         setPixel(x, y, hexColor, true);
-    }
-
-    /**
-     * Sets the image buffer to the pixel data provided by a GBImage.
-     * Does not repaint after each pixel change for performance.
-     *
-     * @param image GBImage instance containing the pixel data
-     */
-    public void setImage(GBImage image) {
-        for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
-            for (int y = 0; y < Specifics.GB_DISPLAY_HEIGHT; y++) {
-                setPixel(x, y, image.getPixelColor(x, y), false);
-            }
-        }
     }
 
     /**
