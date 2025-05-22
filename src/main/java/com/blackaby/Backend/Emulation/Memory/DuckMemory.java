@@ -66,12 +66,19 @@ public class DuckMemory {
 
     private int ram[];
     private int rom[];
+    @SuppressWarnings("unused")
     private int romBank = 1;
+    @SuppressWarnings("unused")
     private int ramBank = 0;
+    @SuppressWarnings("unused")
     private boolean ramEnabled = false;
+    @SuppressWarnings("unused")
     private boolean bankingMode = false;
+    @SuppressWarnings("unused")
     private MBCType mbcType;
+    @SuppressWarnings("unused")
     private int totalRomBanks;
+    @SuppressWarnings("unused")
     private int totalRamBanks;
     private DuckTimer timerSet;
     private boolean dmaActive = false;
@@ -193,7 +200,7 @@ public class DuckMemory {
             return 0xFF;
         }
         // if (address == LY) {
-        //     return 0x90;
+        // return 0x90;
         // }
         return 0xFF & ram[address];
     }
