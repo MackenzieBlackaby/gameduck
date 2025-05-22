@@ -5,8 +5,8 @@ import java.io.IOException;
 import java.io.PrintWriter;
 
 public class DebugLogger {
-    private static final String LOG_FILE = "debugoutput.txt";
-    private static final String SERIAL_FILE = "serialoutput.txt";
+    public static final String LOG_FILE = "debugoutput.txt";
+    public static final String SERIAL_FILE = "serialoutput.txt";
 
     public static void log(String message) {
         System.out.print(message);
@@ -15,12 +15,13 @@ public class DebugLogger {
 
     public static void logFile(String message, String file) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(file, true))) {
-            writer.write(message);
+            writer.write(message + "\r\n");
+            writer.flush();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
-
+ 
     public static void logn(String message) {
         DebugLogger.log(message + "\n");
     }
