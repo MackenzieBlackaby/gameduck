@@ -60,13 +60,14 @@ public class Restart extends Instruction {
      */
     @Override
     public void run() {
-        int pc = cpu.getPC() + 1;
-        int sp = cpu.getSP();
-        memory.write(sp - 1, pc & 0xFF);
-        memory.write(sp - 2, ((pc >> 8) & 0xFF));
+        int pc = cpu.getPC();
+        int sp = cpu.getSP() - 2;
+        cpu.setSP(sp);
+
+        memory.write(sp, pc & 0xFF);
+        memory.write(sp + 1, (pc >> 8) & 0xFF);
+
         RestartType type = RestartType.values()[opcodeValues[0]];
         cpu.setPC(type.getAddress());
-        cpu.setSP(sp - 2);
-        sp = cpu.getSP();
     }
 }
