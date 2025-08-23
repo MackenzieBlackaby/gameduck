@@ -22,15 +22,13 @@ public class DuckTimer {
         if (overflowCounter > 0) {
             overflowCounter--;
             if (overflowCounter == 0) {
-                if (!timaReloaded) {
-                    memory.write(DuckMemory.TIMA, memory.read(DuckMemory.TMA));
-                    cpu.requestInterrupt(DuckCPU.Interrupt.TIMER);
-                }
+                // System.out.println("RELOADING TIMA at cycle " + internalCounter);
+                memory.write(DuckMemory.TIMA, memory.read(DuckMemory.TMA));
+                cpu.requestInterrupt(DuckCPU.Interrupt.TIMER);
                 timaOverflowPending = false;
                 timaReloaded = false;
             }
         }
-
         internalCounter = (internalCounter + 1) & 0xFFFF;
         memory.write(DuckMemory.DIV, (internalCounter >> 8) & 0xFF);
 
@@ -39,6 +37,9 @@ public class DuckTimer {
 
     private void updateTIMA() {
         int tac = memory.read(DuckMemory.TAC);
+        // if (tac != 0)
+        // System.out.println("Updating TIMA at cycle " + internalCounter + ", TAC: " +
+        // String.format("0x%02X", tac));
         boolean timerEnabled = (tac & 0x04) != 0;
         int monitoredBit = getMonitoredBit(tac);
 
@@ -47,6 +48,7 @@ public class DuckTimer {
         if (previousTimerBit && !currentTimerBit) {
             int tima = memory.read(DuckMemory.TIMA) & 0xFF;
             if (tima == 0xFF) {
+                // System.out.println("TIMA OVERFLOW SCHEDULED at cycle " + internalCounter);
                 timaOverflowPending = true;
                 timaReloaded = false;
                 overflowCounter = 4;
@@ -65,12 +67,12 @@ public class DuckTimer {
 
         boolean wasOne = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
 
-        // Internal counter will be 0 after reset, so bit is guaranteed 0
         if (wasOne) {
             int tima = memory.read(DuckMemory.TIMA) & 0xFF;
             if (tima == 0xFF) {
-                memory.write(DuckMemory.TIMA, 0x00);
-                overflowCounter = 1;
+                timaOverflowPending = true;
+                timaReloaded = false;
+                overflowCounter = 4;
             } else {
                 memory.write(DuckMemory.TIMA, (tima + 1) & 0xFF);
             }

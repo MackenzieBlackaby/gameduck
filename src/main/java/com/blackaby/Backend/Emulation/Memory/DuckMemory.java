@@ -222,7 +222,6 @@ public class DuckMemory {
         }
         if (address == DIV) {
             timerSet.resetDIV();
-            ram[DIV] = 0;
             return;
         }
         if (address == TIMA) {
