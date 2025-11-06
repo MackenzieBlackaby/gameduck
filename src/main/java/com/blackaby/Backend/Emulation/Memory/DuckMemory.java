@@ -190,18 +190,17 @@ public class DuckMemory {
      * @return The 8-bit value at that address.
      */
     public int read(int address) {
+        address &= 0xFFFF; // defensive
         if (address == DuckMemory.DIV) {
             return timerSet.getInternalCounter() >> 8;
         }
         if (address >= ECHO_RAM_START && address <= ECHO_RAM_END) {
-            return ram[address - ECHO_RAM_START + WORK_RAM_START];
+            int idx = (address - ECHO_RAM_START + WORK_RAM_START) & 0xFFFF;
+            return 0xFF & ram[idx];
         }
         if (address >= NOT_USABLE_START && address <= NOT_USABLE_END) {
             return 0xFF;
         }
-        // if (address == LY) {
-        // return 0x90;
-        // }
         return 0xFF & ram[address];
     }
 
@@ -213,11 +212,15 @@ public class DuckMemory {
      * @param value   The 8-bit value to write.
      */
     public void write(int address, int value) {
+        address &= 0xFFFF; // defensive: keep 16-bit
+        value &= 0xFF; // ensure 8-bit
+
         if (address >= NOT_USABLE_START && address <= NOT_USABLE_END) {
             return;
         }
         if (address >= ECHO_RAM_START && address <= ECHO_RAM_END) {
-            ram[address - ECHO_RAM_START + WORK_RAM_START] = value;
+            int idx = (address - ECHO_RAM_START + WORK_RAM_START) & 0xFFFF;
+            ram[idx] = value; // already masked
             return;
         }
         if (address == DIV) {
@@ -229,9 +232,12 @@ public class DuckMemory {
                 timerSet.cancelPendingOverflow();
             }
         }
-        ram[address] = value & 0xFF;
+
+        ram[address] = value;
+
         if (address == DMA) {
-            dmaSource = value << 8;
+            // dma source must be based on the low 8 bits only
+            dmaSource = (value & 0xFF) << 8;
             dmaCounter = 0;
             dmaActive = true;
         }
@@ -243,7 +249,17 @@ public class DuckMemory {
     public void tickDMA() {
         if (!dmaActive)
             return;
-        ram[OAM_START + dmaCounter] = read(dmaSource + dmaCounter);
+
+        int dest = OAM_START + dmaCounter;
+        int src = dmaSource + dmaCounter;
+
+        // Defensive masks
+        dest &= 0xFFFF;
+        src &= 0xFFFF;
+
+        int data = read(src) & 0xFF; // read already masks, but be explicit
+        ram[dest] = data; // write into OAM area
+
         dmaCounter++;
         if (dmaCounter == 0xA0) {
             dmaActive = false;
