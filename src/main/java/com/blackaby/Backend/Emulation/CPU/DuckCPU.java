@@ -362,6 +362,7 @@ public class DuckCPU {
             haltBug = false;
         if (instruction != null && !isHalted) {
             // DebugLogger.logFile(this.toString(), DebugLogger.LOG_FILE);
+            instruction.resetCycleCount();
             instruction.run();
         }
         if (interruptMasterEnableCounter >= 2) {

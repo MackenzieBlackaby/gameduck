@@ -87,10 +87,11 @@ public class DuckPPU {
         stat = (stat & 0xFC) | mode.ordinal();
         memory.write(0xFF41, (byte) stat);
 
-        boolean statInterrupt = (stat & (1 << (3 + mode.ordinal()))) != 0;
-        if (statInterrupt) {
-            DebugLogger.logn("[PPU DEBUG] STAT interrupt triggered for mode " + mode);
-            cpu.requestInterrupt(Interrupt.LCD_STAT);
+        if (mode != PPUMode.VRAM) { // VRAM mode never generates STAT interrupts
+            int enableBit = 3 + mode.ordinal(); // HBLANK=3, VBLANK=4, OAM=5
+            if ((stat & (1 << enableBit)) != 0) {
+                cpu.requestInterrupt(Interrupt.LCD_STAT);
+            }
         }
     }
 
@@ -98,6 +99,16 @@ public class DuckPPU {
      * Steps the PPU by one cycle, advancing mode/scanline as needed.
      */
     public void step() {
+        int lcdc = memory.read(DuckMemory.LCDC) & 0xFF;
+
+        // LCD disabled: freeze timing + reset LY/mode
+        if ((lcdc & 0x80) == 0) {
+            scanline = 0;
+            cycle = 0;
+            mode = PPUMode.HBLANK;
+            memory.write(DuckMemory.LY, 0);
+            return;
+        }
         cycle++;
         switch (mode) {
             case OAM:
@@ -153,7 +164,6 @@ public class DuckPPU {
             for (int x = 0; x < Specifics.GB_DISPLAY_WIDTH; x++) {
                 display.setPixel(x, scanline, defaultColor.toColor(), false);
             }
-            return;
         }
 
         // Get scroll offsets.

@@ -36,6 +36,7 @@ public abstract class Instruction implements Runnable {
      * May be adjusted dynamically at runtime in subclasses.
      */
     protected int cycles;
+    protected int initCycles;
 
     /**
      * Constructs a new instruction.
@@ -48,6 +49,7 @@ public abstract class Instruction implements Runnable {
         this.cpu = cpu;
         this.memory = memory;
         this.cycles = cycleCount;
+        this.initCycles = cycleCount;
     }
 
     /**
@@ -84,5 +86,9 @@ public abstract class Instruction implements Runnable {
     @Override
     public void run() {
         System.err.println("Should not run superclass");
+    }
+
+    public void resetCycleCount() {
+        cycles = initCycles;
     }
 }
