@@ -106,6 +106,7 @@ public class DuckEmulation implements Runnable {
         cpu.setSP(0xFFFE);
         memory.write(0xFF47, 0xFC);
         memory.write(0xFF00, 0xFF);
+        memory.write(DuckMemory.LCDC, 0x91);
         startFrameCounter();
         // Main loop for emulation
         long prevTime = System.nanoTime();
@@ -159,19 +160,27 @@ public class DuckEmulation implements Runnable {
             ppu.step();
             memory.tickDMA();
             handleSerial();
-            return 0; // CPU does nothing
+            return 1; // CPU does nothing
         }
 
         // --- HALT handling ---
+        boolean lcdEnabled = (memory.read(DuckMemory.LCDC) & 0x80) != 0;
+
         if (cpu.isHalted()) {
-            if (interruptPending) {
-                cpu.setHalted(false); // resume CPU
+            if (!lcdEnabled) {
+                // LCD disabled -> HALT behaves like NOP
+                cpu.setHalted(false);
+                clockCounter = 1;
+            } else if (interruptPending) {
+                cpu.setHalted(false);
+                if (!cpu.isInterruptMasterEnable()) {
+                    cpu.setHaltBug(true);
+                }
+                clockCounter = 1;
+            } else {
+                // True HALT waiting for interrupt
+                clockCounter = 1;
             }
-            // HALT bug: if IME = 0 and interrupt pending, do NOT increment PC
-            if (interruptPending && !cpu.isInterruptMasterEnable()) {
-                cpu.setHaltBug(true);
-            }
-            clockCounter = 1; // HALT executes 1 cycle until next instruction
         } else {
             instruction = ReadNextInstruction();
             clockCounter = cpu.execute(instruction); // return M-cycles

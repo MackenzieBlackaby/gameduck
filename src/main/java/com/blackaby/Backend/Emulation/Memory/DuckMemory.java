@@ -214,6 +214,11 @@ public class DuckMemory {
     public void write(int address, int value) {
         address &= 0xFFFF; // defensive: keep 16-bit
         value &= 0xFF; // ensure 8-bit
+        // Block writes to ROM (0x0000 - 0x7FFF)
+        if (address < 0x8000) {
+            // Later: handle MBC registers here
+            return;
+        }
 
         if (address >= NOT_USABLE_START && address <= NOT_USABLE_END) {
             return;

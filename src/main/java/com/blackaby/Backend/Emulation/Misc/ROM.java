@@ -2,6 +2,8 @@ package com.blackaby.Backend.Emulation.Misc;
 
 import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.io.File;
 
 /**
@@ -23,29 +25,16 @@ public class ROM {
      */
     public ROM(String filename) {
         this.filename = filename;
-        if (!filename.equals("")) {
-            int size = 0;
-            try (FileInputStream reader = new FileInputStream(filename)) {
-                while (reader.read() != -1) {
-                    size++;
+        if (!filename.isEmpty()) {
+            try {
+                byte[] fileBytes = Files.readAllBytes(Paths.get(filename));
+                data = new int[fileBytes.length];
+                for (int i = 0; i < fileBytes.length; i++) {
+                    data[i] = fileBytes[i] & 0xFF;
                 }
-                reader.close();
             } catch (IOException e) {
                 e.printStackTrace();
-                return;
-            }
-
-            byte tempData[] = new byte[size];
-            try (FileInputStream reader = new FileInputStream(filename)) {
-                reader.read(tempData);
-                reader.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-                return;
-            }
-            data = new int[size];
-            for (int i = 0; i < size; i++) {
-                data[i] = 0xFF & tempData[i];
+                data = new int[0];
             }
         }
     }
