@@ -752,24 +752,31 @@ public class DuckCPU {
     }
 
     private boolean handleInterrupts() {
-        if (!interruptMasterEnable)
-            return false;
+        // 1. Check if ANY interrupt is triggered, regardless of IME
         int interruptEnable = memory.read(DuckMemory.IE);
         int interruptFlags = memory.read(DuckMemory.INTERRUPT_FLAG);
-        int interruptsTriggered = interruptEnable & interruptFlags;
+        int interruptsTriggered = interruptEnable & interruptFlags & 0x1F;
 
-        if (interruptsTriggered == 0)
-            return false;
+        if (interruptsTriggered != 0) {
+            // If we are halted, we ALWAYS wake up if an interrupt is pending
+            if (isHalted) {
+                isHalted = false;
+            }
 
-        interruptMasterEnable = false;
-        isHalted = false;
-        for (int i = 0; i < 5; i++) {
-            if ((interruptsTriggered & (1 << i)) != 0) {
-                handleInterrupt(i);
-                break;
+            // 2. Only actually jump to the ISR if IME is ON
+            if (interruptMasterEnable) {
+                interruptMasterEnable = false; // Disable further interrupts
+
+                // Find which interrupt (priority order 0-4)
+                for (int i = 0; i < 5; i++) {
+                    if ((interruptsTriggered & (1 << i)) != 0) {
+                        handleInterrupt(i);
+                        return true; // We consumed cycles
+                    }
+                }
             }
         }
-        return true;
+        return false;
     }
 
     private void handleInterrupt(int interruptBit) {

@@ -27,7 +27,6 @@ public class DuckEmulation implements Runnable {
 
     // Threading Variables
     private Thread emulationThread;
-    private int clockCounter = 0;
     private volatile boolean running = false;
     private volatile boolean paused = false;
     private Instruction instruction = null;
@@ -37,8 +36,7 @@ public class DuckEmulation implements Runnable {
 
     /**
      * This constructor creates a new DuckEmulation
-     * 
-     * @param display The display to be used in the emulation
+     * * @param display The display to be used in the emulation
      */
     public DuckEmulation(MainWindow window, DuckDisplay display) {
         this.display = display;
@@ -47,8 +45,7 @@ public class DuckEmulation implements Runnable {
 
     /**
      * This method starts the emulation with the given ROM file
-     * 
-     * @param romfile The ROM file to be loaded
+     * * @param romfile The ROM file to be loaded
      */
     public void startEmulation(String romfile) {
         running = true;
@@ -120,9 +117,12 @@ public class DuckEmulation implements Runnable {
                 leftOvers = delta - (ticks * Specifics.US_PER_CYCLE);
                 prevTime = rn;
                 while (ticks > 0) {
+                    // InstructionTick now returns T-Cycles (4.19MHz units)
+                    // This matches the 'ticks' calculated from US_PER_CYCLE
                     ticks -= InstructionTick(false);
+
+                    // Frame counting logic inside the loop
                     int newLY = memory.read(DuckMemory.LY);
-                    // Check if the LY register has changed
                     if (newLY < prevLY)
                         countFrame();
                     prevLY = newLY;
@@ -146,6 +146,15 @@ public class DuckEmulation implements Runnable {
         emulationThread = null;
     }
 
+    /**
+     * Executes one CPU instruction (or HALT state) and steps the hardware
+     * components
+     * proportionally.
+     * * @param skipStops If true, ignore STOP state logic.
+     * 
+     * @return The number of T-Cycles (dots) consumed.
+     * @throws InterruptedException
+     */
     private int InstructionTick(boolean skipStops) throws InterruptedException {
         boolean interruptPending = (memory.getIE() & memory.getIF() & 0x1F) != 0;
 
@@ -155,13 +164,12 @@ public class DuckEmulation implements Runnable {
             if ((memory.getIE() & memory.getIF() & 0x10) != 0) {
                 cpu.setStopped(false);
             }
-            // Still tick some hardware during STOP (timers & PPU)
-            timerSet.tick();
-            ppu.step();
-            memory.tickDMA();
-            handleSerial();
-            return 1; // CPU does nothing
+            // Even in STOP mode, some hardware might need ticking (though usually stopped)
+            // Ideally, we just consume time to prevent tight loops in the main thread
+            return 4;
         }
+
+        int mCycles = 0;
 
         // --- HALT handling ---
         boolean lcdEnabled = (memory.read(DuckMemory.LCDC) & 0x80) != 0;
@@ -170,33 +178,40 @@ public class DuckEmulation implements Runnable {
             if (!lcdEnabled) {
                 // LCD disabled -> HALT behaves like NOP
                 cpu.setHalted(false);
-                clockCounter = 1;
+                // 1 Machine Cycle
+                mCycles = 1;
             } else if (interruptPending) {
                 cpu.setHalted(false);
                 if (!cpu.isInterruptMasterEnable()) {
                     cpu.setHaltBug(true);
                 }
-                clockCounter = 1;
+                // Wake up consumes 1 Machine Cycle
+                mCycles = 1;
             } else {
                 // True HALT waiting for interrupt
-                clockCounter = 1;
+                // Consumes 1 Machine Cycle while waiting
+                mCycles = 1;
             }
         } else {
             instruction = ReadNextInstruction();
-            clockCounter = cpu.execute(instruction); // return M-cycles
+            // cpu.execute returns M-Cycles (e.g., 1, 2, 3...)
+            mCycles = cpu.execute(instruction);
         }
 
-        int prevClockCounter = clockCounter;
+        // --- CRITICAL TIMING FIX ---
+        // Convert Machine Cycles to Clock Cycles (T-Cycles)
+        // 1 M-Cycle = 4 T-Cycles
+        int tCycles = mCycles * 4;
 
-        // --- Tick hardware per machine cycle ---
-        for (; clockCounter > 0; clockCounter--) {
+        // Step hardware components for every T-Cycle
+        for (int i = 0; i < tCycles; i++) {
             memory.tickDMA();
             timerSet.tick();
             ppu.step();
             handleSerial();
         }
 
-        return prevClockCounter;
+        return tCycles;
     }
 
     private void handleSerial() {
@@ -219,8 +234,7 @@ public class DuckEmulation implements Runnable {
      * This method reads the next instruction from the ROM, incrementing the PC and
      * returning the instruction
      * as an array of integers
-     * 
-     * @return The next instruction as an array of integers
+     * * @return The next instruction as an array of integers
      */
     private Instruction ReadNextInstruction() {
         // Get PC
@@ -242,6 +256,8 @@ public class DuckEmulation implements Runnable {
         InstructionType type = DuckDecoder.getType(opcode, isCB);
         // Check for unknown opcode
         if (type == null) {
+            // Optional: Handle unknown opcodes gracefully instead of crashing
+            System.err.println("Unknown Opcode: " + Integer.toHexString(opcode));
             System.exit(1);
         }
         // Get operand count

@@ -194,6 +194,12 @@ public class DuckMemory {
         if (address == DuckMemory.DIV) {
             return timerSet.getInternalCounter() >> 8;
         }
+        if (address >= ROM_BANK_N_START && address <= ROM_BANK_N_END) {
+            // Calculate offset based on current bank
+            int offset = address - ROM_BANK_N_START;
+            int actualAddress = (romBank * 0x4000) + offset;
+            return rom[actualAddress];
+        }
         if (address >= ECHO_RAM_START && address <= ECHO_RAM_END) {
             int idx = (address - ECHO_RAM_START + WORK_RAM_START) & 0xFFFF;
             return 0xFF & ram[idx];
@@ -216,7 +222,19 @@ public class DuckMemory {
         value &= 0xFF; // ensure 8-bit
         // Block writes to ROM (0x0000 - 0x7FFF)
         if (address < 0x8000) {
-            // Later: handle MBC registers here
+            // Handle ROM Banking (0x2000 - 0x3FFF)
+            if (address >= 0x2000 && address <= 0x3FFF) {
+                int bank = value & 0x1F; // Mask to 5 bits
+                if (bank == 0)
+                    bank = 1; // Bank 0 is always translated to 1
+                this.romBank = bank;
+                // Note: You should also mask this against totalRomBanks to avoid
+                // IndexOutOfBounds
+            }
+            // Handle RAM Banking (0x4000 - 0x5FFF)
+            else if (address >= 0x4000 && address <= 0x5FFF) {
+                // RAM bank logic (if you implement External RAM later)
+            }
             return;
         }
 

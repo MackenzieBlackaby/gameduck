@@ -362,7 +362,7 @@ public class DuckPPU {
                 }
             }
 
-            display.setPixel(pixelX, scanline, pixelColor.toColor(), true);
+            display.setPixel(pixelX, scanline, pixelColor.toColor(), false);
         }
     }
 

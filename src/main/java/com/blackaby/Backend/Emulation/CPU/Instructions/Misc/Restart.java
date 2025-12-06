@@ -60,12 +60,16 @@ public class Restart extends Instruction {
      */
     @Override
     public void run() {
+        // Standard PUSH logic
         int pc = cpu.getPC();
-        int sp = cpu.getSP() - 2;
-        cpu.setSP(sp);
 
-        memory.write(sp, pc & 0xFF);
-        memory.write(sp + 1, (pc >> 8) & 0xFF);
+        // 1. Decrement SP, write High Byte
+        cpu.setSP(cpu.getSP() - 1);
+        memory.write(cpu.getSP(), (pc >> 8) & 0xFF);
+
+        // 2. Decrement SP, write Low Byte
+        cpu.setSP(cpu.getSP() - 1);
+        memory.write(cpu.getSP(), pc & 0xFF);
 
         RestartType type = RestartType.values()[opcodeValues[0]];
         cpu.setPC(type.getAddress());

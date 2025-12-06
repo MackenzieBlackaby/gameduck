@@ -36,20 +36,29 @@ public class AddByteSP extends Instruction {
     @Override
     public void run() {
         int sp = cpu.getSP();
-        int offset = (byte) operands[0];
+        int offset = operands[0]; // Keep it as loaded (signed or unsigned 8-bit)
+
+        // In Java, byte is signed (-128 to 127).
+        // For specific flag calculation, we need the raw unsigned values.
 
         int spLow = sp & 0xFF;
-        int offsetLow = offset & 0xFF;
+        int immediateUnsigned = offset & 0xFF; // Treat as 0-255 for flags
 
-        boolean halfCarry = ((spLow & 0x0F) + (offsetLow & 0x0F)) > 0x0F;
-        boolean carry = (spLow + offsetLow) > 0xFF;
+        // H Flag: Carry from bit 3
+        boolean halfCarry = ((spLow & 0x0F) + (immediateUnsigned & 0x0F)) > 0x0F;
 
-        int result = sp + offset;
+        // C Flag: Carry from bit 7 (Overflow of 8-bit addition)
+        boolean carry = (spLow + immediateUnsigned) > 0xFF;
+
+        // The actual math is done on the full 16-bit SP with the SIGNED offset
+        // Convert 8-bit signed operand to int (e.g., 0xFF becomes -1)
+        int signedOffset = (byte) offset;
+        int result = sp + signedOffset;
+
         cpu.setSP(result & 0xFFFF);
 
         cpu.deactivateFlags(Flag.Z, Flag.N);
         cpu.setFlag(Flag.H, halfCarry);
         cpu.setFlag(Flag.C, carry);
-
     }
 }
