@@ -1,6 +1,7 @@
-package com.blackaby.OldBackEnd.Emulation.Peripherals;
+package com.blackaby.Backend.Emulation.Peripherals;
 
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
+import com.blackaby.Backend.Emulation.Memory.DuckAddresses;
 import com.blackaby.OldBackEnd.Emulation.CPU.DuckCPU;
 
 public class DuckTimer {
@@ -20,7 +21,7 @@ public class DuckTimer {
         if (overflowCounter > 0) {
             overflowCounter--;
             if (overflowCounter == 0 && timaOverflowPending) {
-                memory.setTIMAFromTimer(memory.read(DuckMemory.TMA));
+                memory.setTIMAFromTimer(memory.read(DuckAddresses.TMA));
                 cpu.requestInterrupt(DuckCPU.Interrupt.TIMER);
                 timaOverflowPending = false;
             }
@@ -32,7 +33,7 @@ public class DuckTimer {
     }
 
     private void updateTIMA() {
-        int tac = memory.read(DuckMemory.TAC);
+        int tac = memory.read(DuckAddresses.TAC);
         // if (tac != 0)
         // System.out.println("Updating TIMA at cycle " + internalCounter + ", TAC: " +
         // String.format("0x%02X", tac));
@@ -42,7 +43,7 @@ public class DuckTimer {
         boolean currentTimerBit = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
 
         if (previousTimerBit && !currentTimerBit) {
-            int tima = memory.read(DuckMemory.TIMA) & 0xFF;
+            int tima = memory.read(DuckAddresses.TIMA) & 0xFF;
             if (tima == 0xFF) {
                 memory.setTIMAFromTimer(0x00);
                 timaOverflowPending = true;
@@ -56,19 +57,19 @@ public class DuckTimer {
     }
 
     public void resetDIV() {
-        int tac = memory.read(DuckMemory.TAC);
+        int tac = memory.read(DuckAddresses.TAC);
         boolean timerEnabled = (tac & 0x04) != 0;
         int monitoredBit = getMonitoredBit(tac);
 
         boolean wasOne = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
 
         if (wasOne) {
-            int tima = memory.read(DuckMemory.TIMA) & 0xFF;
+            int tima = memory.read(DuckAddresses.TIMA) & 0xFF;
             if (tima == 0xFF) {
                 timaOverflowPending = true;
                 overflowCounter = 4;
             } else {
-                memory.write(DuckMemory.TIMA, (tima + 1) & 0xFF);
+                memory.write(DuckAddresses.TIMA, (tima + 1) & 0xFF);
             }
         }
         internalCounter = 0;
@@ -76,7 +77,7 @@ public class DuckTimer {
     }
 
     public void syncTimerBit() {
-        int tac = memory.read(DuckMemory.TAC);
+        int tac = memory.read(DuckAddresses.TAC);
         boolean timerEnabled = (tac & 0x04) != 0;
         int monitoredBit = getMonitoredBit(tac);
         previousTimerBit = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
