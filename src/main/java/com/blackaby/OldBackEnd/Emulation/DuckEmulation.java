@@ -1,5 +1,6 @@
 package com.blackaby.OldBackEnd.Emulation;
 
+import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
 import com.blackaby.Frontend.DebugLogger;
@@ -7,7 +8,6 @@ import com.blackaby.Frontend.DuckDisplay;
 import com.blackaby.Frontend.MainWindow;
 import com.blackaby.OldBackEnd.Emulation.CPU.*;
 import com.blackaby.OldBackEnd.Emulation.CPU.DuckDecoder.InstructionType;
-import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
 import com.blackaby.OldBackEnd.Emulation.Peripherals.DuckTimer;
 
 /**
@@ -156,12 +156,12 @@ public class DuckEmulation implements Runnable {
      * @throws InterruptedException
      */
     private int InstructionTick(boolean skipStops) throws InterruptedException {
-        boolean interruptPending = (memory.getIE() & memory.getIF() & 0x1F) != 0;
+        boolean interruptPending = (memory.read(DuckAddresses.IE)() & memory.read(DuckAddresses.INTERRUPT_FLAG)() & 0x1F) != 0;
 
         // --- STOP handling ---
         if (cpu.isStopped() && !skipStops) {
             // STOP exits only via Joypad interrupt (bit 4)
-            if ((memory.getIE() & memory.getIF() & 0x10) != 0) {
+            if ((memory.read(DuckAddresses.IE)() & memory.read(DuckAddresses.INTERRUPT_FLAG)() & 0x10) != 0) {
                 cpu.setStopped(false);
             }
             // Even in STOP mode, some hardware might need ticking (though usually stopped)

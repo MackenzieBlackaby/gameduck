@@ -1,7 +1,7 @@
 package com.blackaby.OldBackEnd.Emulation.CPU;
 
+import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.OldBackEnd.Emulation.DuckEmulation;
-import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
 
 /**
  * This class represents the CPU of the GameBoy.

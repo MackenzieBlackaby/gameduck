@@ -1,7 +1,7 @@
 package com.blackaby.OldBackEnd.Emulation.Peripherals;
 
+import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.OldBackEnd.Emulation.CPU.DuckCPU;
-import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
 
 public class DuckTimer {
     private int internalCounter = 0;

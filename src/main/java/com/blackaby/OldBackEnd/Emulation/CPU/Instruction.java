@@ -1,6 +1,6 @@
 package com.blackaby.OldBackEnd.Emulation.CPU;
 
-import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
+import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 
 /**
  * Abstract base class for all CPU instructions.

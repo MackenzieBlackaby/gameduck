@@ -3,6 +3,7 @@ package com.blackaby.OldBackEnd.Emulation.CPU;
 import java.util.HashMap;
 import java.util.Map;
 
+import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.OldBackEnd.Emulation.DuckEmulation;
 import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Bits.*;
 import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Flow.*;
@@ -13,7 +14,6 @@ import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Math.*;
 import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Math.Arithmetic.ArithmeticType;
 import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Math.Bitwise.BitwiseType;
 import com.blackaby.OldBackEnd.Emulation.CPU.Instructions.Misc.*;
-import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
 
 /**
  * The DuckDecoder class is responsible for decoding Game Boy CPU opcodes and
