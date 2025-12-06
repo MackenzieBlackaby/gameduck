@@ -1,15 +1,16 @@
-package com.blackaby.OldBackEnd.Emulation.CPU;
+package com.blackaby.Backend.Emulation.Graphics;
 
 import java.util.ArrayList;
 import java.util.List;
 
 import com.blackaby.Frontend.DuckDisplay;
 import com.blackaby.Misc.Settings;
+import com.blackaby.OldBackEnd.Emulation.CPU.DuckCPU;
+import com.blackaby.OldBackEnd.Emulation.CPU.DuckSprite;
 import com.blackaby.OldBackEnd.Emulation.CPU.DuckCPU.Interrupt;
-import com.blackaby.OldBackEnd.Emulation.Graphics.GBColor;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
-import com.blackaby.Frontend.DebugLogger;
+import com.blackaby.Backend.Emulation.Memory.DuckAddresses;
 
 /**
  * Emulates the Pixel Processing Unit (PPU) of the Game Boy.
@@ -99,14 +100,14 @@ public class DuckPPU {
      * Steps the PPU by one cycle, advancing mode/scanline as needed.
      */
     public void step() {
-        int lcdc = memory.read(DuckMemory.LCDC) & 0xFF;
+        int lcdc = memory.read(DuckAddresses.LCDC) & 0xFF;
 
         // LCD disabled: freeze timing + reset LY/mode
         if ((lcdc & 0x80) == 0) {
             scanline = 0;
             cycle = 0;
             mode = PPUMode.HBLANK;
-            memory.write(DuckMemory.LY, 0);
+            memory.write(DuckAddresses.LY, 0);
             return;
         }
         cycle++;
@@ -148,7 +149,7 @@ public class DuckPPU {
                 }
                 break;
         }
-        memory.write(DuckMemory.LY, (byte) scanline);
+        memory.write(DuckAddresses.LY, (byte) scanline);
         updateLYCCompare();
     }
 
@@ -243,7 +244,7 @@ public class DuckPPU {
      * interrupt.
      */
     private void updateLYCCompare() {
-        int ly = memory.read(DuckMemory.LY) & 0xFF;
+        int ly = memory.read(DuckAddresses.LY) & 0xFF;
         int lyc = memory.read(0xFF45) & 0xFF;
         int stat = memory.read(0xFF41) & 0xFF;
 

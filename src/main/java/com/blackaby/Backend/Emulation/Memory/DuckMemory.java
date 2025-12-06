@@ -1,7 +1,7 @@
 package com.blackaby.Backend.Emulation.Memory;
 
 import com.blackaby.Backend.Emulation.Misc.ROM;
-import com.blackaby.OldBackEnd.Emulation.Peripherals.DuckTimer;
+import com.blackaby.Backend.Emulation.Peripherals.DuckTimer;
 
 /**
  * Represents the Game Boy's memory system.
@@ -76,12 +76,13 @@ public class DuckMemory {
             return timerSet.getInternalCounter() >> 8;
         }
 
-        // Handle rom banks
-        if (address >= DuckAddresses.ROM_BANK_N_START && address <= DuckAddresses.ROM_BANK_N_END) {
-            int offset = address - DuckAddresses.ROM_BANK_N_START;
-            int actualAddress = (romBank * 0x4000) + offset;
-            return rom[actualAddress];
-        }
+        // // Handle rom banks
+        // if (address >= DuckAddresses.ROM_BANK_N_START && address <=
+        // DuckAddresses.ROM_BANK_N_END) {
+        // int offset = address - DuckAddresses.ROM_BANK_N_START;
+        // int actualAddress = (romBank * 0x4000) + offset;
+        // return rom[actualAddress];
+        // }
 
         // Handle Echo Ram
         if (address >= DuckAddresses.ECHO_RAM_START && address <= DuckAddresses.ECHO_RAM_END) {

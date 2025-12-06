@@ -1,5 +1,6 @@
 package com.blackaby.OldBackEnd.Emulation;
 
+import com.blackaby.Backend.Emulation.Graphics.DuckPPU;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Misc.Specifics;
