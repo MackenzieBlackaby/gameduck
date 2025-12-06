@@ -4,7 +4,7 @@ import java.awt.*;
 import java.awt.image.*;
 import javax.swing.*;
 
-import com.blackaby.OldBackEnd.Emulation.Misc.Specifics;
+import com.blackaby.Backend.Emulation.Misc.Specifics;
 
 /**
  * A custom JPanel for rendering Game Boy display output.

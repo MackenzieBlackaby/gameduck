@@ -8,7 +8,7 @@ import com.blackaby.Misc.Settings;
 import com.blackaby.OldBackEnd.Emulation.CPU.DuckCPU.Interrupt;
 import com.blackaby.OldBackEnd.Emulation.Graphics.GBColor;
 import com.blackaby.OldBackEnd.Emulation.Memory.DuckMemory;
-import com.blackaby.OldBackEnd.Emulation.Misc.Specifics;
+import com.blackaby.Backend.Emulation.Misc.Specifics;
 import com.blackaby.Frontend.DebugLogger;
 
 /**
