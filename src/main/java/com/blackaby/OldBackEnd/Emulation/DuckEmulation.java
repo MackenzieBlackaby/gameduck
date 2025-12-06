@@ -113,12 +113,12 @@ public class DuckEmulation implements Runnable {
             try {
                 long rn = System.nanoTime();
                 double delta = rn - prevTime + leftOvers;
-                int ticks = (int) (delta / Specifics.US_PER_CYCLE);
-                leftOvers = delta - (ticks * Specifics.US_PER_CYCLE);
+                int ticks = (int) (delta / Specifics.NS_PER_CYCLE);
+                leftOvers = delta - (ticks * Specifics.NS_PER_CYCLE);
                 prevTime = rn;
                 while (ticks > 0) {
                     // InstructionTick now returns T-Cycles (4.19MHz units)
-                    // This matches the 'ticks' calculated from US_PER_CYCLE
+                    // This matches the 'ticks' calculated from NS_PER_CYCLE
                     ticks -= InstructionTick(false);
 
                     // Frame counting logic inside the loop
