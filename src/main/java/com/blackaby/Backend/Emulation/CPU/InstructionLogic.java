@@ -1,4 +1,5 @@
 package com.blackaby.Backend.Emulation.CPU;
+
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.Graphics.DuckPPU;
@@ -410,6 +411,46 @@ public class InstructionLogic {
     public static int Arithmetic(ArithmeticType type, int immediate, boolean usingCarry) {
         ArithmeticEngine(immediate, usingCarry, type);
         return 8;
+    }
+
+    /**
+     * Adds a register pair to HL
+     * 
+     * @param registerPair the register pair to add
+     * @return 8 T-cycles
+     */
+    public static int AddPairHL(Register registerPair) {
+        int hl = cpu.getHL();
+        int value = cpu.regGet16(registerPair);
+        int result = hl + value;
+        cpu.setHL(result & 0xFFFF);
+
+        cpu.setFlag(Flag.N, false);
+        cpu.setFlag(Flag.H, (hl & 0xFFF) + (value & 0xFFF) > 0xFFF);
+        cpu.setFlag(Flag.C, result > 0xFFFF);
+        // Z is not affected
+        return 8;
+    }
+
+    public static int AddByteSP(int immediate) {
+        int sp = cpu.getSP();
+        immediate &= 0xFF;
+
+        int spLow = sp & 0xFF;
+        boolean halfCarry = CalculateHalfCarry(spLow, immediate, 0, ArithmeticType.ADD);
+        boolean carry = spLow + immediate > 0xFF;
+
+        int signedImmediate = immediate - 128;
+        int result = (sp + signedImmediate) & 0xFFFF;
+
+        cpu.setSP(result);
+
+        cpu.setFlag(Flag.Z, false);
+        cpu.setFlag(Flag.N, false);
+        cpu.setFlag(Flag.H, halfCarry);
+        cpu.setFlag(Flag.C, carry);
+        return 16;
+
     }
 
 }
