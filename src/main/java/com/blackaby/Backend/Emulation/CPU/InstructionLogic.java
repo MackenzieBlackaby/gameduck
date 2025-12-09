@@ -1,7 +1,4 @@
 package com.blackaby.Backend.Emulation.CPU;
-
-import java.rmi.registry.Registry;
-
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Flag;
 import com.blackaby.Backend.Emulation.CPU.DuckCPU.Register;
 import com.blackaby.Backend.Emulation.Graphics.DuckPPU;
@@ -273,7 +270,7 @@ public class InstructionLogic {
      * @return 8 T-cycles
      */
     public static int Bitwise(BitwiseType bitwiseType) {
-        BitwiseEngine(bitwiseType, 0);
+        BitwiseEngine(bitwiseType, memory.read(cpu.getHL()));
         return 8;
     }
 
@@ -301,10 +298,118 @@ public class InstructionLogic {
         return 8;
     }
 
-    public static int ArithmeticEngine(int a, int b, bool usingCarry, ArithmeticType type) {
+    // Calculates the half carry when the modifier and carry is added/subtracted
+    // from the positive register
+    private static boolean CalculateHalfCarry(int positiveRegister, int modifier, int carry, ArithmeticType type) {
+        if (type == ArithmeticType.ADD)
+            return ((positiveRegister & 0xF) + (modifier & 0xF) + carry) > 0xF;
+        else
+            return ((positiveRegister & 0xF) - (modifier & 0xF) - carry) < 0;
+
+    }
+
+    // Calculates carry by comparing the result to the boundaries of a 1 byte int
+    private static boolean CalculateCarry(int result, ArithmeticType type) {
+        if (type == ArithmeticType.ADD)
+            return result > 0xFF;
+        else
+            return result < 0;
+
+    }
+
+    private static void ArithmeticEngine(int b, boolean usingCarry, ArithmeticType type) {
+        int a = cpu.regGet(Register.A);
         int result = 0;
         int carry = (usingCarry && cpu.getFlag(Flag.C) ? 1 : 0);
-        if (type == ArithmeticType.ADD) result 
+        int diff = (b + carry);
+        // Perform operation
+        if (type == ArithmeticType.ADD)
+            result = a + diff;
+        else
+            result = a - diff;
+
+        if (type != ArithmeticType.CP)
+            cpu.regSet(Register.A, result);
+
+        cpu.setFlag(Flag.Z, (result & 0xFF) == 0);
+        cpu.setFlag(Flag.N, type != ArithmeticType.ADD);
+        cpu.setFlag(Flag.C, CalculateCarry(result, type));
+        cpu.setFlag(Flag.H, CalculateHalfCarry(a, b, carry, type));
+    }
+
+    /**
+     * Arithmetic operation for working on the data specified at address in register
+     * HL
+     * Default is not using carry
+     * 
+     * @param type the opeation type
+     * @return 8 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type) {
+        return Arithmetic(type, false);
+    }
+
+    /**
+     * Arithmetic operation for working on the data specified at address in register
+     * HL, specifying carry
+     * 
+     * @param type       the opeation type
+     * @param usingCarry whether to use carry or not
+     * @return 8 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type, boolean usingCarry) {
+        ArithmeticEngine(memory.read(cpu.getHL()), usingCarry, type);
+        return 8;
+    }
+
+    /**
+     * Arithmetic operation for working on the data in a register
+     * Default is not using carry
+     * 
+     * @param type     the opeation type
+     * @param register the register
+     * @return 4 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type, Register register) {
+        return Arithmetic(type, register, false);
+    }
+
+    /**
+     * Arithmetic operation for working on the data in a register, specifying carry
+     * 
+     * @param type       the opeation type
+     * @param register   the register
+     * @param usingCarry whether to use carry or not
+     * @return 4 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type, Register register, boolean usingCarry) {
+        ArithmeticEngine(cpu.regGet(register), usingCarry, type);
+        return 4;
+    }
+
+    /**
+     * Arithmetic operation for working on an immediate
+     * Default is not using carry
+     * 
+     * @param type      the opeation type
+     * @param immediate the immediate
+     * @return 8 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type, int immediate) {
+        return Arithmetic(type, immediate, false);
+    }
+
+    /**
+     * Arithmetic operation for working on an immediate, specifying carry
+     * 
+     * @param type       the opeation type
+     * @param immediate  the immediate
+     * @param usingCarry whether to use carry or not
+     * @return 8 T-cycles
+     */
+    public static int Arithmetic(ArithmeticType type, int immediate, boolean usingCarry) {
+        ArithmeticEngine(immediate, usingCarry, type);
+        return 8;
     }
 
 }
