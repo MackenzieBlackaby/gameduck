@@ -68,10 +68,8 @@ public class DuckDecoder {
         int high = fetchByte();
         return (high << 8) | low;
     }
-
-    // ==========================================
+    
     // TABLE INITIALIZATION
-    // ==========================================
 
     private void InitialiseOpcodes() {
         // TODO: Implement all opcodes here
