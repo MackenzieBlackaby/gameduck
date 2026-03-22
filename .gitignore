@@ -22,3 +22,4 @@ library/roms/*.gbc
 devassets
 demo-roms-dev
 release
+tools
