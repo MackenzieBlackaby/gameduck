@@ -15,3 +15,7 @@ scripts
 src/test/java
 cache
 target
+saves/*.sav
+quickstates/*.gqs
+library/roms/*.gb
+library/roms/*.gbc
