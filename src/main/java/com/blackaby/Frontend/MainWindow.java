@@ -16,7 +16,6 @@ import com.blackaby.Misc.Settings;
 import com.blackaby.Misc.UiText;
 
 import javax.swing.BorderFactory;
-import javax.swing.Box;
 import javax.swing.BoxLayout;
 import javax.swing.ImageIcon;
 import javax.swing.JButton;
