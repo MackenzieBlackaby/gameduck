@@ -1,8 +1,6 @@
 package com.blackaby.Frontend;
 
-import com.blackaby.Backend.Emulation.DuckEmulation;
 import com.blackaby.Backend.Emulation.Graphics.GBColor;
-import com.blackaby.Backend.Emulation.Misc.ROM;
 import com.blackaby.Backend.Emulation.Peripherals.DuckJoypad;
 import com.blackaby.Backend.Helpers.ManagedGameRegistry;
 import com.blackaby.Backend.Helpers.SaveFileManager;
@@ -34,10 +32,6 @@ import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.EnumMap;
 import java.util.List;
-import java.nio.file.Path;
-import java.nio.file.attribute.FileTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
 
 /**
  * Hosts the application options window.
@@ -90,8 +84,6 @@ public class OptionsWindow extends DuckWindow {
             return label;
         }
     }
-
-    private static final DateTimeFormatter saveTimestampFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy HH:mm");
 
     private final Color panelBackground;
     private final Color cardBackground;
@@ -370,7 +362,8 @@ public class OptionsWindow extends DuckWindow {
         savePaletteButton.addActionListener(event -> {
             String name = paletteNameField.getText().trim();
             if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, UiText.OptionsWindow.PaletteNameRequiredMessage(), UiText.Common.WARNING_TITLE,
+                JOptionPane.showMessageDialog(this, UiText.OptionsWindow.PaletteNameRequiredMessage(),
+                        UiText.Common.WARNING_TITLE,
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -452,11 +445,14 @@ public class OptionsWindow extends DuckWindow {
         JPanel paletteGrid = new JPanel(new GridLayout(1, 3, 10, 0));
         paletteGrid.setOpaque(false);
         paletteGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
-        paletteGrid.add(createGbcPaletteRow(0, UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_TITLE, UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_HELPER,
+        paletteGrid.add(createGbcPaletteRow(0, UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_TITLE,
+                UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_HELPER,
                 Settings.CurrentGbcBackgroundPalette()));
-        paletteGrid.add(createGbcPaletteRow(1, UiText.OptionsWindow.GBC_SPRITE0_PALETTE_TITLE, UiText.OptionsWindow.GBC_SPRITE0_PALETTE_HELPER,
+        paletteGrid.add(createGbcPaletteRow(1, UiText.OptionsWindow.GBC_SPRITE0_PALETTE_TITLE,
+                UiText.OptionsWindow.GBC_SPRITE0_PALETTE_HELPER,
                 Settings.CurrentGbcSpritePalette0()));
-        paletteGrid.add(createGbcPaletteRow(2, UiText.OptionsWindow.GBC_SPRITE1_PALETTE_TITLE, UiText.OptionsWindow.GBC_SPRITE1_PALETTE_HELPER,
+        paletteGrid.add(createGbcPaletteRow(2, UiText.OptionsWindow.GBC_SPRITE1_PALETTE_TITLE,
+                UiText.OptionsWindow.GBC_SPRITE1_PALETTE_HELPER,
                 Settings.CurrentGbcSpritePalette1()));
 
         JButton resetGbcPaletteButton = createSecondaryButton(UiText.OptionsWindow.RESET_GBC_SETTINGS_BUTTON);
@@ -467,7 +463,8 @@ public class OptionsWindow extends DuckWindow {
                         GbcCompatiblePaletteModeOption.fromSetting(Settings.preferDmgModeForGbcCompatibleGames));
             }
             if (dmgPaletteModeSelector != null) {
-                dmgPaletteModeSelector.setSelectedItem(DmgPaletteModeOption.fromSetting(Settings.gbcPaletteModeEnabled));
+                dmgPaletteModeSelector
+                        .setSelectedItem(DmgPaletteModeOption.fromSetting(Settings.gbcPaletteModeEnabled));
             }
             refreshPaletteDetails();
             Config.Save();
@@ -695,7 +692,8 @@ public class OptionsWindow extends DuckWindow {
         saveThemeButton.addActionListener(event -> {
             String name = themeNameField.getText().trim();
             if (name.isEmpty()) {
-                JOptionPane.showMessageDialog(this, UiText.OptionsWindow.ThemeNameRequiredMessage(), UiText.Common.WARNING_TITLE,
+                JOptionPane.showMessageDialog(this, UiText.OptionsWindow.ThemeNameRequiredMessage(),
+                        UiText.Common.WARNING_TITLE,
                         JOptionPane.WARNING_MESSAGE);
                 return;
             }
@@ -855,7 +853,8 @@ public class OptionsWindow extends DuckWindow {
         shortcutLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         shortcutLabel.setForeground(accentColour);
 
-        JLabel helperLabel = new JLabel("<html><body style='width: 132px'>" + shortcut.Description() + "</body></html>");
+        JLabel helperLabel = new JLabel(
+                "<html><body style='width: 132px'>" + shortcut.Description() + "</body></html>");
         helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
         helperLabel.setForeground(mutedText);
 
@@ -965,72 +964,6 @@ public class OptionsWindow extends DuckWindow {
 
         card.add(textBlock, BorderLayout.CENTER);
         card.add(swatchStrip, BorderLayout.EAST);
-        return card;
-    }
-
-    private JComponent createPaletteToneCard(int index, String name, GBColor color) {
-        JPanel card = new JPanel(new BorderLayout(10, 0));
-        card.setBackground(Styling.cardTintColour);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
-
-        JLabel title = new JLabel(name);
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
-        title.setForeground(accentColour);
-
-        JLabel helper = new JLabel(paletteToneDescription(index));
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        JPanel preview = new JPanel(new BorderLayout());
-        preview.setPreferredSize(new Dimension(58, 58));
-        preview.setMinimumSize(new Dimension(58, 58));
-        preview.setBackground(color.ToColour());
-        preview.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(58, 92, 132, 45), 1, true),
-                BorderFactory.createEmptyBorder(6, 6, 6, 6)));
-        colorPreviews[index] = preview;
-
-        JLabel hexLabel = new JLabel(color.ToHex().toUpperCase());
-        hexLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 11f));
-        hexLabel.setForeground(accentColour);
-        hexLabel.setOpaque(true);
-        hexLabel.setBackground(new Color(255, 255, 255, 180));
-        hexLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(160, 186, 216), 1, true),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)));
-        colorHexLabels[index] = hexLabel;
-
-        JPanel hexWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        hexWrap.setOpaque(false);
-        hexWrap.add(hexLabel);
-        preview.add(hexWrap, BorderLayout.SOUTH);
-
-        JButton chooseButton = createSecondaryButton(UiText.OptionsWindow.CHOOSE_COLOR_BUTTON);
-        chooseButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
-        chooseButton.setPreferredSize(new Dimension(118, 34));
-        chooseButton.setHorizontalAlignment(SwingConstants.CENTER);
-        chooseButton.addActionListener(event -> chooseColor(index, UiText.OptionsWindow.PaletteToneColorLabel(name)));
-
-        JPanel details = new JPanel();
-        details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
-        details.setOpaque(false);
-        details.add(title);
-        details.add(Box.createVerticalStrut(2));
-        details.add(helper);
-
-        JPanel rightColumn = new JPanel();
-        rightColumn.setLayout(new BoxLayout(rightColumn, BoxLayout.Y_AXIS));
-        rightColumn.setOpaque(false);
-        preview.setAlignmentX(Component.CENTER_ALIGNMENT);
-        chooseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        rightColumn.add(preview);
-        rightColumn.add(Box.createVerticalStrut(8));
-        rightColumn.add(chooseButton);
-
-        card.add(details, BorderLayout.CENTER);
-        card.add(rightColumn, BorderLayout.EAST);
         return card;
     }
 
@@ -1207,7 +1140,8 @@ public class OptionsWindow extends DuckWindow {
             enhancementChainModel.addElement(preset);
         }
 
-        JCheckBox soundEnabledCheckBox = new JCheckBox(UiText.OptionsWindow.SOUND_ENABLED_CHECKBOX, Settings.soundEnabled);
+        JCheckBox soundEnabledCheckBox = new JCheckBox(UiText.OptionsWindow.SOUND_ENABLED_CHECKBOX,
+                Settings.soundEnabled);
         soundEnabledCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         soundEnabledCheckBox.setForeground(accentColour);
         soundEnabledCheckBox.setBackground(Styling.sectionHighlightColour);
@@ -1283,7 +1217,8 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createEmptyBorder(8, 12, 8, 12)));
         volumeValueField.setHorizontalAlignment(SwingConstants.CENTER);
         FontMetrics volumeMetrics = volumeValueField.getFontMetrics(volumeValueField.getFont());
-        Dimension volumeBadgeSize = new Dimension(volumeMetrics.stringWidth("100%") + 28, volumeMetrics.getHeight() + 20);
+        Dimension volumeBadgeSize = new Dimension(volumeMetrics.stringWidth("100%") + 28,
+                volumeMetrics.getHeight() + 20);
         volumeValueField.setPreferredSize(volumeBadgeSize);
         volumeValueField.setMinimumSize(volumeBadgeSize);
 
@@ -1369,7 +1304,9 @@ public class OptionsWindow extends DuckWindow {
         channelGbc.weightx = 1.0;
 
         for (int channelIndex = 0; channelIndex < 4; channelIndex++) {
-            channelGrid.add(createChannelMixerRow(channelIndex, channelMuteCheckBoxes, channelVolumeSliders, channelVolumeLabels),
+            channelGrid.add(
+                    createChannelMixerRow(channelIndex, channelMuteCheckBoxes, channelVolumeSliders,
+                            channelVolumeLabels),
                     channelGbc);
             channelGbc.gridy++;
         }
@@ -1426,7 +1363,8 @@ public class OptionsWindow extends DuckWindow {
         title.setForeground(accentColour);
 
         JLabel helper = new JLabel(
-                "<html><body style='width: 520px'>" + UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER + "</body></html>");
+                "<html><body style='width: 520px'>" + UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER
+                        + "</body></html>");
         helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
         helper.setForeground(mutedText);
 
@@ -1497,7 +1435,8 @@ public class OptionsWindow extends DuckWindow {
             @Override
             public Component getListCellRendererComponent(JList<?> list, Object value, int index,
                     boolean isSelected, boolean cellHasFocus) {
-                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected, cellHasFocus);
+                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
+                        cellHasFocus);
                 if (value instanceof AudioEnhancementPreset preset) {
                     label.setText(UiText.OptionsWindow.AudioChainItemLabel(index, preset.Label()));
                 }
@@ -1608,7 +1547,8 @@ public class OptionsWindow extends DuckWindow {
         gbc.anchor = GridBagConstraints.WEST;
         row.add(channelLabel, gbc);
 
-        JCheckBox muteCheckBox = new JCheckBox(UiText.OptionsWindow.MUTE_CHECKBOX, Settings.IsChannelMuted(channelIndex));
+        JCheckBox muteCheckBox = new JCheckBox(UiText.OptionsWindow.MUTE_CHECKBOX,
+                Settings.IsChannelMuted(channelIndex));
         muteCheckBox.setOpaque(false);
         muteCheckBox.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
         muteCheckBox.setForeground(accentColour);
@@ -1668,7 +1608,8 @@ public class OptionsWindow extends DuckWindow {
         return UiText.OptionsWindow.ChannelName(channelIndex);
     }
 
-    private void updateAudioEnhancementDescription(JComboBox<AudioEnhancementPreset> presetSelector, JLabel descriptionLabel) {
+    private void updateAudioEnhancementDescription(JComboBox<AudioEnhancementPreset> presetSelector,
+            JLabel descriptionLabel) {
         Object selectedPreset = presetSelector.getSelectedItem();
         if (descriptionLabel == null) {
             return;
@@ -1715,7 +1656,8 @@ public class OptionsWindow extends DuckWindow {
 
         GridBagConstraints gbc = baseConstraints();
 
-        JCheckBox fillWindowCheckBox = new JCheckBox(UiText.OptionsWindow.WINDOW_FILL_CHECKBOX, Settings.fillWindowOutput);
+        JCheckBox fillWindowCheckBox = new JCheckBox(UiText.OptionsWindow.WINDOW_FILL_CHECKBOX,
+                Settings.fillWindowOutput);
         fillWindowCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         fillWindowCheckBox.setForeground(accentColour);
         fillWindowCheckBox.setBackground(cardBackground);
@@ -1741,7 +1683,8 @@ public class OptionsWindow extends DuckWindow {
         gbc.gridy++;
         gbc.insets = new Insets(12, 0, 0, 12);
         gbc.gridwidth = 1;
-        JCheckBox serialOutputCheckBox = new JCheckBox(UiText.OptionsWindow.SERIAL_OUTPUT_CHECKBOX, Settings.showSerialOutput);
+        JCheckBox serialOutputCheckBox = new JCheckBox(UiText.OptionsWindow.SERIAL_OUTPUT_CHECKBOX,
+                Settings.showSerialOutput);
         serialOutputCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         serialOutputCheckBox.setForeground(accentColour);
         serialOutputCheckBox.setBackground(cardBackground);
@@ -1908,7 +1851,8 @@ public class OptionsWindow extends DuckWindow {
         titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
         titleLabel.setForeground(accentColour);
 
-        JLabel helperLabel = new JLabel("<html><body style='width: 360px'>" + UiText.OptionsWindow.SAVE_DATA_DESCRIPTION + "</body></html>");
+        JLabel helperLabel = new JLabel(
+                "<html><body style='width: 360px'>" + UiText.OptionsWindow.SAVE_DATA_DESCRIPTION + "</body></html>");
         helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
         helperLabel.setForeground(mutedText);
 
@@ -1959,84 +1903,6 @@ public class OptionsWindow extends DuckWindow {
         return container;
     }
 
-    private JComponent createExistingSaveFilesCard(SaveFileManager.SaveFileSummary saveSummary) {
-        JPanel card = new JPanel(new BorderLayout(0, 8));
-        card.setOpaque(true);
-        card.setBackground(new Color(255, 255, 255, 135));
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
-
-        JLabel title = new JLabel(UiText.OptionsWindow.SAVE_DATA_EXISTING_FILES_TITLE);
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
-        title.setForeground(accentColour);
-        card.add(title, BorderLayout.NORTH);
-
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setOpaque(false);
-
-        JLabel helper = new JLabel("<html>" + UiText.OptionsWindow.SAVE_DATA_EXISTING_FILES_HELPER + "</html>");
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-        content.add(helper);
-        content.add(Box.createVerticalStrut(8));
-
-        JPanel entries = new JPanel();
-        entries.setLayout(new BoxLayout(entries, BoxLayout.Y_AXIS));
-        entries.setOpaque(false);
-
-        if (saveSummary == null || !saveSummary.HasExistingFiles()) {
-            JLabel emptyLabel = new JLabel(UiText.OptionsWindow.SAVE_DETAILS_NONE);
-            emptyLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-            emptyLabel.setForeground(mutedText);
-            entries.add(emptyLabel);
-        } else {
-            for (SaveFileManager.SaveFileEntry entry : saveSummary.existingFiles()) {
-                JLabel entryLabel = new JLabel(UiText.OptionsWindow.SaveFileEntrySummary(
-                        entry.label(),
-                        entry.sizeBytes(),
-                        formatSaveTimestamp(entry.lastModified())));
-                entryLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-                entryLabel.setForeground(accentColour);
-
-                JTextArea pathArea = new JTextArea(entry.path().toString());
-                pathArea.setEditable(false);
-                pathArea.setFocusable(false);
-                pathArea.setLineWrap(true);
-                pathArea.setWrapStyleWord(true);
-                pathArea.setOpaque(false);
-                pathArea.setFont(new Font(Font.MONOSPACED, Font.PLAIN, 11));
-                pathArea.setForeground(mutedText);
-                pathArea.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
-
-                entries.add(entryLabel);
-                entries.add(pathArea);
-                entries.add(Box.createVerticalStrut(8));
-            }
-        }
-
-        content.add(entries);
-        card.add(content, BorderLayout.CENTER);
-        return card;
-    }
-
-    private JComponent createSaveDataMetricsCard(ROM loadedRom, DuckEmulation emulation, boolean hasSaveSupport) {
-        JPanel card = new JPanel(new GridLayout(1, 2, 10, 0));
-        card.setOpaque(false);
-
-        String liveSize = hasSaveSupport
-                ? UiText.OptionsWindow.FormatByteSize(emulation.SnapshotSaveData().length)
-                : UiText.OptionsWindow.SAVE_DETAILS_NOT_AVAILABLE;
-        String expectedSize = loadedRom != null && loadedRom.HasBatteryBackedSave()
-                ? UiText.OptionsWindow.FormatByteSize(loadedRom.GetExternalRamSizeBytes())
-                : UiText.OptionsWindow.SAVE_DETAILS_NOT_AVAILABLE;
-
-        card.add(createSaveDataDetailCard(UiText.OptionsWindow.SAVE_DETAILS_LIVE_SIZE_TITLE, "", liveSize));
-        card.add(createSaveDataDetailCard(UiText.OptionsWindow.SAVE_DETAILS_EXPECTED_SIZE_TITLE, "", expectedSize));
-        return card;
-    }
-
     private JPanel createSaveDataDetailCard(String titleText, String helperText, String valueText) {
         JPanel card = new JPanel(new BorderLayout(0, 6));
         card.setOpaque(true);
@@ -2071,71 +1937,6 @@ public class OptionsWindow extends DuckWindow {
         return card;
     }
 
-    private void importSaveData(DuckEmulation emulation, ROM loadedRom) {
-        if (emulation == null || loadedRom == null || !emulation.CanManageSaveData()) {
-            return;
-        }
-
-        File importFile = promptForSaveImportFile();
-        if (importFile == null) {
-            return;
-        }
-
-        try {
-            int importedBytes = emulation.ImportSaveData(importFile.toPath());
-            JOptionPane.showMessageDialog(this,
-                    UiText.OptionsWindow.SaveImportSuccessMessage(currentLoadedRomDisplayName(), importedBytes));
-            reopenWithCurrentTab();
-        } catch (IOException | IllegalArgumentException | IllegalStateException exception) {
-            JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.SAVE_IMPORT_FAILED_TITLE,
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void exportSaveData(DuckEmulation emulation, ROM loadedRom) {
-        if (emulation == null || loadedRom == null || !emulation.CanManageSaveData()) {
-            return;
-        }
-
-        File exportFile = promptForSaveExportFile(loadedRom);
-        if (exportFile == null) {
-            return;
-        }
-
-        try {
-            emulation.ExportSaveData(exportFile.toPath());
-            JOptionPane.showMessageDialog(this,
-                    UiText.OptionsWindow.SaveExportSuccessMessage(exportFile.getAbsolutePath()));
-        } catch (IOException | IllegalArgumentException | IllegalStateException exception) {
-            JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.SAVE_EXPORT_FAILED_TITLE,
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
-    private void deleteSaveData(DuckEmulation emulation, ROM loadedRom) {
-        if (emulation == null || loadedRom == null || !emulation.CanManageSaveData()) {
-            return;
-        }
-
-        int result = JOptionPane.showConfirmDialog(this,
-                UiText.OptionsWindow.SaveDeleteConfirmMessage(currentLoadedRomDisplayName()),
-                UiText.OptionsWindow.SAVE_DELETE_CONFIRM_TITLE,
-                JOptionPane.YES_NO_OPTION,
-                JOptionPane.WARNING_MESSAGE);
-        if (result != JOptionPane.YES_OPTION) {
-            return;
-        }
-
-        try {
-            emulation.DeleteSaveData();
-            JOptionPane.showMessageDialog(this, UiText.OptionsWindow.SaveDeletedMessage(currentLoadedRomDisplayName()));
-            reopenWithCurrentTab();
-        } catch (IOException | IllegalArgumentException | IllegalStateException exception) {
-            JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.SAVE_DELETE_FAILED_TITLE,
-                    JOptionPane.ERROR_MESSAGE);
-        }
-    }
-
     private JComponent createEmulationPanel() {
         JPanel container = new JPanel(new BorderLayout(0, 18));
         container.setOpaque(false);
@@ -2147,7 +1948,8 @@ public class OptionsWindow extends DuckWindow {
         stack.add(Box.createVerticalStrut(12));
 
         boolean bootRomInstalled = BootRomManager.HasDmgBootRom();
-        JCheckBox useBootRomCheckBox = new JCheckBox(UiText.OptionsWindow.USE_DMG_BOOT_ROM_CHECKBOX, Settings.useBootRom);
+        JCheckBox useBootRomCheckBox = new JCheckBox(UiText.OptionsWindow.USE_DMG_BOOT_ROM_CHECKBOX,
+                Settings.useBootRom);
         useBootRomCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         useBootRomCheckBox.setForeground(accentColour);
         useBootRomCheckBox.setBackground(Styling.sectionHighlightColour);
@@ -2226,7 +2028,8 @@ public class OptionsWindow extends DuckWindow {
         JLabel statusLabel = createBadgeLabel(bootRomInstalled ? UiText.Common.INSTALLED : UiText.Common.MISSING);
         statusLabel.setBackground(bootRomInstalled ? new Color(220, 239, 222) : new Color(244, 233, 217));
         statusLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bootRomInstalled ? new Color(126, 170, 132) : new Color(185, 160, 108), 1, true),
+                BorderFactory.createLineBorder(bootRomInstalled ? new Color(126, 170, 132) : new Color(185, 160, 108),
+                        1, true),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
         statusRow.add(statusText, BorderLayout.CENTER);
@@ -2280,7 +2083,8 @@ public class OptionsWindow extends DuckWindow {
                 Config.Save();
                 reopenWithCurrentTab();
             } catch (IOException | IllegalArgumentException exception) {
-                JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.BOOT_ROM_INSTALL_FAILED_TITLE,
+                JOptionPane.showMessageDialog(this, exception.getMessage(),
+                        UiText.OptionsWindow.BOOT_ROM_INSTALL_FAILED_TITLE,
                         JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -2294,7 +2098,8 @@ public class OptionsWindow extends DuckWindow {
                 Config.Save();
                 reopenWithCurrentTab();
             } catch (IOException exception) {
-                JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.BOOT_ROM_REMOVE_FAILED_TITLE,
+                JOptionPane.showMessageDialog(this, exception.getMessage(),
+                        UiText.OptionsWindow.BOOT_ROM_REMOVE_FAILED_TITLE,
                         JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -2389,7 +2194,8 @@ public class OptionsWindow extends DuckWindow {
         JLabel statusLabel = createBadgeLabel(bootRomInstalled ? UiText.Common.INSTALLED : UiText.Common.MISSING);
         statusLabel.setBackground(bootRomInstalled ? new Color(220, 239, 222) : new Color(244, 233, 217));
         statusLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(bootRomInstalled ? new Color(126, 170, 132) : new Color(185, 160, 108), 1, true),
+                BorderFactory.createLineBorder(bootRomInstalled ? new Color(126, 170, 132) : new Color(185, 160, 108),
+                        1, true),
                 BorderFactory.createEmptyBorder(4, 8, 4, 8)));
 
         statusRow.add(statusText, BorderLayout.CENTER);
@@ -2438,7 +2244,8 @@ public class OptionsWindow extends DuckWindow {
                 Config.Save();
                 reopenWithCurrentTab();
             } catch (IOException | IllegalArgumentException exception) {
-                JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.BOOT_ROM_INSTALL_FAILED_TITLE,
+                JOptionPane.showMessageDialog(this, exception.getMessage(),
+                        UiText.OptionsWindow.BOOT_ROM_INSTALL_FAILED_TITLE,
                         JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -2452,7 +2259,8 @@ public class OptionsWindow extends DuckWindow {
                 Config.Save();
                 reopenWithCurrentTab();
             } catch (IOException exception) {
-                JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.OptionsWindow.BOOT_ROM_REMOVE_FAILED_TITLE,
+                JOptionPane.showMessageDialog(this, exception.getMessage(),
+                        UiText.OptionsWindow.BOOT_ROM_REMOVE_FAILED_TITLE,
                         JOptionPane.ERROR_MESSAGE);
             }
         });
@@ -2547,8 +2355,9 @@ public class OptionsWindow extends DuckWindow {
         Color initialColour = colorPreviews[index] != null
                 ? colorPreviews[index].getBackground()
                 : (paletteStripPreviews[index] != null ? paletteStripPreviews[index].getBackground()
-                : Settings.CurrentPalette()[index].ToColour());
-        Color selectedColor = JColorChooser.showDialog(this, UiText.OptionsWindow.ChooseColorTitle(label), initialColour);
+                        : Settings.CurrentPalette()[index].ToColour());
+        Color selectedColor = JColorChooser.showDialog(this, UiText.OptionsWindow.ChooseColorTitle(label),
+                initialColour);
         if (selectedColor == null) {
             return;
         }
@@ -2563,13 +2372,15 @@ public class OptionsWindow extends DuckWindow {
         Color initialColour = gbcColorPreviews[flatIndex] == null
                 ? Color.WHITE
                 : gbcColorPreviews[flatIndex].getBackground();
-        Color selectedColor = JColorChooser.showDialog(this, UiText.OptionsWindow.GbcColorChooserTitle(), initialColour);
+        Color selectedColor = JColorChooser.showDialog(this, UiText.OptionsWindow.GbcColorChooserTitle(),
+                initialColour);
         if (selectedColor == null) {
             return;
         }
 
         Settings.SetGbcPaletteColour(paletteIndex, colourIndex,
-                String.format("#%02X%02X%02X", selectedColor.getRed(), selectedColor.getGreen(), selectedColor.getBlue()));
+                String.format("#%02X%02X%02X", selectedColor.getRed(), selectedColor.getGreen(),
+                        selectedColor.getBlue()));
         refreshPaletteDetails();
         Config.Save();
     }
@@ -2582,7 +2393,8 @@ public class OptionsWindow extends DuckWindow {
         }
 
         Settings.SetAppThemeColour(role,
-                String.format("#%02X%02X%02X", selectedColor.getRed(), selectedColor.getGreen(), selectedColor.getBlue()));
+                String.format("#%02X%02X%02X", selectedColor.getRed(), selectedColor.getGreen(),
+                        selectedColor.getBlue()));
         Config.Save();
         if (mainWindow != null) {
             mainWindow.RefreshTheme();
@@ -2599,7 +2411,8 @@ public class OptionsWindow extends DuckWindow {
         content.setBackground(cardBackground);
         content.setBorder(createCardBorder());
 
-        JLabel title = new JLabel(UiText.OptionsWindow.RebindDialogPrompt(formatButtonName(button)), SwingConstants.CENTER);
+        JLabel title = new JLabel(UiText.OptionsWindow.RebindDialogPrompt(formatButtonName(button)),
+                SwingConstants.CENTER);
         title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 18f));
         title.setForeground(accentColour);
 
@@ -2861,45 +2674,6 @@ public class OptionsWindow extends DuckWindow {
         SwingUtilities.invokeLater(() -> new OptionsWindow(mainWindow, selectedTab));
     }
 
-    private DuckEmulation currentEmulation() {
-        return mainWindow == null ? null : mainWindow.GetEmulation();
-    }
-
-    private ROM currentLoadedRom() {
-        return mainWindow == null ? null : mainWindow.GetCurrentLoadedRom();
-    }
-
-    private String currentLoadedRomDisplayName() {
-        if (mainWindow != null) {
-            return mainWindow.GetCurrentLoadedRomDisplayName();
-        }
-
-        ROM rom = currentLoadedRom();
-        if (rom == null) {
-            return UiText.OptionsWindow.SAVE_DATA_NO_ROM_TITLE;
-        }
-        return rom.GetSourceName() == null || rom.GetSourceName().isBlank() ? rom.GetName() : rom.GetSourceName();
-    }
-
-    private String resolveSaveDataBadge(ROM loadedRom, boolean hasSaveSupport, SaveFileManager.SaveFileSummary saveSummary) {
-        if (loadedRom == null) {
-            return UiText.OptionsWindow.SAVE_DATA_NO_GAME_BADGE;
-        }
-        if (!hasSaveSupport) {
-            return UiText.OptionsWindow.SAVE_DATA_UNSUPPORTED_BADGE;
-        }
-        return saveSummary != null && saveSummary.HasExistingFiles()
-                ? UiText.OptionsWindow.SAVE_DATA_READY_BADGE
-                : UiText.OptionsWindow.SAVE_DATA_EMPTY_BADGE;
-    }
-
-    private String formatSaveTimestamp(FileTime lastModified) {
-        if (lastModified == null || lastModified.toMillis() <= 0L) {
-            return UiText.OptionsWindow.SAVE_DETAILS_UNKNOWN_TIME;
-        }
-        return saveTimestampFormatter.format(lastModified.toInstant().atZone(ZoneId.systemDefault()));
-    }
-
     private String escapeHtml(String value) {
         if (value == null) {
             return "";
@@ -2919,47 +2693,6 @@ public class OptionsWindow extends DuckWindow {
         });
         fileDialog.setVisible(true);
         return fileDialog.getFiles().length == 0 ? null : fileDialog.getFiles()[0];
-    }
-
-    private File promptForSaveImportFile() {
-        FileDialog fileDialog = new FileDialog(this, UiText.OptionsWindow.SAVE_IMPORT_DIALOG_TITLE, FileDialog.LOAD);
-        fileDialog.setAlwaysOnTop(true);
-        fileDialog.setFilenameFilter((directory, name) -> name.toLowerCase().endsWith(".sav"));
-        fileDialog.setVisible(true);
-        return fileDialog.getFiles().length == 0 ? null : fileDialog.getFiles()[0];
-    }
-
-    private File promptForSaveExportFile(ROM rom) {
-        FileDialog fileDialog = new FileDialog(this, UiText.OptionsWindow.SAVE_EXPORT_DIALOG_TITLE, FileDialog.SAVE);
-        fileDialog.setAlwaysOnTop(true);
-
-        Path defaultPath = rom == null
-                ? SaveFileManager.SaveDirectoryPath().resolve("game.sav")
-                : SaveFileManager.PreferredSavePath(rom);
-        if (defaultPath.getParent() != null) {
-            fileDialog.setDirectory(defaultPath.getParent().toString());
-        }
-        fileDialog.setFile(defaultPath.getFileName().toString());
-        fileDialog.setVisible(true);
-
-        if (fileDialog.getFiles().length == 0) {
-            return null;
-        }
-
-        File selectedFile = fileDialog.getFiles()[0];
-        if (selectedFile == null) {
-            return null;
-        }
-
-        String selectedName = selectedFile.getName();
-        if (!selectedName.toLowerCase().endsWith(".sav")) {
-            selectedFile = new File(selectedFile.getParentFile(), selectedName + ".sav");
-        }
-        return selectedFile;
-    }
-
-    private String paletteToneDescription(int index) {
-        return UiText.OptionsWindow.PaletteToneDescription(index);
     }
 
     private static final class VerticalScrollPanel extends JPanel implements Scrollable {
