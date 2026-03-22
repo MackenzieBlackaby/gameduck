@@ -199,11 +199,4 @@ public class DuckTimer {
         return timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
     }
 
-    @Deprecated public void initializeDMGBootState() { InitialiseDmgBootState(); }
-    @Deprecated public void tick() { Tick(); }
-    @Deprecated public void resetDIV() { ResetDiv(); }
-    @Deprecated public void syncTimerBit() { SyncTimerBit(); }
-    @Deprecated public void writeTAC(int value) { WriteTac(value); }
-    @Deprecated public int getInternalCounter() { return GetInternalCounter(); }
-    @Deprecated public void cancelPendingOverflow() { CancelPendingOverflow(); }
 }

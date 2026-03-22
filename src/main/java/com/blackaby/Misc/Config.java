@@ -586,15 +586,4 @@ public final class Config {
             exception.printStackTrace();
         }
     }
-
-    @Deprecated public static synchronized void load() { Load(); }
-    @Deprecated public static synchronized void save() { Save(); }
-    @Deprecated public static void savePalette(String name) { SavePalette(name); }
-    @Deprecated public static void saveTheme(String name) { SaveTheme(name); }
-    @Deprecated public static synchronized List<String> getSavedPaletteNames() { return GetSavedPaletteNames(); }
-    @Deprecated public static synchronized List<String> getSavedThemeNames() { return GetSavedThemeNames(); }
-    @Deprecated public static synchronized boolean loadPalette(String name) { return LoadPalette(name); }
-    @Deprecated public static synchronized boolean loadTheme(String name) { return LoadTheme(name); }
-    @Deprecated public static synchronized void deletePalette(String name) { DeletePalette(name); }
-    @Deprecated public static synchronized void deleteTheme(String name) { DeleteTheme(name); }
 }

@@ -93,9 +93,4 @@ public final class InputBindings {
         return null;
     }
 
-    @Deprecated public synchronized void resetToDefaults() { ResetToDefaults(); }
-    @Deprecated public synchronized int getKeyCode(DuckJoypad.Button button) { return GetKeyCode(button); }
-    @Deprecated public synchronized String getKeyText(DuckJoypad.Button button) { return GetKeyText(button); }
-    @Deprecated public synchronized void setKeyCode(DuckJoypad.Button button, int keyCode) { SetKeyCode(button, keyCode); }
-    @Deprecated public synchronized DuckJoypad.Button getButtonForKeyCode(int keyCode) { return GetButtonForKeyCode(keyCode); }
 }

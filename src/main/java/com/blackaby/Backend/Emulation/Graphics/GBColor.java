@@ -62,10 +62,6 @@ public class GBColor {
         return String.format("#%02x%02x%02x", red, green, blue);
     }
 
-    @Deprecated public Color toColor() { return ToColour(); }
-    @Deprecated public int toRGB() { return ToRgb(); }
-    @Deprecated public String toHex() { return ToHex(); }
-
     @Override
     public String toString() {
         return "GBColor(" + red + ", " + green + ", " + blue + ")";

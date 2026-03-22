@@ -37,6 +37,4 @@ public enum AppThemeColorRole {
         return description;
     }
 
-    @Deprecated public String label() { return Label(); }
-    @Deprecated public String description() { return Description(); }
 }

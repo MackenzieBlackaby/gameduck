@@ -50,7 +50,4 @@ public enum AppThemePreset {
         return theme.Copy();
     }
 
-    @Deprecated public String label() { return Label(); }
-    @Deprecated public String description() { return Description(); }
-    @Deprecated public AppTheme theme() { return Theme(); }
 }

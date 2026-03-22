@@ -130,8 +130,4 @@ public class DuckAudioOutput {
         appliedEnhancementChainVersion = currentVersion;
     }
 
-    @Deprecated public synchronized void writeSample(double left, double right) { WriteSample(left, right); }
-    @Deprecated public synchronized void flush() { Flush(); }
-    @Deprecated public synchronized void close() { Close(); }
-    @Deprecated public synchronized void discardBufferedAudio() { DiscardBufferedAudio(); }
 }

@@ -20,12 +20,6 @@ public final class Specifics {
     /** Length of one CPU cycle in nanoseconds. */
     public static final double nanosecondsPerCycle = 1_000_000_000.0 / cyclesPerSecond;
 
-    @Deprecated public static final int GB_DISPLAY_WIDTH = gameBoyDisplayWidth;
-    @Deprecated public static final int GB_DISPLAY_HEIGHT = gameBoyDisplayHeight;
-    @Deprecated public static final int REFRESH_RATE = refreshRate;
-    @Deprecated public static final double CPS = cyclesPerSecond;
-    @Deprecated public static final double NS_PER_CYCLE = nanosecondsPerCycle;
-
     private Specifics() {
     }
 }

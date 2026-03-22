@@ -30,9 +30,6 @@ public class DuckPPU {
     public static final int oamDuration = 80;
     public static final int vramDuration = 172;
 
-    @Deprecated public static final int OAM_DURATION = oamDuration;
-    @Deprecated public static final int VRAM_DURATION = vramDuration;
-
     private static final int scanlineCycles = 456;
     private static final int vblankLines = 10;
     private static final int screenHeight = 144;
@@ -527,6 +524,4 @@ public class DuckPPU {
     private boolean ShouldUseGbcColourisation() {
         return Settings.gbcPaletteModeEnabled && !memory.IsLoadedRomCgbCompatible();
     }
-
-    @Deprecated public void step() { Step(); }
 }

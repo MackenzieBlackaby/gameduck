@@ -138,19 +138,4 @@ public class DuckWindow extends JFrame {
             SwingUtilities.invokeLater(() -> setTitle(nextTitle));
         }
     }
-
-    @Deprecated
-    public void toggleMaximise() {
-        ToggleMaximise();
-    }
-
-    @Deprecated
-    public void toggleFullScreen() {
-        ToggleFullScreen();
-    }
-
-    @Deprecated
-    public void subtitle(String... subtitleParts) {
-        SetSubtitle(subtitleParts);
-    }
 }

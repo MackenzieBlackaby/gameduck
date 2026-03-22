@@ -59,8 +59,6 @@ public class DuckJoypad {
             return group;
         }
 
-        @Deprecated public int getMask() { return GetMask(); }
-        @Deprecated public ButtonGroup getGroup() { return GetGroup(); }
     }
 
     private final EnumMap<Button, Boolean> pressedStates = new EnumMap<>(Button.class);
@@ -203,9 +201,4 @@ public class DuckJoypad {
         return nibble;
     }
 
-    @Deprecated public synchronized void setCPU(DuckCPU cpu) { SetCpu(cpu); }
-    @Deprecated public synchronized void reset() { Reset(); }
-    @Deprecated public synchronized int readRegister() { return ReadRegister(); }
-    @Deprecated public synchronized void writeRegister(int value) { WriteRegister(value); }
-    @Deprecated public synchronized void setButtonPressed(Button button, boolean pressed) { SetButtonPressed(button, pressed); }
 }

@@ -257,29 +257,6 @@ public final class AppTheme {
         return Mix(SectionHighlightColour(), SurfaceColour(), 0.58);
     }
 
-    @Deprecated public String name() { return Name(); }
-    @Deprecated public AppTheme copy() { return Copy(); }
-    @Deprecated public AppTheme renamed(String name) { return Renamed(name); }
-    @Deprecated public Color coreColor(AppThemeColorRole role) { return CoreColour(role); }
-    @Deprecated public String coreHex(AppThemeColorRole role) { return CoreHex(role); }
-    @Deprecated public void setCoreColor(AppThemeColorRole role, String hex) { SetCoreColour(role, hex); }
-    @Deprecated public Color backgroundColor() { return BackgroundColour(); }
-    @Deprecated public Color appBackgroundColor() { return AppBackgroundColour(); }
-    @Deprecated public Color surfaceColor() { return SurfaceColour(); }
-    @Deprecated public Color surfaceBorderColor() { return SurfaceBorderColour(); }
-    @Deprecated public Color accentColor() { return AccentColour(); }
-    @Deprecated public Color mutedTextColor() { return MutedTextColour(); }
-    @Deprecated public Color displayFrameColor() { return DisplayFrameColour(); }
-    @Deprecated public Color statusBackgroundColor() { return StatusBackgroundColour(); }
-    @Deprecated public Color buttonSecondaryBackground() { return ButtonSecondaryBackground(); }
-    @Deprecated public Color primaryButtonBorderColor() { return PrimaryButtonBorderColour(); }
-    @Deprecated public Color displayFrameBorderColor() { return DisplayFrameBorderColour(); }
-    @Deprecated public Color sectionHighlightColor() { return SectionHighlightColour(); }
-    @Deprecated public Color sectionHighlightBorderColor() { return SectionHighlightBorderColour(); }
-    @Deprecated public Color cardTintColor() { return CardTintColour(); }
-    @Deprecated public Color cardTintBorderColor() { return CardTintBorderColour(); }
-    @Deprecated public Color listSelectionColor() { return ListSelectionColour(); }
-
     private static Color Parse(String hex) {
         return Color.decode(hex);
     }

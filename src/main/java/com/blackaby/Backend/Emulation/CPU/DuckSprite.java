@@ -89,13 +89,6 @@ public class DuckSprite {
         return (attributes & vramBankMask) != 0 ? 1 : 0;
     }
 
-    @Deprecated public boolean isPriorityInternal() { return IsPriorityInternal(); }
-    @Deprecated public boolean isYFlip() { return IsYFlip(); }
-    @Deprecated public boolean isXFlip() { return IsXFlip(); }
-    @Deprecated public boolean usePalette1() { return UsesPalette1(); }
-    @Deprecated public int cgbPaletteIndex() { return CgbPaletteIndex(); }
-    @Deprecated public int vramBank() { return VramBank(); }
-
     @Override
     public String toString() {
         return String.format("Sprite[x=%d, y=%d, tile=%02X, attr=%02X]", x, y, tileIndex, attributes);

@@ -133,7 +133,7 @@ public class DuckMemory {
      * Loads a cartridge and clears the non-cartridge memory map using the
      * requested hardware mode for compatible cartridges.
      *
-     * @param rom cartridge image to attach
+     * @param rom        cartridge image to attach
      * @param useCgbMode whether to enable CGB hardware when the cartridge allows it
      */
     public void LoadRom(ROM rom, boolean useCgbMode) {
@@ -188,7 +188,8 @@ public class DuckMemory {
         int expectedLength = isCgbBootRom ? 0x800 : 0x100;
         if (bootRomBytes == null || bootRomBytes.length != expectedLength) {
             throw new IllegalArgumentException(
-                    "The " + (isCgbBootRom ? "CGB" : "DMG") + " boot ROM must be exactly " + expectedLength + " bytes.");
+                    "The " + (isCgbBootRom ? "CGB" : "DMG") + " boot ROM must be exactly " + expectedLength
+                            + " bytes.");
         }
 
         bootRom = new int[bootRomBytes.length];
@@ -343,7 +344,7 @@ public class DuckMemory {
      * register side effects.
      *
      * @param address address to write
-     * @param value byte value to store
+     * @param value   byte value to store
      */
     public void WriteDirect(int address, int value) {
         address &= 0xFFFF;
@@ -503,7 +504,7 @@ public class DuckMemory {
      * effects where needed.
      *
      * @param address CPU address to write
-     * @param value byte value to store
+     * @param value   byte value to store
      */
     public void Write(int address, int value) {
         address &= 0xFFFF;
@@ -725,7 +726,8 @@ public class DuckMemory {
     }
 
     /**
-     * Returns whether the currently loaded ROM advertises Game Boy Color compatibility.
+     * Returns whether the currently loaded ROM advertises Game Boy Color
+     * compatibility.
      *
      * @return {@code true} when the loaded cartridge is CGB capable
      */
@@ -837,7 +839,7 @@ public class DuckMemory {
     /**
      * Reads from a specific VRAM bank regardless of the currently selected bank.
      *
-     * @param bank VRAM bank index
+     * @param bank    VRAM bank index
      * @param address VRAM address from {@code 0x8000} to {@code 0x9FFF}
      * @return byte value from the requested VRAM bank
      */
@@ -854,7 +856,7 @@ public class DuckMemory {
      * Returns one CGB background palette colour as packed ARGB.
      *
      * @param paletteIndex palette index from 0 to 7
-     * @param colourIndex palette colour index from 0 to 3
+     * @param colourIndex  palette colour index from 0 to 3
      * @return packed ARGB value
      */
     public int ReadCgbBackgroundPaletteColourRgb(int paletteIndex, int colourIndex) {
@@ -865,7 +867,7 @@ public class DuckMemory {
      * Returns one CGB object palette colour as packed ARGB.
      *
      * @param paletteIndex palette index from 0 to 7
-     * @param colourIndex palette colour index from 0 to 3
+     * @param colourIndex  palette colour index from 0 to 3
      * @return packed ARGB value
      */
     public int ReadCgbObjectPaletteColourRgb(int paletteIndex, int colourIndex) {
@@ -980,7 +982,8 @@ public class DuckMemory {
                     DuckAddresses.HDMA3, DuckAddresses.HDMA4, DuckAddresses.HDMA5,
                     DuckAddresses.RP, DuckAddresses.BCPS, DuckAddresses.BCPD,
                     DuckAddresses.OCPS, DuckAddresses.OCPD, DuckAddresses.OPRI,
-                    DuckAddresses.SVBK -> true;
+                    DuckAddresses.SVBK ->
+                true;
             default -> false;
         };
     }
@@ -1069,38 +1072,4 @@ public class DuckMemory {
         }
         System.arraycopy(source, 0, target, 0, target.length);
     }
-
-    @Deprecated public void setTimerSet(DuckTimer timer) { SetTimer(timer); }
-    @Deprecated public void setCPU(DuckCPU cpu) { SetCpu(cpu); }
-    @Deprecated public void setJoypad(DuckJoypad joypad) { SetJoypad(joypad); }
-    @Deprecated public void setAPU(DuckAPU apu) { SetApu(apu); }
-    @Deprecated public void loadROM(ROM rom) { LoadRom(rom); }
-    @Deprecated public void loadROM(ROM rom, boolean useCgbMode) { LoadRom(rom, useCgbMode); }
-    @Deprecated public void loadBootRom(byte[] bootRomBytes) { LoadBootRom(bootRomBytes); }
-    @Deprecated public void initializeDMGBootState() { InitialiseDmgBootState(); }
-    @Deprecated public void initializeCGBBootState() { InitialiseCgbBootState(); }
-    @Deprecated public void writeDirect(int address, int value) { WriteDirect(address, value); }
-    @Deprecated public int read(int address) { return Read(address); }
-    @Deprecated public void write(int address, int value) { Write(address, value); }
-    @Deprecated public void tickDMA() { TickDma(); }
-    @Deprecated public boolean hasSaveData() { return HasSaveData(); }
-    @Deprecated public byte[] exportSaveData() { return ExportSaveData(); }
-    @Deprecated public boolean isLoadedRomCgbCompatible() { return IsLoadedRomCgbCompatible(); }
-    @Deprecated public boolean isCgbMode() { return IsCgbMode(); }
-    @Deprecated public void loadSaveData(byte[] saveData) { LoadSaveData(saveData); }
-    @Deprecated public int[] readBytes(int start, int count) { return ReadBytes(start, count); }
-    @Deprecated public void stackPushByte(int value) { StackPushByte(value); }
-    @Deprecated public void stackPushShort(int value) { StackPushShort(value); }
-    @Deprecated public int stackPopByte() { return StackPopByte(); }
-    @Deprecated public int stackPopShort() { return StackPopShort(); }
-    @Deprecated public void setDividerFromTimer(int value) { SetDividerFromTimer(value); }
-    @Deprecated public void setTIMAFromTimer(int value) { SetTimaFromTimer(value); }
-    @Deprecated public int readVideoRam(int bank, int address) { return ReadVideoRam(bank, address); }
-    @Deprecated public int readCgbBackgroundPaletteColourRgb(int paletteIndex, int colourIndex) {
-        return ReadCgbBackgroundPaletteColourRgb(paletteIndex, colourIndex);
-    }
-    @Deprecated public int readCgbObjectPaletteColourRgb(int paletteIndex, int colourIndex) {
-        return ReadCgbObjectPaletteColourRgb(paletteIndex, colourIndex);
-    }
-    @Deprecated public void handleStopInstruction() { HandleStopInstruction(); }
 }

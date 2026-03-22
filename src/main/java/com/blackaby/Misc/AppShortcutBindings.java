@@ -181,15 +181,4 @@ public final class AppShortcutBindings {
         }
         return modifiers + "+" + keyText;
     }
-
-    @Deprecated public synchronized void resetToDefaults() { ResetToDefaults(); }
-    @Deprecated public synchronized KeyStroke getKeyStroke(AppShortcut shortcut) { return GetKeyStroke(shortcut); }
-    @Deprecated public synchronized String getKeyText(AppShortcut shortcut) { return GetKeyText(shortcut); }
-    @Deprecated public synchronized void setKeyStroke(AppShortcut shortcut, KeyStroke keyStroke) { SetKeyStroke(shortcut, keyStroke); }
-    @Deprecated public synchronized AppShortcut getShortcutForKeyStroke(KeyStroke keyStroke) { return GetShortcutForKeyStroke(keyStroke); }
-    @Deprecated public synchronized String toConfigValue(AppShortcut shortcut) { return ToConfigValue(shortcut); }
-    @Deprecated public synchronized void loadFromConfigValue(AppShortcut shortcut, String value) { LoadFromConfigValue(shortcut, value); }
-    @Deprecated public static KeyStroke normalize(KeyStroke keyStroke) { return Normalise(keyStroke); }
-    @Deprecated public static boolean isModifierKey(int keyCode) { return IsModifierKey(keyCode); }
-    @Deprecated public static String formatKeyStroke(KeyStroke keyStroke) { return FormatKeyStroke(keyStroke); }
 }

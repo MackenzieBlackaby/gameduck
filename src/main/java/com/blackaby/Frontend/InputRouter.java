@@ -127,14 +127,4 @@ public final class InputRouter implements KeyEventDispatcher {
         Window activeWindow = KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
         return activeWindow == mainWindow;
     }
-
-    @Deprecated
-    public void install() {
-        Install();
-    }
-
-    @Deprecated
-    private boolean shouldRouteInput() {
-        return ShouldRouteInput();
-    }
 }

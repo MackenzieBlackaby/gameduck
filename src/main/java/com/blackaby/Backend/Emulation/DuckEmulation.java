@@ -59,7 +59,7 @@ public class DuckEmulation implements Runnable {
     /**
      * Creates an emulator controller for the main window and display.
      *
-     * @param window owning main window
+     * @param window  owning main window
      * @param display display surface for rendered frames
      */
     public DuckEmulation(MainWindow window, DuckDisplay display) {
@@ -241,7 +241,7 @@ public class DuckEmulation implements Runnable {
     /**
      * Updates the joypad state from host input.
      *
-     * @param button joypad button to update
+     * @param button  joypad button to update
      * @param pressed whether the button is pressed
      */
     public void SetButtonPressed(DuckJoypad.Button button, boolean pressed) {
@@ -579,18 +579,4 @@ public class DuckEmulation implements Runnable {
     private void SetRuntimeStatus(String statusText) {
         mainWindow.SetSubtitle(romName, statusText);
     }
-
-    @Deprecated public void startEmulation(String romFile) { StartEmulation(romFile); }
-    @Deprecated public void pauseEmulation() { PauseEmulation(); }
-    @Deprecated public void stopEmulation() { StopEmulation(); }
-    @Deprecated public void restartEmulation() { RestartEmulation(); }
-    @Deprecated public void setButtonPressed(DuckJoypad.Button button, boolean pressed) { SetButtonPressed(button, pressed); }
-    @Deprecated public boolean hasLoadedRom() { return HasLoadedRom(); }
-    @Deprecated public ROM getLoadedRom() { return GetLoadedRom(); }
-    @Deprecated public boolean canManageSaveData() { return CanManageSaveData(); }
-    @Deprecated public byte[] snapshotSaveData() { return SnapshotSaveData(); }
-    @Deprecated public void exportSaveData(Path destinationPath) throws IOException { ExportSaveData(destinationPath); }
-    @Deprecated public int importSaveData(Path sourcePath) throws IOException { return ImportSaveData(sourcePath); }
-    @Deprecated public void deleteSaveData() throws IOException { DeleteSaveData(); }
-    @Deprecated public void applyIpsPatch(String patchFilename) throws IOException { ApplyIpsPatch(patchFilename); }
 }

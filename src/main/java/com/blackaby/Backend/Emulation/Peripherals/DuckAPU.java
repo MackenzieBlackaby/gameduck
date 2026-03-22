@@ -568,11 +568,6 @@ public class DuckAPU {
         channel.dacEnabled = state.dacEnabled();
     }
 
-    @Deprecated public void initializeDMGBootState() { InitialiseDmgBootState(); }
-    @Deprecated public void shutdown() { Shutdown(); }
-    @Deprecated public void tick() { Tick(); }
-    @Deprecated public int read(int address) { return Read(address); }
-    @Deprecated public void write(int address, int value) { Write(address, value); }
 
     private abstract static class BaseChannel {
         protected boolean enabled;

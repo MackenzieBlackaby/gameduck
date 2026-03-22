@@ -79,8 +79,6 @@ public class DuckCPU {
             };
         }
 
-        @Deprecated public static Register getRegFrom3Bit(int bitId) { return GetRegFrom3Bit(bitId); }
-        @Deprecated public static Register getRegFrom2Bit(int bitId, boolean isAfContext) { return GetRegFrom2Bit(bitId, isAfContext); }
     }
 
     /**
@@ -104,7 +102,6 @@ public class DuckCPU {
             return bit;
         }
 
-        @Deprecated public int getBit() { return GetBit(); }
     }
 
     /**
@@ -159,10 +156,6 @@ public class DuckCPU {
                 default -> throw new IllegalArgumentException("Invalid interrupt index");
             };
         }
-
-        @Deprecated public int getMask() { return GetMask(); }
-        @Deprecated public int getAddress() { return GetAddress(); }
-        @Deprecated public static Interrupt getInterrupt(int index) { return GetInterrupt(index); }
     }
 
     private int pc;
@@ -718,45 +711,6 @@ public class DuckCPU {
         sp = (sp - 1) & 0xFFFF;
         memory.Write(sp, value & 0xFF);
     }
-
-    @Deprecated public void fetch() { Fetch(); }
-    @Deprecated public void decode() { Decode(); }
-    @Deprecated public int execute() { return Execute(); }
-    @Deprecated public void regSet(Register register, int value) { SetRegister(register, value); }
-    @Deprecated public int regGet(Register register) { return GetRegister(register); }
-    @Deprecated public void regSet16(Register register, int value) { SetRegisterPair(register, value); }
-    @Deprecated public int regGet16(Register register) { return GetRegisterPair(register); }
-    @Deprecated public int getHL() { return GetHL(); }
-    @Deprecated public void setHL(int value) { SetHL(value); }
-    @Deprecated public int getBC() { return GetBC(); }
-    @Deprecated public void setBC(int value) { SetBC(value); }
-    @Deprecated public int getDE() { return GetDE(); }
-    @Deprecated public void setDE(int value) { SetDE(value); }
-    @Deprecated public int getAF() { return GetAF(); }
-    @Deprecated public void setAF(int value) { SetAF(value); }
-    @Deprecated public int getPC() { return GetPC(); }
-    @Deprecated public void setPC(int value) { SetPC(value); }
-    @Deprecated public int getSP() { return GetSP(); }
-    @Deprecated public void setSP(int value) { SetSP(value); }
-    @Deprecated public int getAccumulator() { return GetAccumulator(); }
-    @Deprecated public void setAccumulator(int value) { SetAccumulator(value); }
-    @Deprecated public int getC() { return GetC(); }
-    @Deprecated public void setC(int value) { SetC(value); }
-    @Deprecated public int getInstructionRegister() { return GetInstructionRegister(); }
-    @Deprecated public void setFlag(Flag flag, boolean value) { SetFlag(flag, value); }
-    @Deprecated public boolean getFlag(Flag flag) { return GetFlag(flag); }
-    @Deprecated public void clearFlags() { ClearFlags(); }
-    @Deprecated public void setHalted(boolean halted) { SetHalted(halted); }
-    @Deprecated public boolean isHalted() { return IsHalted(); }
-    @Deprecated public void setStopped(boolean stopped) { SetStopped(stopped); }
-    @Deprecated public boolean isStopped() { return IsStopped(); }
-    @Deprecated public void setHaltBug() { SetHaltBug(); }
-    @Deprecated public boolean isHaltBug() { return IsHaltBug(); }
-    @Deprecated public void scheduleEnableInterrupts() { ScheduleEnableInterrupts(); }
-    @Deprecated public void disableInterrupts() { DisableInterrupts(); }
-    @Deprecated public void enableInterruptsImmediately() { EnableInterruptsImmediately(); }
-    @Deprecated public void requestInterrupt(Interrupt interrupt) { RequestInterrupt(interrupt); }
-    @Deprecated public boolean isInterruptMasterEnable() { return IsInterruptMasterEnable(); }
 
     @Override
     public String toString() {

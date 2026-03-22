@@ -21,8 +21,6 @@ public final class DebugLogger {
 
     public static final String logFileName = "debugoutput.txt";
     public static final String serialFileName = "serialoutput.txt";
-    @Deprecated public static final String LOG_FILE = logFileName;
-    @Deprecated public static final String SERIAL_FILE = serialFileName;
 
     private static final StringBuilder serialBuffer = new StringBuilder();
     private static final List<SerialListener> serialListeners = new ArrayList<>();
@@ -133,12 +131,4 @@ public final class DebugLogger {
         serialListeners.remove(listener);
     }
 
-    @Deprecated public static void log(String message) { Log(message); }
-    @Deprecated public static void logFile(String message, String file) { LogFile(message, file); }
-    @Deprecated public static void logn(String message) { LogLine(message); }
-    @Deprecated public static void serialOutput(int byteToPrint) { SerialOutput(byteToPrint); }
-    @Deprecated public static String getSerialOutput() { return GetSerialOutput(); }
-    @Deprecated public static void clearSerialOutput() { ClearSerialOutput(); }
-    @Deprecated public static void addSerialListener(SerialListener listener) { AddSerialListener(listener); }
-    @Deprecated public static void removeSerialListener(SerialListener listener) { RemoveSerialListener(listener); }
 }

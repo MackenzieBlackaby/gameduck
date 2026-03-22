@@ -451,22 +451,4 @@ public class ROM {
         }
         return name;
     }
-
-    @Deprecated public int[] getData() { return GetData(); }
-    @Deprecated public int getCartridgeTypeCode() { return GetCartridgeTypeCode(); }
-    @Deprecated public CartridgeMapperType getMapperType() { return GetMapperType(); }
-    @Deprecated public int getDeclaredRomBankCount() { return GetDeclaredRomBankCount(); }
-    @Deprecated public int getEffectiveRomBankCount() { return GetEffectiveRomBankCount(); }
-    @Deprecated public int getExternalRamSizeBytes() { return GetExternalRamSizeBytes(); }
-    @Deprecated public boolean hasBatteryBackedSave() { return HasBatteryBackedSave(); }
-    @Deprecated public boolean isCgbCompatible() { return IsCgbCompatible(); }
-    @Deprecated public boolean isCgbEnhanced() { return IsCgbEnhanced(); }
-    @Deprecated public boolean isCgbOnly() { return IsCgbOnly(); }
-    @Deprecated public String getSourcePath() { return GetSourcePath(); }
-    @Deprecated public String getName() { return GetName(); }
-    @Deprecated public List<String> getPatchNames() { return GetPatchNames(); }
-    @Deprecated public List<String> getPatchSourcePaths() { return GetPatchSourcePaths(); }
-    @Deprecated public String getSourceName() { return GetSourceName(); }
-    @Deprecated public String getHeaderTitle() { return GetHeaderTitle(); }
-    @Deprecated public byte[] toByteArray() { return ToByteArray(); }
 }

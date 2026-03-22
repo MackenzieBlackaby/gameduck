@@ -80,8 +80,4 @@ public enum AppShortcut {
         return defaultKeyStroke;
     }
 
-    @Deprecated public String label() { return Label(); }
-    @Deprecated public String description() { return Description(); }
-    @Deprecated public Action action() { return Action(); }
-    @Deprecated public KeyStroke defaultKeyStroke() { return DefaultKeyStroke(); }
 }

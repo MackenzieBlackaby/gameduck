@@ -26,11 +26,6 @@ public class InstructionLogic {
         memory = memoryInstance;
     }
 
-    @Deprecated
-    public static void init(DuckCPU cpuInstance, DuckMemory memoryInstance) {
-        Initialise(cpuInstance, memoryInstance);
-    }
-
     /**
      * Bitwise logic operations that target the accumulator.
      */
@@ -681,11 +676,6 @@ public class InstructionLogic {
     public static int LoadAccumulatorFromMemoryViaCRegisterMask() {
         LoadAccumulatorFromMemoryViaMaskedImmediate(cpu.GetC());
         return 8;
-    }
-
-    @Deprecated
-    public static int LoadACcumulatorFromMemoryViaMaskedImmediate(int mask) {
-        return LoadAccumulatorFromMemoryViaMaskedImmediate(mask);
     }
 
     /**

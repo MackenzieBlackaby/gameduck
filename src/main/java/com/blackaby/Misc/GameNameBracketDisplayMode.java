@@ -39,7 +39,4 @@ public enum GameNameBracketDisplayMode {
     public String toString() {
         return label;
     }
-
-    @Deprecated public String label() { return Label(); }
-    @Deprecated public String description() { return Description(); }
 }

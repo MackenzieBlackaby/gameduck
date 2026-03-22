@@ -23,7 +23,7 @@ public abstract class CartridgeController {
     /**
      * Creates a controller backed by the supplied cartridge image.
      *
-     * @param rom cartridge image and header metadata
+     * @param rom          cartridge image and header metadata
      * @param ramSizeBytes amount of external RAM exposed by the cartridge
      */
     protected CartridgeController(ROM rom, int ramSizeBytes) {
@@ -72,7 +72,7 @@ public abstract class CartridgeController {
      * Handles a write to cartridge-controlled address space.
      *
      * @param address CPU address being written
-     * @param value byte value being written
+     * @param value   byte value being written
      */
     public abstract void Write(int address, int value);
 
@@ -80,7 +80,7 @@ public abstract class CartridgeController {
      * Reads a byte from a ROM bank, clamping out-of-range addresses to
      * {@code 0xFF}.
      *
-     * @param bank bank number to read
+     * @param bank              bank number to read
      * @param addressWithinBank offset within the selected bank
      * @return ROM byte
      */
@@ -97,7 +97,7 @@ public abstract class CartridgeController {
     /**
      * Reads a byte from an external RAM bank.
      *
-     * @param bank RAM bank number
+     * @param bank              RAM bank number
      * @param addressWithinBank offset within the selected bank
      * @return RAM byte
      */
@@ -119,9 +119,9 @@ public abstract class CartridgeController {
     /**
      * Writes a byte into an external RAM bank.
      *
-     * @param bank RAM bank number
+     * @param bank              RAM bank number
      * @param addressWithinBank offset within the selected bank
-     * @param value byte value to store
+     * @param value             byte value to store
      */
     protected void WriteRamBank(int bank, int addressWithinBank, int value) {
         if (ramData.length == 0) {
@@ -219,60 +219,5 @@ public abstract class CartridgeController {
     }
 
     protected void RestoreRegisters(int[] registers) {
-    }
-
-    @Deprecated
-    public static CartridgeController create(ROM rom) {
-        return Create(rom);
-    }
-
-    @Deprecated
-    public int readRom(int address) {
-        return ReadRom(address);
-    }
-
-    @Deprecated
-    public int readRam(int address) {
-        return ReadRam(address);
-    }
-
-    @Deprecated
-    public void write(int address, int value) {
-        Write(address, value);
-    }
-
-    @Deprecated
-    protected int readRomBank(int bank, int addressWithinBank) {
-        return ReadRomBank(bank, addressWithinBank);
-    }
-
-    @Deprecated
-    protected int readRamBank(int bank, int addressWithinBank) {
-        return ReadRamBank(bank, addressWithinBank);
-    }
-
-    @Deprecated
-    protected void writeRamBank(int bank, int addressWithinBank, int value) {
-        WriteRamBank(bank, addressWithinBank, value);
-    }
-
-    @Deprecated
-    protected boolean hasRam() {
-        return HasRam();
-    }
-
-    @Deprecated
-    public boolean supportsSaveData() {
-        return SupportsSaveData();
-    }
-
-    @Deprecated
-    public byte[] exportSaveData() {
-        return ExportSaveData();
-    }
-
-    @Deprecated
-    public void loadSaveData(byte[] saveData) {
-        LoadSaveData(saveData);
     }
 }

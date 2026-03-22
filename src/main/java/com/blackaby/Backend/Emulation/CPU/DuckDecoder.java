@@ -335,5 +335,4 @@ public class DuckDecoder {
         return !cpu.GetFlag(Flag.C);
     }
 
-    @Deprecated public OpcodeHandler decodeInstruction(int opcode, boolean cbPrefixed) { return DecodeInstruction(opcode, cbPrefixed); }
 }
