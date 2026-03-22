@@ -15,6 +15,7 @@ The project is aimed at original Game Boy and Game Boy Color software. The deskt
 
 ## What is planned by the time of V 1.0
 
+- ROM deletion from library
 - SGB Support
 - Controller support
 - Library and Config migration (To make updating easy)
