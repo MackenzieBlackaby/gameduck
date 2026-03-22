@@ -1565,8 +1565,10 @@ public class OptionsWindow extends DuckWindow {
         chainHelper.setForeground(mutedText);
 
         chainText.add(chainTitle);
-        chainText.add(Box.createVerticalStrut(4));
-        chainText.add(chainHelper);
+        if (shouldRenderUiText(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER)) {
+            chainText.add(Box.createVerticalStrut(4));
+            chainText.add(chainHelper);
+        }
 
         JPanel chainPanel = new JPanel(new BorderLayout(0, 8));
         chainPanel.setOpaque(false);
@@ -2216,8 +2218,10 @@ public class OptionsWindow extends DuckWindow {
         statusHelper.setForeground(mutedText);
 
         statusText.add(statusTitle);
-        statusText.add(Box.createVerticalStrut(4));
-        statusText.add(statusHelper);
+        if (shouldRenderUiText(UiText.OptionsWindow.INSTALLED_BOOT_ROM_HELPER)) {
+            statusText.add(Box.createVerticalStrut(4));
+            statusText.add(statusHelper);
+        }
 
         JLabel statusLabel = createBadgeLabel(bootRomInstalled ? UiText.Common.INSTALLED : UiText.Common.MISSING);
         statusLabel.setBackground(bootRomInstalled ? new Color(220, 239, 222) : new Color(244, 233, 217));
@@ -2494,7 +2498,7 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private boolean shouldRenderUiText(String text) {
-        return text != null && !text.isBlank() && !"REMOVE THIS ELEMENT".equals(text);
+        return text != null && !text.isBlank();
     }
 
     private JButton createPrimaryButton(String text) {

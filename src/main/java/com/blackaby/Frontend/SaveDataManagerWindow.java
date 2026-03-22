@@ -119,7 +119,10 @@ public final class SaveDataManagerWindow extends DuckWindow {
         subtitleLabel.setForeground(mutedText);
 
         titleStack.add(titleLabel, BorderLayout.NORTH);
-        titleStack.add(subtitleLabel, BorderLayout.CENTER);
+        if (UiText.OptionsWindow.SAVE_MANAGER_SUBTITLE != null
+                && !UiText.OptionsWindow.SAVE_MANAGER_SUBTITLE.isBlank()) {
+            titleStack.add(subtitleLabel, BorderLayout.CENTER);
+        }
 
         JPanel topRow = new JPanel(new BorderLayout(12, 0));
         topRow.setOpaque(false);

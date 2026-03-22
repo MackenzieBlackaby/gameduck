@@ -351,8 +351,16 @@ public final class SaveStateManagerWindow extends DuckWindow {
         moveSection.add(moveHeader, BorderLayout.NORTH);
         moveSection.add(moveRow, BorderLayout.CENTER);
 
-        actionsSection.add(actionsTitleLabel, BorderLayout.NORTH);
-        actionsSection.add(actionsHelperLabel, BorderLayout.CENTER);
+        if (UiText.OptionsWindow.SAVE_STATE_MANAGER_ACTIONS_HELPER != null
+                && !UiText.OptionsWindow.SAVE_STATE_MANAGER_ACTIONS_HELPER.isBlank()) {
+            JPanel actionsHeader = new JPanel(new BorderLayout(0, 4));
+            actionsHeader.setOpaque(false);
+            actionsHeader.add(actionsTitleLabel, BorderLayout.NORTH);
+            actionsHeader.add(actionsHelperLabel, BorderLayout.CENTER);
+            actionsSection.add(actionsHeader, BorderLayout.NORTH);
+        } else {
+            actionsSection.add(actionsTitleLabel, BorderLayout.NORTH);
+        }
         actionsSection.add(topButtonRow, BorderLayout.SOUTH);
 
         bottomSection.add(actionsSection, BorderLayout.CENTER);

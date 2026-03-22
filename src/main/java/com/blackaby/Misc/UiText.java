@@ -494,7 +494,6 @@ public final class UiText {
         public static final String STEREO_WIDEN_LABEL = "Stereo Widen";
         public static final String ROOM_REVERB_LABEL = "Room Reverb";
         public static final String SHIMMER_CHORUS_LABEL = "Shimmer Chorus";
-        public static final String BITCRUSH_LABEL = "Bitcrush";
         public static final String DUB_ECHO_LABEL = "Dub Echo";
         public static final String UNDERWATER_LABEL = "Underwater";
 
@@ -505,7 +504,6 @@ public final class UiText {
         public static final String STEREO_WIDEN_DESCRIPTION = "Expands the left and right image slightly after the mix";
         public static final String ROOM_REVERB_DESCRIPTION = "Adds a short reverb to create extra depth";
         public static final String SHIMMER_CHORUS_DESCRIPTION = "Adds washiness to the audio, for creativity";
-        public static final String BITCRUSH_DESCRIPTION = "Over the top bitcrush. Included just for fun :)";
         public static final String DUB_ECHO_DESCRIPTION = "Adds a left/right ping pong echo";
         public static final String UNDERWATER_DESCRIPTION = "Hello. I am under the water.";
 
@@ -534,9 +532,9 @@ public final class UiText {
         // Keep each title/description pair together for the card it belongs to.
         // -----------------------------------------------------------------
         public static final String SECTION_PALETTE_TITLE = "Game Boy Palette Customisation";
-        public static final String SECTION_PALETTE_DESCRIPTION = "REMOVE THIS ELEMENT";
+        public static final String SECTION_PALETTE_DESCRIPTION = "";
         public static final String SECTION_GBC_TITLE = "Game Boy Colour Colourisation";
-        public static final String SECTION_GBC_DESCRIPTION = "REMOVE THIS ELEMENT";
+        public static final String SECTION_GBC_DESCRIPTION = "";
         public static final String SECTION_CONTROLS_TITLE = "Input Mapping";
         public static final String SECTION_CONTROLS_DESCRIPTION = "Rebind the Game Boy button mapping";
         public static final String SECTION_SHORTCUTS_TITLE = "App Shortcuts";
@@ -544,7 +542,7 @@ public final class UiText {
         public static final String SECTION_SOUND_TITLE = "Audio Output";
         public static final String SECTION_SOUND_DESCRIPTION = "Adjust various audio settings and effects";
         public static final String SECTION_EMULATION_TITLE = "Save Data and Boot ROM";
-        public static final String SECTION_EMULATION_DESCRIPTION = "REMOVE THIS ELEMENT";
+        public static final String SECTION_EMULATION_DESCRIPTION = "";
         public static final String SECTION_WINDOW_TITLE = "Main Window Layout";
         public static final String SECTION_WINDOW_DESCRIPTION = "Adjust various window settings";
         public static final String SECTION_LIBRARY_TITLE = "Game Name Display";
@@ -562,7 +560,7 @@ public final class UiText {
         public static final String ACTIVE_DMG_PALETTE_TITLE = "Active Game Boy Palette";
         public static final String ACTIVE_DMG_PALETTE_HELPER = "Click any swatch to edit that tone";
         public static final String SAVE_CURRENT_PALETTE = "Save Current Palette";
-        public static final String SAVE_CURRENT_PALETTE_HELPER = "REMOVE THIS ELEMENT";
+        public static final String SAVE_CURRENT_PALETTE_HELPER = "";
         public static final String SAVE_PALETTE_BUTTON = "Save Palette";
         public static final String BROWSE_BUTTON = "Browse";
         public static final String RESET_PALETTE_BUTTON = "Default Palette";
@@ -636,7 +634,7 @@ public final class UiText {
         public static final String AUDIO_ENHANCEMENTS_HELPER = "Apply stackable audio enhancements. The FX chain is read from top to bottom";
         public static final String ADD_PRESET_TITLE = "Add Effect";
         public static final String ACTIVE_CHAIN_TITLE = "Active Chain";
-        public static final String ACTIVE_CHAIN_HELPER = "REMOVE THIS ELEMENT";
+        public static final String ACTIVE_CHAIN_HELPER = "";
         public static final String PRESET_DESCRIPTION_PLACEHOLDER = "Effect description will show here";
         public static final String ADD_TO_CHAIN_BUTTON = "Add to Chain";
         public static final String MOVE_UP_BUTTON = "Move Up";
@@ -671,7 +669,7 @@ public final class UiText {
         public static final String SAVE_STATE_MANAGER_SLOT_HELPER = "Quick Slot plus slots 1-9 for the selected ROM";
         public static final String SAVE_STATE_MANAGER_PATH_TITLE = "Selected Slot Path";
         public static final String SAVE_STATE_MANAGER_ACTIONS_TITLE = "State Actions";
-        public static final String SAVE_STATE_MANAGER_ACTIONS_HELPER = "REMOVE THIS ELEMENT";
+        public static final String SAVE_STATE_MANAGER_ACTIONS_HELPER = "";
         public static final String SAVE_STATE_MANAGER_MOVE_TITLE = "Move State";
         public static final String SAVE_STATE_MANAGER_MOVE_HELPER = "Move the selected state into another slot for this ROM (THIS DELETES THE TARGET STATE)";
         public static final String SAVE_STATE_MANAGER_IMPORT_BUTTON = "Import";
@@ -702,7 +700,7 @@ public final class UiText {
         public static final String SAVE_DATA_TITLE = "Save Data Manager";
         public static final String SAVE_DATA_DESCRIPTION = "Manage save data for all compatible games";
         public static final String SAVE_MANAGER_WINDOW_TITLE = "Save Data Manager";
-        public static final String SAVE_MANAGER_SUBTITLE = "REMOVE THIS ELEMENT";
+        public static final String SAVE_MANAGER_SUBTITLE = "";
         public static final String SAVE_MANAGER_EMPTY_TITLE = "No tracked save games yet";
         public static final String SAVE_MANAGER_EMPTY_HELPER = "Load a game with saving functionality to track it here";
         public static final String SAVE_MANAGER_FILTERED_EMPTY_TITLE = "No matching tracked games";
@@ -713,7 +711,7 @@ public final class UiText {
         public static final String SAVE_MANAGER_ACTIONS_TITLE = "Save Actions";
         public static final String SAVE_MANAGER_ACTIONS_HELPER = "Import, export, or delete save data";
         public static final String SAVE_MANAGER_LAUNCH_TITLE = "Tracked game count";
-        public static final String SAVE_MANAGER_LAUNCH_HELPER = "REMOVE THIS ELEMENT";
+        public static final String SAVE_MANAGER_LAUNCH_HELPER = "";
         public static final String SAVE_MANAGER_OPEN_BUTTON = "Open Save Manager";
         public static final String SAVE_DATA_MANAGED_PATH_TITLE = "Save Path location";
         public static final String SAVE_DATA_EXISTING_FILES_TITLE = "Detected Save Files";
@@ -747,7 +745,7 @@ public final class UiText {
         public static final String DMG_BOOT_SEQUENCE_TITLE = "Game Boy Boot Rom";
         public static final String DMG_BOOT_SEQUENCE_HELPER = "Run the installed boot rom on startup";
         public static final String INSTALLED_BOOT_ROM_TITLE = "Installed Boot ROM";
-        public static final String INSTALLED_BOOT_ROM_HELPER = "REMOVE THIS ELEMENT";
+        public static final String INSTALLED_BOOT_ROM_HELPER = "";
         public static final String MANAGED_PATH_TITLE = "Managed Path";
         public static final String INSERT_BOOT_ROM_BUTTON = "Insert GB Boot ROM";
         public static final String REMOVE_BOOT_ROM_BUTTON = "Remove GB Boot ROM";

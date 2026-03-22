@@ -85,9 +85,6 @@ public final class AudioEnhancementChain {
             case SHIMMER_CHORUS -> List.of(
                     new ChorusProcessor(sampleRate, 11.0, 5.0, 0.32, 0.10, 0.27),
                     new StereoWidthProcessor(1.12));
-            case BITCRUSH -> List.of(
-                    new BitCrusherProcessor(4, 18),
-                    new SoftClipProcessor(1.18));
             case DUB_ECHO -> List.of(
                     new PingPongDelayProcessor(sampleRate, 0.245, 0.38, 0.44, 2_600.0),
                     new OnePoleLowPassProcessor(5_200.0, sampleRate));
@@ -179,36 +176,6 @@ public final class AudioEnhancementChain {
             double side = (frame.left - frame.right) * 0.5 * width;
             frame.left = mid + side;
             frame.right = mid - side;
-        }
-    }
-
-    private static final class BitCrusherProcessor implements Processor {
-        private final int holdSamples;
-        private final double quantisationSteps;
-        private int holdCounter;
-        private double heldLeft;
-        private double heldRight;
-
-        private BitCrusherProcessor(int holdSamples, int quantisationSteps) {
-            this.holdSamples = Math.max(1, holdSamples);
-            this.quantisationSteps = Math.max(2, quantisationSteps);
-        }
-
-        @Override
-        public void Process(StereoFrame frame) {
-            if (holdCounter <= 0) {
-                heldLeft = Quantise(frame.left);
-                heldRight = Quantise(frame.right);
-                holdCounter = holdSamples;
-            }
-
-            holdCounter--;
-            frame.left = heldLeft;
-            frame.right = heldRight;
-        }
-
-        private double Quantise(double sample) {
-            return Math.round(sample * quantisationSteps) / quantisationSteps;
         }
     }
 

@@ -10,7 +10,6 @@ public enum AudioEnhancementPreset {
     STEREO_WIDEN(UiText.AudioEnhancements.STEREO_WIDEN_LABEL, UiText.AudioEnhancements.STEREO_WIDEN_DESCRIPTION),
     ROOM_REVERB(UiText.AudioEnhancements.ROOM_REVERB_LABEL, UiText.AudioEnhancements.ROOM_REVERB_DESCRIPTION),
     SHIMMER_CHORUS(UiText.AudioEnhancements.SHIMMER_CHORUS_LABEL, UiText.AudioEnhancements.SHIMMER_CHORUS_DESCRIPTION),
-    BITCRUSH(UiText.AudioEnhancements.BITCRUSH_LABEL, UiText.AudioEnhancements.BITCRUSH_DESCRIPTION),
     DUB_ECHO(UiText.AudioEnhancements.DUB_ECHO_LABEL, UiText.AudioEnhancements.DUB_ECHO_DESCRIPTION),
     UNDERWATER(UiText.AudioEnhancements.UNDERWATER_LABEL, UiText.AudioEnhancements.UNDERWATER_DESCRIPTION);
 
