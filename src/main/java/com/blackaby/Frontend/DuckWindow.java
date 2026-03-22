@@ -2,15 +2,16 @@ package com.blackaby.Frontend;
 
 import com.blackaby.Misc.UiText;
 
-import javax.swing.ImageIcon;
 import javax.swing.JFrame;
 import javax.swing.SwingUtilities;
 import java.awt.BorderLayout;
 import java.awt.Dimension;
 import java.awt.GraphicsDevice;
 import java.awt.GraphicsEnvironment;
+import java.awt.Image;
 import java.awt.Point;
 import java.awt.Toolkit;
+import java.util.List;
 
 /**
  * Base window class for the GameDuck desktop UI.
@@ -46,7 +47,10 @@ public class DuckWindow extends JFrame {
         setTitle(title);
         baseTitle = title;
         setLocationRelativeTo(null);
-        setIconImage(new ImageIcon("src/main/resources/duck.png").getImage());
+        List<Image> windowIcons = AppAssets.WindowIcons();
+        if (!windowIcons.isEmpty()) {
+            setIconImages(windowIcons);
+        }
         windowedSize = Toolkit.getDefaultToolkit().getScreenSize();
         sizeBeforeMaximise = Toolkit.getDefaultToolkit().getScreenSize();
         locationBeforeMaximise = getLocation();
