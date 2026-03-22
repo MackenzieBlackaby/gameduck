@@ -59,8 +59,8 @@ public class DuckDisplay extends JPanel {
      * @param repaint Whether to repaint the component afterwards
      */
     public void setPixel(int x, int y, int rgb, boolean repaint) {
-        if (backBuffer != null && x >= 0 && x < Specifics.GB_DISPLAY_WIDTH && y >= 0 && y < Specifics.GB_DISPLAY_HEIGHT) {
-            backBuffer[(y * Specifics.GB_DISPLAY_WIDTH) + x] = rgb;
+        if (backBuffer != null && x >= 0 && x < Specifics.gameBoyDisplayWidth && y >= 0 && y < Specifics.gameBoyDisplayHeight) {
+            backBuffer[(y * Specifics.gameBoyDisplayWidth) + x] = rgb;
             if (repaint) {
                 presentFrame();
             }
@@ -202,10 +202,10 @@ public class DuckDisplay extends JPanel {
 
             // Calculate scaled dimensions while maintaining aspect ratio
             double scale = Math.min(
-                    getWidth() / (double) Specifics.GB_DISPLAY_WIDTH,
-                    getHeight() / (double) Specifics.GB_DISPLAY_HEIGHT);
-            int scaledWidth = (int) (Specifics.GB_DISPLAY_WIDTH * scale);
-            int scaledHeight = (int) (Specifics.GB_DISPLAY_HEIGHT * scale);
+                    getWidth() / (double) Specifics.gameBoyDisplayWidth,
+                    getHeight() / (double) Specifics.gameBoyDisplayHeight);
+            int scaledWidth = (int) (Specifics.gameBoyDisplayWidth * scale);
+            int scaledHeight = (int) (Specifics.gameBoyDisplayHeight * scale);
 
             // Calculate position to center the scaled image
             int x = (getWidth() - scaledWidth) / 2;
@@ -254,9 +254,9 @@ public class DuckDisplay extends JPanel {
     }
 
     private void initializeBuffers() {
-        image = new BufferedImage(Specifics.GB_DISPLAY_WIDTH, Specifics.GB_DISPLAY_HEIGHT, BufferedImage.TYPE_INT_RGB);
+        image = new BufferedImage(Specifics.gameBoyDisplayWidth, Specifics.gameBoyDisplayHeight, BufferedImage.TYPE_INT_RGB);
         frontBuffer = ((DataBufferInt) image.getRaster().getDataBuffer()).getData();
-        backBuffer = new int[Specifics.GB_DISPLAY_WIDTH * Specifics.GB_DISPLAY_HEIGHT];
+        backBuffer = new int[Specifics.gameBoyDisplayWidth * Specifics.gameBoyDisplayHeight];
         Arrays.fill(frontBuffer, Color.BLACK.getRGB());
         Arrays.fill(backBuffer, Color.BLACK.getRGB());
     }
