@@ -25,17 +25,26 @@ public final class Settings {
     /** Default DMG palette colour 3, used for the darkest shade. */
     public static final String gbColour3 = "#081820";
 
-    /** Default GBC background palette used for monochrome games when colourisation is enabled. */
+    /**
+     * Default GBC background palette used for monochrome games when colourisation
+     * is enabled.
+     */
     public static final String[] gbcBackgroundPaletteDefaults = {
             "#F8F8F8", "#B8D8B0", "#607060", "#203028"
     };
 
-    /** Default GBC sprite palette 0 used for monochrome games when colourisation is enabled. */
+    /**
+     * Default GBC sprite palette 0 used for monochrome games when colourisation is
+     * enabled.
+     */
     public static final String[] gbcSpritePalette0Defaults = {
             "#F8F8F8", "#F8C088", "#C87048", "#502018"
     };
 
-    /** Default GBC sprite palette 1 used for monochrome games when colourisation is enabled. */
+    /**
+     * Default GBC sprite palette 1 used for monochrome games when colourisation is
+     * enabled.
+     */
     public static final String[] gbcSpritePalette1Defaults = {
             "#F8F8F8", "#88C0F8", "#4868C8", "#182048"
     };
@@ -52,7 +61,9 @@ public final class Settings {
     /** Active DMG palette colour 3. */
     public static GBColor gbColour3Object = new GBColor(gbColour3);
 
-    /** Whether dual-mode CGB-compatible cartridges should boot in original DMG mode. */
+    /**
+     * Whether dual-mode CGB-compatible cartridges should boot in original DMG mode.
+     */
     public static boolean preferDmgModeForGbcCompatibleGames = false;
 
     /** Whether alternate GBC-style palettes should be used for non-CGB games. */
@@ -97,7 +108,10 @@ public final class Settings {
     /** Whether the emulator should boot through an installed DMG boot ROM. */
     public static boolean useBootRom = false;
 
-    /** Whether the emulator should boot through an installed CGB boot ROM for CGB-capable games. */
+    /**
+     * Whether the emulator should boot through an installed CGB boot ROM for
+     * CGB-capable games.
+     */
     public static boolean useCgbBootRom = false;
 
     /** Whether the main display should stretch to fill the host window. */
@@ -111,33 +125,6 @@ public final class Settings {
 
     /** Which bracketed suffixes should be removed from displayed game names. */
     public static GameNameBracketDisplayMode gameNameBracketDisplayMode = GameNameBracketDisplayMode.NONE;
-    @Deprecated public static final String GB_COLOR_0 = gbColour0;
-    @Deprecated public static final String GB_COLOR_1 = gbColour1;
-    @Deprecated public static final String GB_COLOR_2 = gbColour2;
-    @Deprecated public static final String GB_COLOR_3 = gbColour3;
-    @Deprecated public static GBColor GB_COLOR_0_OBJ = gbColour0Object;
-    @Deprecated public static GBColor GB_COLOR_1_OBJ = gbColour1Object;
-    @Deprecated public static GBColor GB_COLOR_2_OBJ = gbColour2Object;
-    @Deprecated public static GBColor GB_COLOR_3_OBJ = gbColour3Object;
-    @Deprecated public static boolean PREFER_DMG_MODE_FOR_GBC_COMPATIBLE_GAMES = preferDmgModeForGbcCompatibleGames;
-    @Deprecated public static boolean GBC_PALETTE_MODE_ENABLED = gbcPaletteModeEnabled;
-    @Deprecated public static GBColor[] GBC_BACKGROUND_PALETTE = gbcBackgroundPaletteObjects;
-    @Deprecated public static GBColor[] GBC_SPRITE_PALETTE_0 = gbcSpritePalette0Objects;
-    @Deprecated public static GBColor[] GBC_SPRITE_PALETTE_1 = gbcSpritePalette1Objects;
-    @Deprecated public static AppTheme APP_THEME = appTheme;
-    @Deprecated public static final InputBindings INPUT_BINDINGS = inputBindings;
-    @Deprecated public static final AppShortcutBindings APP_SHORTCUT_BINDINGS = appShortcutBindings;
-    @Deprecated public static boolean SOUND_ENABLED = soundEnabled;
-    @Deprecated public static int MASTER_VOLUME = masterVolume;
-    @Deprecated public static boolean[] CHANNEL_MUTED = channelMuted;
-    @Deprecated public static int[] CHANNEL_VOLUME = channelVolume;
-    @Deprecated public static List<AudioEnhancementPreset> AUDIO_ENHANCEMENT_CHAIN = audioEnhancementChain;
-    @Deprecated public static boolean USE_BOOT_ROM = useBootRom;
-    @Deprecated public static boolean USE_CGB_BOOT_ROM = useCgbBootRom;
-    @Deprecated public static boolean FILL_WINDOW_OUTPUT = fillWindowOutput;
-    @Deprecated public static boolean SHOW_SERIAL_OUTPUT = showSerialOutput;
-    @Deprecated public static GameArtDisplayMode GAME_ART_DISPLAY_MODE = gameArtDisplayMode;
-    @Deprecated public static GameNameBracketDisplayMode GAME_NAME_BRACKET_DISPLAY_MODE = gameNameBracketDisplayMode;
 
     private Settings() {
     }
@@ -164,7 +151,7 @@ public final class Settings {
         gbColour1Object = new GBColor(gbColour1);
         gbColour2Object = new GBColor(gbColour2);
         gbColour3Object = new GBColor(gbColour3);
-        SyncLegacyFields();
+
     }
 
     /**
@@ -176,7 +163,7 @@ public final class Settings {
         gbcBackgroundPaletteObjects = CreatePalette(gbcBackgroundPaletteDefaults);
         gbcSpritePalette0Objects = CreatePalette(gbcSpritePalette0Defaults);
         gbcSpritePalette1Objects = CreatePalette(gbcSpritePalette1Defaults);
-        SyncLegacyFields();
+
     }
 
     /**
@@ -201,7 +188,7 @@ public final class Settings {
     public static void ApplyAppTheme(AppTheme theme) {
         appTheme = theme.Copy();
         com.blackaby.Frontend.Styling.ApplyTheme(appTheme);
-        SyncLegacyFields();
+
     }
 
     /**
@@ -217,12 +204,12 @@ public final class Settings {
      * Updates one editable theme colour slot and reapplies the theme.
      *
      * @param role theme slot to change
-     * @param hex replacement colour in hexadecimal form
+     * @param hex  replacement colour in hexadecimal form
      */
     public static void SetAppThemeColour(AppThemeColorRole role, String hex) {
         appTheme.SetCoreColour(role, hex);
         com.blackaby.Frontend.Styling.ApplyTheme(appTheme);
-        SyncLegacyFields();
+
     }
 
     /**
@@ -241,7 +228,7 @@ public final class Settings {
         channelMuted = new boolean[] { false, false, false, false };
         channelVolume = new int[] { 100, 100, 100, 100 };
         SetAudioEnhancementChainInternal(List.of(), false);
-        SyncLegacyFields();
+
     }
 
     /**
@@ -259,12 +246,12 @@ public final class Settings {
      * Sets whether a DMG channel is muted.
      *
      * @param channelIndex channel index from 0 to 3
-     * @param muted mute state
+     * @param muted        mute state
      */
     public static void SetChannelMuted(int channelIndex, boolean muted) {
         ValidateChannelIndex(channelIndex);
         channelMuted[channelIndex] = muted;
-        SyncLegacyFields();
+
     }
 
     /**
@@ -282,12 +269,12 @@ public final class Settings {
      * Sets the channel volume as a percentage.
      *
      * @param channelIndex channel index from 0 to 3
-     * @param volume volume from 0 to 100
+     * @param volume       volume from 0 to 100
      */
     public static void SetChannelVolume(int channelIndex, int volume) {
         ValidateChannelIndex(channelIndex);
         channelVolume[channelIndex] = Math.max(0, Math.min(100, volume));
-        SyncLegacyFields();
+
     }
 
     /**
@@ -323,7 +310,7 @@ public final class Settings {
     public static void ResetEmulation() {
         useBootRom = false;
         useCgbBootRom = false;
-        SyncLegacyFields();
+
     }
 
     /**
@@ -333,7 +320,7 @@ public final class Settings {
         fillWindowOutput = false;
         showSerialOutput = true;
         gameArtDisplayMode = GameArtDisplayMode.BOX_ART;
-        SyncLegacyFields();
+
     }
 
     /**
@@ -341,7 +328,7 @@ public final class Settings {
      */
     public static void ResetLibrary() {
         gameNameBracketDisplayMode = GameNameBracketDisplayMode.NONE;
-        SyncLegacyFields();
+
     }
 
     /**
@@ -389,7 +376,7 @@ public final class Settings {
      * Replaces one entry in the active DMG palette.
      *
      * @param index palette index from 0 to 3
-     * @param hex colour in hexadecimal form
+     * @param hex   colour in hexadecimal form
      */
     public static void SetPaletteColour(int index, String hex) {
         switch (index) {
@@ -399,15 +386,15 @@ public final class Settings {
             case 3 -> gbColour3Object = new GBColor(hex);
             default -> throw new IllegalArgumentException("Invalid palette index: " + index);
         }
-        SyncLegacyFields();
+
     }
 
     /**
      * Replaces one entry in one of the GBC-style non-CGB palettes.
      *
      * @param paletteIndex palette selector: 0 background, 1 sprite 0, 2 sprite 1
-     * @param colourIndex palette colour index from 0 to 3
-     * @param hex colour in hexadecimal form
+     * @param colourIndex  palette colour index from 0 to 3
+     * @param hex          colour in hexadecimal form
      */
     public static void SetGbcPaletteColour(int paletteIndex, int colourIndex, String hex) {
         GBColor[] targetPalette = switch (paletteIndex) {
@@ -422,31 +409,7 @@ public final class Settings {
         }
 
         targetPalette[colourIndex] = new GBColor(hex);
-        SyncLegacyFields();
-    }
 
-    private static void SyncLegacyFields() {
-        GB_COLOR_0_OBJ = gbColour0Object;
-        GB_COLOR_1_OBJ = gbColour1Object;
-        GB_COLOR_2_OBJ = gbColour2Object;
-        GB_COLOR_3_OBJ = gbColour3Object;
-        PREFER_DMG_MODE_FOR_GBC_COMPATIBLE_GAMES = preferDmgModeForGbcCompatibleGames;
-        GBC_PALETTE_MODE_ENABLED = gbcPaletteModeEnabled;
-        GBC_BACKGROUND_PALETTE = gbcBackgroundPaletteObjects;
-        GBC_SPRITE_PALETTE_0 = gbcSpritePalette0Objects;
-        GBC_SPRITE_PALETTE_1 = gbcSpritePalette1Objects;
-        APP_THEME = appTheme;
-        SOUND_ENABLED = soundEnabled;
-        MASTER_VOLUME = masterVolume;
-        CHANNEL_MUTED = channelMuted;
-        CHANNEL_VOLUME = channelVolume;
-        AUDIO_ENHANCEMENT_CHAIN = audioEnhancementChain;
-        USE_BOOT_ROM = useBootRom;
-        USE_CGB_BOOT_ROM = useCgbBootRom;
-        FILL_WINDOW_OUTPUT = fillWindowOutput;
-        SHOW_SERIAL_OUTPUT = showSerialOutput;
-        GAME_ART_DISPLAY_MODE = gameArtDisplayMode;
-        GAME_NAME_BRACKET_DISPLAY_MODE = gameNameBracketDisplayMode;
     }
 
     private static GBColor[] CreatePalette(String[] hexPalette) {
@@ -475,36 +438,7 @@ public final class Settings {
         audioEnhancementChain = chain == null ? List.of() : List.copyOf(chain);
         audioEnhancementChainVersion++;
         if (syncLegacyFields) {
-            SyncLegacyFields();
-        }
-    }
 
-    @Deprecated public static void reset() { Reset(); }
-    @Deprecated public static void resetPalette() { ResetPalette(); }
-    @Deprecated public static void resetGbcPaletteMode() { ResetGbcPaletteMode(); }
-    @Deprecated public static void resetControls() { ResetControls(); }
-    @Deprecated public static void resetAppTheme() { ResetAppTheme(); }
-    @Deprecated public static void applyAppTheme(AppTheme theme) { ApplyAppTheme(theme); }
-    @Deprecated public static AppTheme currentAppTheme() { return CurrentAppTheme(); }
-    @Deprecated public static void setAppThemeColor(AppThemeColorRole role, String hex) { SetAppThemeColour(role, hex); }
-    @Deprecated public static void resetAppShortcuts() { ResetAppShortcuts(); }
-    @Deprecated public static void resetSound() { ResetSound(); }
-    @Deprecated public static boolean isChannelMuted(int channelIndex) { return IsChannelMuted(channelIndex); }
-    @Deprecated public static void setChannelMuted(int channelIndex, boolean muted) { SetChannelMuted(channelIndex, muted); }
-    @Deprecated public static int getChannelVolume(int channelIndex) { return GetChannelVolume(channelIndex); }
-    @Deprecated public static void setChannelVolume(int channelIndex, int volume) { SetChannelVolume(channelIndex, volume); }
-    @Deprecated public static List<AudioEnhancementPreset> currentAudioEnhancementChain() { return CurrentAudioEnhancementChain(); }
-    @Deprecated public static long audioEnhancementChainVersion() { return AudioEnhancementChainVersion(); }
-    @Deprecated public static void setAudioEnhancementChain(List<AudioEnhancementPreset> chain) { SetAudioEnhancementChain(chain); }
-    @Deprecated public static void resetEmulation() { ResetEmulation(); }
-    @Deprecated public static void resetWindow() { ResetWindow(); }
-    @Deprecated public static void resetLibrary() { ResetLibrary(); }
-    @Deprecated public static GBColor[] currentPalette() { return CurrentPalette(); }
-    @Deprecated public static GBColor[] currentGbcBackgroundPalette() { return CurrentGbcBackgroundPalette(); }
-    @Deprecated public static GBColor[] currentGbcSpritePalette0() { return CurrentGbcSpritePalette0(); }
-    @Deprecated public static GBColor[] currentGbcSpritePalette1() { return CurrentGbcSpritePalette1(); }
-    @Deprecated public static void setPaletteColor(int index, String hex) { SetPaletteColour(index, hex); }
-    @Deprecated public static void setGbcPaletteColor(int paletteIndex, int colourIndex, String hex) {
-        SetGbcPaletteColour(paletteIndex, colourIndex, hex);
+        }
     }
 }
