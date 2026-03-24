@@ -1,5 +1,6 @@
 package com.blackaby.Frontend;
 
+import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.PrintWriter;
@@ -24,6 +25,7 @@ public final class DebugLogger {
 
     private static final StringBuilder serialBuffer = new StringBuilder();
     private static final List<SerialListener> serialListeners = new ArrayList<>();
+    private static PrintWriter serialWriter;
 
     private DebugLogger() {
     }
@@ -72,10 +74,16 @@ public final class DebugLogger {
 
         synchronized (DebugLogger.class) {
             serialBuffer.append(text);
+            EnsureSerialWriter(true);
+            if (serialWriter != null) {
+                serialWriter.write(text);
+                if ((serialBuffer.length() & 0x3F) == 0 || text.charAt(0) == '\n') {
+                    serialWriter.flush();
+                }
+            }
             listeners = new ArrayList<>(serialListeners);
         }
 
-        LogFile(text, serialFileName);
         for (SerialListener listener : listeners) {
             listener.SerialOutputAppended(text);
         }
@@ -97,6 +105,7 @@ public final class DebugLogger {
         List<SerialListener> listeners;
         synchronized (DebugLogger.class) {
             serialBuffer.setLength(0);
+            CloseSerialWriter();
             listeners = new ArrayList<>(serialListeners);
         }
 
@@ -129,6 +138,28 @@ public final class DebugLogger {
      */
     public static synchronized void RemoveSerialListener(SerialListener listener) {
         serialListeners.remove(listener);
+    }
+
+    private static void EnsureSerialWriter(boolean append) {
+        if (serialWriter != null) {
+            return;
+        }
+
+        try {
+            serialWriter = new PrintWriter(new BufferedWriter(new FileWriter(serialFileName, append)));
+        } catch (IOException exception) {
+            exception.printStackTrace();
+        }
+    }
+
+    private static void CloseSerialWriter() {
+        if (serialWriter == null) {
+            return;
+        }
+
+        serialWriter.flush();
+        serialWriter.close();
+        serialWriter = null;
     }
 
 }
