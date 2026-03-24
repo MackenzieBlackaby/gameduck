@@ -51,7 +51,6 @@ public class DuckEmulation implements Runnable {
     private volatile boolean running;
     private volatile boolean paused;
     private int frames;
-    private int previousLy;
     private final String defaultRomName = "NO ROM LOADED";
     private String romName = defaultRomName;
     private final Object stateLock = new Object();
@@ -230,7 +229,6 @@ public class DuckEmulation implements Runnable {
 
                     executedCycles += tCycles;
                     availableCycles -= tCycles;
-                    TrackFrameBoundary();
                 }
             }
 
@@ -500,14 +498,7 @@ public class DuckEmulation implements Runnable {
             apu.Tick();
             HandleSerial();
         }
-    }
-
-    private void TrackFrameBoundary() {
-        int currentLy = memory.Read(DuckAddresses.LY);
-        if (currentLy < previousLy) {
-            frames++;
-        }
-        previousLy = currentLy;
+        frames += ppu.ConsumeCompletedFrames();
     }
 
     private void HandleSerial() {
@@ -552,7 +543,7 @@ public class DuckEmulation implements Runnable {
                 apu.CaptureState(),
                 display.SnapshotFrameState(),
                 frames,
-                previousLy);
+                ppu.GetCurrentScanline());
     }
 
     private void RestoreQuickState(QuickStateManager.QuickStateData quickState) {
@@ -573,7 +564,6 @@ public class DuckEmulation implements Runnable {
         ppu.RestoreState(quickState.ppuState());
         display.RestoreFrameState(quickState.displayState());
         frames = Math.max(0, quickState.frames());
-        previousLy = quickState.previousLy();
     }
 
     private void SetRuntimeStatus(String statusText) {

@@ -1,11 +1,8 @@
 package com.blackaby.Backend.Emulation.Graphics;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
+import java.util.Arrays;
 
 import com.blackaby.Backend.Emulation.CPU.DuckCPU;
-import com.blackaby.Backend.Emulation.CPU.DuckSprite;
 import com.blackaby.Backend.Emulation.Memory.DuckAddresses;
 import com.blackaby.Backend.Emulation.Memory.DuckMemory;
 import com.blackaby.Frontend.DuckDisplay;
@@ -34,6 +31,7 @@ public class DuckPPU {
     private static final int vblankLines = 10;
     private static final int screenHeight = 144;
     private static final int screenWidth = 160;
+    private static final int maxSpritesPerScanline = 10;
 
     private static final int regLcdc = DuckAddresses.LCDC;
     private static final int regStat = DuckAddresses.STAT;
@@ -65,11 +63,22 @@ public class DuckPPU {
     private final DuckDisplay display;
     private final int[] backgroundPriorityBuffer = new int[screenWidth];
     private final boolean[] backgroundTilePriorityBuffer = new boolean[screenWidth];
+    private final int[] visibleSpriteY = new int[maxSpritesPerScanline];
+    private final int[] visibleSpriteX = new int[maxSpritesPerScanline];
+    private final int[] visibleSpriteTile = new int[maxSpritesPerScanline];
+    private final int[] visibleSpriteAttributes = new int[maxSpritesPerScanline];
+    private final int[] activeBackgroundPalette = new int[4];
+    private final int[] activeSpritePalette0 = new int[4];
+    private final int[] activeSpritePalette1 = new int[4];
+    private final int[] decodedBackgroundPalette = new int[4];
+    private final int[] decodedSpritePalette0 = new int[4];
+    private final int[] decodedSpritePalette1 = new int[4];
 
     private PpuMode mode;
     private int scanline;
     private int cycle;
     private boolean statInterruptLine;
+    private int completedFrames;
 
     /**
      * Creates a PPU bound to the current CPU, memory bus, and display target.
@@ -122,6 +131,7 @@ public class DuckPPU {
                     if (scanline == screenHeight) {
                         SetMode(PpuMode.VBLANK);
                         cpu.RequestInterrupt(DuckCPU.Interrupt.VBLANK);
+                        completedFrames++;
                         display.presentFrame();
                     } else {
                         SetMode(PpuMode.OAM);
@@ -170,6 +180,27 @@ public class DuckPPU {
         scanline = state.scanline();
         cycle = Math.max(0, state.cycle());
         statInterruptLine = state.statInterruptLine();
+        completedFrames = 0;
+    }
+
+    /**
+     * Returns and clears the number of frames completed since the last poll.
+     *
+     * @return completed frame count
+     */
+    public int ConsumeCompletedFrames() {
+        int frames = completedFrames;
+        completedFrames = 0;
+        return frames;
+    }
+
+    /**
+     * Returns the current scanline index.
+     *
+     * @return current LY value
+     */
+    public int GetCurrentScanline() {
+        return scanline;
     }
 
     private void HandleLcdDisabled() {
@@ -177,6 +208,7 @@ public class DuckPPU {
         cycle = 0;
         mode = PpuMode.HBLANK;
         statInterruptLine = false;
+        completedFrames = 0;
         memory.WriteDirect(regLy, 0);
 
         int stat = memory.Read(regStat);
@@ -224,29 +256,39 @@ public class DuckPPU {
         int lcdControl = memory.Read(regLcdc);
         boolean cgbMode = memory.IsCgbMode();
         boolean useGbcColourisation = ShouldUseGbcColourisation();
-        int[] activeBackgroundPalette = cgbMode ? null : ActiveBackgroundPaletteRgb(useGbcColourisation);
-        int[] activeSpritePalette0 = cgbMode ? null : ActiveSpritePalette0Rgb(useGbcColourisation);
-        int[] activeSpritePalette1 = cgbMode ? null : ActiveSpritePalette1Rgb(useGbcColourisation);
+        if (!cgbMode) {
+            if (useGbcColourisation) {
+                LoadPalette(Settings.gbcBackgroundPaletteObjects, activeBackgroundPalette);
+                LoadPalette(Settings.gbcSpritePalette0Objects, activeSpritePalette0);
+                LoadPalette(Settings.gbcSpritePalette1Objects, activeSpritePalette1);
+            } else {
+                LoadDmgPalette(activeBackgroundPalette);
+                LoadDmgPalette(activeSpritePalette0);
+                LoadDmgPalette(activeSpritePalette1);
+            }
 
-        for (int x = 0; x < screenWidth; x++) {
-            backgroundPriorityBuffer[x] = 0;
-            backgroundTilePriorityBuffer[x] = false;
+            DecodePalette(memory.Read(regBgp), activeBackgroundPalette, decodedBackgroundPalette);
+            DecodePalette(memory.Read(regObp0), activeSpritePalette0, decodedSpritePalette0);
+            DecodePalette(memory.Read(regObp1), activeSpritePalette1, decodedSpritePalette1);
         }
 
+        Arrays.fill(backgroundPriorityBuffer, 0);
+        Arrays.fill(backgroundTilePriorityBuffer, false);
+
         if (cgbMode || (lcdControl & 0x01) != 0) {
-            RenderBackground(lcdControl, activeBackgroundPalette);
+            RenderBackground(lcdControl, cgbMode ? null : decodedBackgroundPalette);
             if ((lcdControl & 0x20) != 0) {
-                RenderWindow(lcdControl, activeBackgroundPalette);
+                RenderWindow(lcdControl, cgbMode ? null : decodedBackgroundPalette);
             }
         } else {
-            int white = activeBackgroundPalette[0];
+            int white = decodedBackgroundPalette[0];
             for (int x = 0; x < screenWidth; x++) {
                 display.setPixel(x, scanline, white, false);
             }
         }
 
         if ((lcdControl & 0x02) != 0) {
-            RenderSprites(lcdControl, activeSpritePalette0, activeSpritePalette1);
+            RenderSprites(lcdControl, cgbMode ? null : decodedSpritePalette0, cgbMode ? null : decodedSpritePalette1);
         }
     }
 
@@ -254,7 +296,7 @@ public class DuckPPU {
         int scrollY = memory.Read(regScy);
         int scrollX = memory.Read(regScx);
         boolean cgbMode = memory.IsCgbMode();
-        int[] backgroundPalette = cgbMode ? null : DecodePalette(memory.Read(regBgp), activeBackgroundPalette);
+        int[] backgroundPalette = cgbMode ? null : activeBackgroundPalette;
 
         boolean unsignedTileData = (lcdControl & 0x10) != 0;
         int tileMapBase = ((lcdControl & 0x08) != 0) ? 0x9C00 : 0x9800;
@@ -314,7 +356,7 @@ public class DuckPPU {
         }
 
         boolean cgbMode = memory.IsCgbMode();
-        int[] backgroundPalette = cgbMode ? null : DecodePalette(memory.Read(regBgp), activeBackgroundPalette);
+        int[] backgroundPalette = cgbMode ? null : activeBackgroundPalette;
         boolean unsignedTileData = (lcdControl & 0x10) != 0;
         int tileMapBase = ((lcdControl & 0x40) != 0) ? 0x9C00 : 0x9800;
         int tileDataBase = unsignedTileData ? 0x8000 : 0x9000;
@@ -367,27 +409,26 @@ public class DuckPPU {
 
     private void RenderSprites(int lcdControl, int[] activeSpritePalette0, int[] activeSpritePalette1) {
         boolean use8x16 = (lcdControl & 0x04) != 0;
-        List<DuckSprite> visibleSprites = GetSpritesOnScanline(use8x16);
-        for (DuckSprite sprite : visibleSprites) {
-            DrawSprite(sprite, use8x16, activeSpritePalette0, activeSpritePalette1);
+        boolean cgbMode = memory.IsCgbMode();
+        boolean bgMasterPriority = cgbMode && (lcdControl & 0x01) != 0;
+        int visibleSpriteCount = LoadSpritesOnScanline(use8x16);
+        for (int spriteIndex = 0; spriteIndex < visibleSpriteCount; spriteIndex++) {
+            DrawSprite(spriteIndex, use8x16, cgbMode, bgMasterPriority, activeSpritePalette0, activeSpritePalette1);
         }
     }
 
-    private void DrawSprite(DuckSprite sprite, boolean use8x16, int[] activeSpritePalette0, int[] activeSpritePalette1) {
-        boolean cgbMode = memory.IsCgbMode();
+    private void DrawSprite(int spriteIndex, boolean use8x16, boolean cgbMode, boolean bgMasterPriority,
+            int[] activeSpritePalette0, int[] activeSpritePalette1) {
         int spriteHeight = use8x16 ? 16 : 8;
-        int paletteRegister = sprite.UsesPalette1() ? regObp1 : regObp0;
-        int[] palette = cgbMode
-                ? null
-                : DecodePalette(memory.Read(paletteRegister),
-                        sprite.UsesPalette1() ? activeSpritePalette1 : activeSpritePalette0);
+        int attributes = visibleSpriteAttributes[spriteIndex];
+        int[] palette = cgbMode ? null : (((attributes & 0x10) != 0) ? activeSpritePalette1 : activeSpritePalette0);
 
-        int line = scanline - sprite.y;
-        if (sprite.IsYFlip()) {
+        int line = scanline - visibleSpriteY[spriteIndex];
+        if ((attributes & 0x40) != 0) {
             line = spriteHeight - 1 - line;
         }
 
-        int tileIndex = sprite.tileIndex;
+        int tileIndex = visibleSpriteTile[spriteIndex];
         if (use8x16) {
             tileIndex &= 0xFE;
             if (line >= 8) {
@@ -397,16 +438,17 @@ public class DuckPPU {
         }
 
         int tileAddress = 0x8000 + (tileIndex * 16) + (line * 2);
-        int lowByte = cgbMode ? memory.ReadVideoRam(sprite.VramBank(), tileAddress) : memory.Read(tileAddress);
-        int highByte = cgbMode ? memory.ReadVideoRam(sprite.VramBank(), tileAddress + 1) : memory.Read(tileAddress + 1);
+        int vramBank = (attributes & 0x08) != 0 ? 1 : 0;
+        int lowByte = cgbMode ? memory.ReadVideoRam(vramBank, tileAddress) : memory.Read(tileAddress);
+        int highByte = cgbMode ? memory.ReadVideoRam(vramBank, tileAddress + 1) : memory.Read(tileAddress + 1);
 
         for (int x = 0; x < 8; x++) {
-            int pixelX = sprite.x + x;
+            int pixelX = visibleSpriteX[spriteIndex] + x;
             if (pixelX < 0 || pixelX >= screenWidth) {
                 continue;
             }
 
-            int bit = sprite.IsXFlip() ? x : 7 - x;
+            int bit = (attributes & 0x20) != 0 ? x : 7 - x;
             int high = (highByte >> bit) & 1;
             int low = (lowByte >> bit) & 1;
             int colourIndex = (high << 1) | low;
@@ -416,24 +458,23 @@ public class DuckPPU {
             }
 
             if (cgbMode) {
-                boolean bgMasterPriority = (memory.Read(regLcdc) & 0x01) != 0;
                 if (bgMasterPriority && backgroundPriorityBuffer[pixelX] != 0
-                        && (sprite.IsPriorityInternal() || backgroundTilePriorityBuffer[pixelX])) {
+                        && (((attributes & 0x80) != 0) || backgroundTilePriorityBuffer[pixelX])) {
                     continue;
                 }
-            } else if (sprite.IsPriorityInternal() && backgroundPriorityBuffer[pixelX] != 0) {
+            } else if ((attributes & 0x80) != 0 && backgroundPriorityBuffer[pixelX] != 0) {
                 continue;
             }
 
             int colour = cgbMode
-                    ? memory.ReadCgbObjectPaletteColourRgb(sprite.CgbPaletteIndex(), colourIndex)
+                    ? memory.ReadCgbObjectPaletteColourRgb(attributes & 0x07, colourIndex)
                     : palette[colourIndex];
             display.setPixel(pixelX, scanline, colour, false);
         }
     }
 
-    private List<DuckSprite> GetSpritesOnScanline(boolean use8x16) {
-        List<DuckSprite> visibleSprites = new ArrayList<>();
+    private int LoadSpritesOnScanline(boolean use8x16) {
+        int visibleSpriteCount = 0;
         int spriteHeight = use8x16 ? 16 : 8;
 
         for (int index = 0; index < 40; index++) {
@@ -444,81 +485,70 @@ public class DuckPPU {
             int attributes = memory.Read(address + 3);
 
             if (scanline >= y && scanline < (y + spriteHeight)) {
-                visibleSprites.add(new DuckSprite(y, x, tile, attributes));
+                visibleSpriteY[visibleSpriteCount] = y;
+                visibleSpriteX[visibleSpriteCount] = x;
+                visibleSpriteTile[visibleSpriteCount] = tile;
+                visibleSpriteAttributes[visibleSpriteCount] = attributes;
+                visibleSpriteCount++;
             }
 
-            if (visibleSprites.size() >= 10) {
+            if (visibleSpriteCount >= maxSpritesPerScanline) {
                 break;
             }
         }
 
-        if (!memory.IsCgbMode() || memory.Read(DuckAddresses.OPRI) != 0) {
-            visibleSprites.sort(Comparator.comparingInt(sprite -> sprite.x));
+        if ((!memory.IsCgbMode() || memory.Read(DuckAddresses.OPRI) != 0) && visibleSpriteCount > 1) {
+            SortVisibleSpritesByX(visibleSpriteCount);
         }
-        return visibleSprites;
+        return visibleSpriteCount;
     }
 
-    private int[] DecodePalette(int paletteRegister, int[] paletteColours) {
-        return new int[] {
-                PaletteColourRgb(0, paletteRegister, paletteColours),
-                PaletteColourRgb(1, paletteRegister, paletteColours),
-                PaletteColourRgb(2, paletteRegister, paletteColours),
-                PaletteColourRgb(3, paletteRegister, paletteColours)
-        };
+    private void SortVisibleSpritesByX(int count) {
+        for (int index = 1; index < count; index++) {
+            int spriteY = visibleSpriteY[index];
+            int spriteX = visibleSpriteX[index];
+            int spriteTile = visibleSpriteTile[index];
+            int spriteAttributes = visibleSpriteAttributes[index];
+            int compareIndex = index - 1;
+
+            while (compareIndex >= 0 && spriteX < visibleSpriteX[compareIndex]) {
+                visibleSpriteY[compareIndex + 1] = visibleSpriteY[compareIndex];
+                visibleSpriteX[compareIndex + 1] = visibleSpriteX[compareIndex];
+                visibleSpriteTile[compareIndex + 1] = visibleSpriteTile[compareIndex];
+                visibleSpriteAttributes[compareIndex + 1] = visibleSpriteAttributes[compareIndex];
+                compareIndex--;
+            }
+
+            visibleSpriteY[compareIndex + 1] = spriteY;
+            visibleSpriteX[compareIndex + 1] = spriteX;
+            visibleSpriteTile[compareIndex + 1] = spriteTile;
+            visibleSpriteAttributes[compareIndex + 1] = spriteAttributes;
+        }
+    }
+
+    private void DecodePalette(int paletteRegister, int[] paletteColours, int[] targetPalette) {
+        for (int colourIndex = 0; colourIndex < targetPalette.length; colourIndex++) {
+            targetPalette[colourIndex] = PaletteColourRgb(colourIndex, paletteRegister, paletteColours);
+        }
     }
 
     private int PaletteColourRgb(int colourIndex, int paletteRegister, int[] paletteColours) {
         int shift = colourIndex * 2;
         int colourId = (paletteRegister >> shift) & 0x03;
-        return paletteColours[Math.max(0, Math.min(3, colourId))];
+        return paletteColours[colourId];
     }
 
-    private int[] ActiveBackgroundPaletteRgb(boolean useGbcColourisation) {
-        if (useGbcColourisation) {
-            return PaletteRgb(Settings.gbcBackgroundPaletteObjects);
+    private void LoadPalette(GBColor[] palette, int[] target) {
+        for (int index = 0; index < target.length; index++) {
+            target[index] = palette[index].ToRgb();
         }
-
-        return new int[] {
-                Settings.gbColour0Object.ToRgb(),
-                Settings.gbColour1Object.ToRgb(),
-                Settings.gbColour2Object.ToRgb(),
-                Settings.gbColour3Object.ToRgb()
-        };
     }
 
-    private int[] ActiveSpritePalette0Rgb(boolean useGbcColourisation) {
-        if (useGbcColourisation) {
-            return PaletteRgb(Settings.gbcSpritePalette0Objects);
-        }
-
-        return new int[] {
-                Settings.gbColour0Object.ToRgb(),
-                Settings.gbColour1Object.ToRgb(),
-                Settings.gbColour2Object.ToRgb(),
-                Settings.gbColour3Object.ToRgb()
-        };
-    }
-
-    private int[] ActiveSpritePalette1Rgb(boolean useGbcColourisation) {
-        if (useGbcColourisation) {
-            return PaletteRgb(Settings.gbcSpritePalette1Objects);
-        }
-
-        return new int[] {
-                Settings.gbColour0Object.ToRgb(),
-                Settings.gbColour1Object.ToRgb(),
-                Settings.gbColour2Object.ToRgb(),
-                Settings.gbColour3Object.ToRgb()
-        };
-    }
-
-    private int[] PaletteRgb(GBColor[] palette) {
-        return new int[] {
-                palette[0].ToRgb(),
-                palette[1].ToRgb(),
-                palette[2].ToRgb(),
-                palette[3].ToRgb()
-        };
+    private void LoadDmgPalette(int[] target) {
+        target[0] = Settings.gbColour0Object.ToRgb();
+        target[1] = Settings.gbColour1Object.ToRgb();
+        target[2] = Settings.gbColour2Object.ToRgb();
+        target[3] = Settings.gbColour3Object.ToRgb();
     }
 
     private boolean ShouldUseGbcColourisation() {
