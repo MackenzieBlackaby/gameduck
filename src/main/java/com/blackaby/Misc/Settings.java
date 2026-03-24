@@ -84,8 +84,20 @@ public final class Settings {
     /** Active keyboard bindings for emulated Game Boy buttons. */
     public static final InputBindings inputBindings = new InputBindings();
 
+    /** Active controller bindings for emulated Game Boy buttons. */
+    public static final ControllerBindings controllerBindings = new ControllerBindings();
+
     /** Active keyboard bindings for host window shortcuts. */
     public static final AppShortcutBindings appShortcutBindings = new AppShortcutBindings();
+
+    /** Whether generic controller input is enabled. */
+    public static boolean controllerInputEnabled = true;
+
+    /** Preferred controller identifier, or blank for automatic selection. */
+    public static String preferredControllerId = "";
+
+    /** Controller deadzone as a percentage from 0 to 100. */
+    public static int controllerDeadzonePercent = 45;
 
     /** Whether host audio output is enabled. */
     public static boolean soundEnabled = true;
@@ -136,6 +148,7 @@ public final class Settings {
         ResetPalette();
         ResetAppTheme();
         ResetControls();
+        ResetControllerControls();
         ResetAppShortcuts();
         ResetSound();
         ResetEmulation();
@@ -171,6 +184,16 @@ public final class Settings {
      */
     public static void ResetControls() {
         inputBindings.ResetToDefaults();
+    }
+
+    /**
+     * Restores the generic controller input settings to their defaults.
+     */
+    public static void ResetControllerControls() {
+        controllerBindings.ResetToDefaults();
+        controllerInputEnabled = true;
+        preferredControllerId = "";
+        controllerDeadzonePercent = 45;
     }
 
     /**

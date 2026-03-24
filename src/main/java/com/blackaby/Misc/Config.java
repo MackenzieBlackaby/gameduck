@@ -31,8 +31,12 @@ public final class Config {
     private static final String savedThemeListKey = "theme.saved.names";
     private static final String savedThemePrefix = "theme.saved.";
     private static final String inputPrefix = "input.";
+    private static final String controllerInputPrefix = "controller.input.";
     private static final String shortcutPrefix = "shortcut.";
     private static final String themePrefix = "theme.";
+    private static final String controllerEnabledKey = "controller.enabled";
+    private static final String controllerPreferredIdKey = "controller.preferred_id";
+    private static final String controllerDeadzoneKey = "controller.deadzone_percent";
     private static final String soundEnabledKey = "sound.enabled";
     private static final String soundVolumeKey = "sound.volume";
     private static final String soundChannelMutedPrefix = "sound.channel.muted.";
@@ -72,6 +76,7 @@ public final class Config {
         ApplyCurrentPalette();
         ApplyAppTheme();
         ApplyInputBindings();
+        ApplyControllerBindings();
         ApplyAppShortcuts();
         ApplySoundSettings();
         ApplyEmulationSettings();
@@ -88,6 +93,7 @@ public final class Config {
         SyncCurrentPalette();
         SyncAppTheme();
         SyncInputBindings();
+        SyncControllerBindings();
         SyncAppShortcuts();
         SyncSoundSettings();
         SyncEmulationSettings();
@@ -119,6 +125,7 @@ public final class Config {
             SyncCurrentPalette();
             SyncAppTheme();
             SyncInputBindings();
+            SyncControllerBindings();
             SyncAppShortcuts();
             SyncSoundSettings();
             SyncEmulationSettings();
@@ -151,6 +158,7 @@ public final class Config {
             SyncCurrentPalette();
             SyncAppTheme();
             SyncInputBindings();
+            SyncControllerBindings();
             SyncAppShortcuts();
             SyncSoundSettings();
             SyncEmulationSettings();
@@ -204,6 +212,7 @@ public final class Config {
             SyncCurrentPalette();
             SyncAppTheme();
             SyncInputBindings();
+            SyncControllerBindings();
             SyncAppShortcuts();
             SyncSoundSettings();
             SyncWindowSettings();
@@ -272,6 +281,7 @@ public final class Config {
         SyncCurrentPalette();
         SyncAppTheme();
         SyncInputBindings();
+        SyncControllerBindings();
         SyncAppShortcuts();
         SyncSoundSettings();
         SyncEmulationSettings();
@@ -299,6 +309,7 @@ public final class Config {
         SyncCurrentPalette();
         SyncAppTheme();
         SyncInputBindings();
+        SyncControllerBindings();
         SyncAppShortcuts();
         SyncSoundSettings();
         SyncEmulationSettings();
@@ -362,6 +373,27 @@ public final class Config {
         for (AppShortcut shortcut : AppShortcut.values()) {
             Settings.appShortcutBindings.LoadFromConfigValue(shortcut,
                     properties.getProperty(shortcutPrefix + shortcut.name()));
+        }
+    }
+
+    private static void ApplyControllerBindings() {
+        Settings.ResetControllerControls();
+        Settings.controllerInputEnabled = Boolean.parseBoolean(properties.getProperty(controllerEnabledKey, "true"));
+        Settings.preferredControllerId = properties.getProperty(controllerPreferredIdKey, "");
+
+        try {
+            int configuredDeadzone = Integer.parseInt(properties.getProperty(controllerDeadzoneKey, "45"));
+            Settings.controllerDeadzonePercent = Math.max(0, Math.min(95, configuredDeadzone));
+        } catch (NumberFormatException exception) {
+            Settings.controllerDeadzonePercent = 45;
+        }
+
+        for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
+            ControllerBinding binding = ControllerBinding.FromConfigValue(
+                    properties.getProperty(controllerInputPrefix + button.name()));
+            if (binding != null) {
+                Settings.controllerBindings.SetBinding(button, binding);
+            }
         }
     }
 
@@ -443,6 +475,18 @@ public final class Config {
         for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
             properties.setProperty(inputPrefix + button.name(),
                     String.valueOf(Settings.inputBindings.GetKeyCode(button)));
+        }
+    }
+
+    private static void SyncControllerBindings() {
+        properties.setProperty(controllerEnabledKey, String.valueOf(Settings.controllerInputEnabled));
+        properties.setProperty(controllerPreferredIdKey,
+                Settings.preferredControllerId == null ? "" : Settings.preferredControllerId);
+        properties.setProperty(controllerDeadzoneKey, String.valueOf(Settings.controllerDeadzonePercent));
+        for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
+            ControllerBinding binding = Settings.controllerBindings.GetBinding(button);
+            properties.setProperty(controllerInputPrefix + button.name(),
+                    binding == null ? "" : binding.ToConfigValue());
         }
     }
 

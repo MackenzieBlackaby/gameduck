@@ -1,12 +1,24 @@
 # GameDuck
 
+## Overview
+
 GameDuck is my Game Boy / Colour emulator and desktop frontend, written in Java with Swing.
 
 It started as my final year project at Lancaster University and evolved past that into a fully fledged Game Boy emulation suite. The repo contains the emulator core itself, the desktop UI wrapped around it, save-data and save-state management, ROM library features, ROM-hack loading tools, boot ROM support, palette and theme customisation, serial output logging, and a duck name and logo in honour of the Lancaster University ducks :)
 
 The project is aimed at original Game Boy and Game Boy Color software. The desktop UI is deliberately designed to be easy to use and feature-rich in a convenient way. I know swing UI looks somewhat archaic compared to RetroArch, but the defining feature of this is that it runs on Java, and therefore can run natively on any device that can run a JVM.
 
-## What is in here at V 0.1
+## Changelog
+
+### V 0.1.1
+
+- Basic controller support has been added. 
+- It supports a variety of controllers using standard input systems such as XInput and DirectInput on Windows, and the standard input APIs on Linux and Mac. 
+- The controller configuration UI allows you to map buttons to the Game Boy buttons.
+- The emulator can detect connected controllers and switch between them seamlessly.
+- Shortcut mapping and "map all" functionality is coming soon.
+
+### V 0.1.0
 
 - A OOP-based emulator core under `Backend/Emulation`, split into CPU, memory, graphics, peripherals, and various other classes. Basically the heart of the entire emulation.
 - A Swing desktop application under `Frontend`, including the main window, library browser, ROM information view, options window, theme manager, palette manager, save manager, and save-state manager.
@@ -66,10 +78,16 @@ GameDuck currently targets Java 22 and builds with Maven.
 mvn compile
 ```
 
-To run the desktop app:
+To run the desktop app, compile in the same invocation so Maven does not launch against stale `target/classes` output:
 
 ```bash
-mvn exec:java
+mvn compile exec:java
+```
+
+If you still hit a `ClassNotFoundException` or `NoClassDefFoundError` after source changes, clear stale output first:
+
+```bash
+mvn clean compile exec:java
 ```
 
 To run the tests:

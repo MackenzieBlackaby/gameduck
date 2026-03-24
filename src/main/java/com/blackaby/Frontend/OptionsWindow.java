@@ -12,6 +12,7 @@ import com.blackaby.Misc.AppThemeColorRole;
 import com.blackaby.Misc.AppThemePreset;
 import com.blackaby.Misc.BootRomManager;
 import com.blackaby.Misc.Config;
+import com.blackaby.Misc.ControllerBinding;
 import com.blackaby.Misc.GameArtDisplayMode;
 import com.blackaby.Misc.GameNameBracketDisplayMode;
 import com.blackaby.Misc.Settings;
@@ -31,7 +32,10 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.util.ArrayList;
 import java.util.EnumMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 /**
  * Hosts the application options window.
@@ -90,6 +94,7 @@ public class OptionsWindow extends DuckWindow {
     private final Color cardBorder;
     private final Color accentColour;
     private final Color mutedText;
+    private final ControllerInputService controllerInputService = ControllerInputService.Shared();
 
     private final JPanel[] paletteStripPreviews = new JPanel[4];
     private final JPanel[] colorPreviews = new JPanel[4];
@@ -100,12 +105,25 @@ public class OptionsWindow extends DuckWindow {
     private final JPanel[] themeColorPreviews = new JPanel[AppThemeColorRole.values().length];
     private final JLabel[] themeColorHexLabels = new JLabel[AppThemeColorRole.values().length];
     private final EnumMap<DuckJoypad.Button, JButton> bindingButtons = new EnumMap<>(DuckJoypad.Button.class);
+    private final EnumMap<DuckJoypad.Button, JButton> controllerBindingButtons = new EnumMap<>(DuckJoypad.Button.class);
     private final EnumMap<AppShortcut, JButton> shortcutButtons = new EnumMap<>(AppShortcut.class);
     private final MainWindow mainWindow;
     private final int initialTabIndex;
     private JTabbedPane tabs;
     private JComboBox<DmgPaletteModeOption> dmgPaletteModeSelector;
     private JComboBox<GbcCompatiblePaletteModeOption> gbcCompatiblePaletteModeSelector;
+    private JComboBox<ControllerChoice> controllerSelector;
+    private JCheckBox controllerEnabledCheckBox;
+    private JLabel controllerActiveValueLabel;
+    private JLabel controllerStatusBadgeLabel;
+    private JLabel controllerStatusHelperLabel;
+    private JLabel controllerLiveInputsArea;
+    private JLabel controllerMappedButtonsArea;
+    private JLabel controllerDeadzoneValueLabel;
+    private JSlider controllerDeadzoneSlider;
+    private Timer controllerRefreshTimer;
+    private boolean updatingControllerUi;
+    private List<String> lastControllerDeviceEntries = List.of();
     private JTextField volumeValueField;
 
     public OptionsWindow(MainWindow mainWindow) {
@@ -128,6 +146,17 @@ public class OptionsWindow extends DuckWindow {
         add(buildHeader(), BorderLayout.NORTH);
         add(buildTabbedContent(), BorderLayout.CENTER);
         add(buildFooter(), BorderLayout.SOUTH);
+        controllerRefreshTimer = new Timer(250, event -> refreshControllerStatus());
+        controllerRefreshTimer.start();
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent event) {
+                if (controllerRefreshTimer != null) {
+                    controllerRefreshTimer.stop();
+                }
+            }
+        });
+        refreshControllerStatus();
 
         setVisible(true);
     }
@@ -164,6 +193,11 @@ public class OptionsWindow extends DuckWindow {
         tabs.addTab(UiText.OptionsWindow.TAB_WINDOW, buildTabScrollPane(buildWindowTab()));
         tabs.addTab(UiText.OptionsWindow.TAB_LIBRARY, buildTabScrollPane(buildLibraryTab()));
         tabs.addTab(UiText.OptionsWindow.TAB_THEME, buildTabScrollPane(buildThemeTab()));
+        tabs.addChangeListener(event -> {
+            if (isControlsTabSelected()) {
+                refreshControllerStatus();
+            }
+        });
         if (initialTabIndex >= 0 && initialTabIndex < tabs.getTabCount()) {
             tabs.setSelectedIndex(initialTabIndex);
         }
@@ -201,9 +235,15 @@ public class OptionsWindow extends DuckWindow {
                 createControlsPanel()));
         content.add(Box.createVerticalStrut(16));
         content.add(createSectionCard(
+                UiText.OptionsWindow.SECTION_CONTROLLER_TITLE,
+                UiText.OptionsWindow.SECTION_CONTROLLER_DESCRIPTION,
+                createControllerPanel()));
+        content.add(Box.createVerticalStrut(16));
+        content.add(createSectionCard(
                 UiText.OptionsWindow.SECTION_SHORTCUTS_TITLE,
                 UiText.OptionsWindow.SECTION_SHORTCUTS_DESCRIPTION,
                 createShortcutPanel()));
+        content.add(Box.createVerticalGlue());
         return content;
     }
 
@@ -757,6 +797,199 @@ public class OptionsWindow extends DuckWindow {
         container.add(actions, BorderLayout.SOUTH);
 
         return container;
+    }
+
+    private JComponent createControllerPanel() {
+        JPanel container = new JPanel(new BorderLayout(0, 18));
+        container.setOpaque(false);
+
+        JPanel stack = new JPanel();
+        stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
+        stack.setOpaque(false);
+
+        stack.add(createControllerSettingsCard());
+        stack.add(Box.createVerticalStrut(12));
+        stack.add(createControllerLiveTesterCard());
+        stack.add(Box.createVerticalStrut(12));
+
+        JPanel bindingsSection = new JPanel(new BorderLayout(0, 10));
+        bindingsSection.setOpaque(false);
+
+        JLabel bindingsTitle = createFieldLabel(UiText.OptionsWindow.CONTROLLER_BINDINGS_TITLE);
+        JPanel bindingsHeader = new JPanel(new BorderLayout());
+        bindingsHeader.setOpaque(false);
+        bindingsHeader.add(bindingsTitle, BorderLayout.WEST);
+        bindingsHeader.add(createBadgeLabel(UiText.OptionsWindow.DMG_BADGE), BorderLayout.EAST);
+
+        JLabel bindingsHelper = new JLabel(UiText.OptionsWindow.CONTROLLER_BINDINGS_HELPER);
+        bindingsHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        bindingsHelper.setForeground(mutedText);
+
+        JPanel bindingsHeaderStack = new JPanel();
+        bindingsHeaderStack.setOpaque(false);
+        bindingsHeaderStack.setLayout(new BoxLayout(bindingsHeaderStack, BoxLayout.Y_AXIS));
+        bindingsHeaderStack.add(bindingsHeader);
+        bindingsHeaderStack.add(Box.createVerticalStrut(4));
+        bindingsHeaderStack.add(bindingsHelper);
+
+        JPanel bindingsGrid = new JPanel(new GridLayout(4, 2, 10, 10));
+        bindingsGrid.setOpaque(false);
+        for (DuckJoypad.Button button : controlOrder()) {
+            bindingsGrid.add(createControllerBindingCard(button));
+        }
+
+        bindingsSection.add(bindingsHeaderStack, BorderLayout.NORTH);
+        bindingsSection.add(bindingsGrid, BorderLayout.CENTER);
+        stack.add(bindingsSection);
+
+        container.add(stack, BorderLayout.CENTER);
+
+        JButton resetControllerButton = createSecondaryButton(UiText.OptionsWindow.CONTROLLER_RESET_BUTTON);
+        resetControllerButton.addActionListener(event -> {
+            Settings.ResetControllerControls();
+            controllerInputService.RefreshControllers();
+            refreshControllerBindingButtons();
+            refreshControllerStatus();
+            Config.Save();
+        });
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        actions.setOpaque(false);
+        actions.add(resetControllerButton);
+        container.add(actions, BorderLayout.SOUTH);
+        return container;
+    }
+
+    private JComponent createControllerSettingsCard() {
+        JPanel card = new JPanel(new BorderLayout(0, 14));
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+
+        controllerEnabledCheckBox = new JCheckBox(UiText.OptionsWindow.CONTROLLER_ENABLE_CHECKBOX,
+                Settings.controllerInputEnabled);
+        controllerEnabledCheckBox.setOpaque(false);
+        controllerEnabledCheckBox.setForeground(accentColour);
+        controllerEnabledCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        controllerEnabledCheckBox.addActionListener(event -> {
+            if (updatingControllerUi) {
+                return;
+            }
+            Settings.controllerInputEnabled = controllerEnabledCheckBox.isSelected();
+            Config.Save();
+            refreshControllerStatus();
+        });
+
+        JButton refreshControllerButton = createSecondaryButton(UiText.OptionsWindow.CONTROLLER_REFRESH_BUTTON);
+        refreshControllerButton.addActionListener(event -> {
+            controllerInputService.RefreshControllers();
+            refreshControllerStatus();
+        });
+
+        JPanel topRow = new JPanel(new BorderLayout());
+        topRow.setOpaque(false);
+        topRow.add(controllerEnabledCheckBox, BorderLayout.WEST);
+        topRow.add(refreshControllerButton, BorderLayout.EAST);
+
+        controllerSelector = new JComboBox<>();
+        controllerSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
+        controllerSelector.addActionListener(event -> {
+            if (updatingControllerUi) {
+                return;
+            }
+            ControllerChoice selectedChoice = (ControllerChoice) controllerSelector.getSelectedItem();
+            String preferredId = selectedChoice == null ? "" : selectedChoice.id();
+            if (!preferredId.equals(Settings.preferredControllerId)) {
+                Settings.preferredControllerId = preferredId;
+                Config.Save();
+                controllerInputService.RefreshControllers();
+                refreshControllerStatus();
+            }
+        });
+
+        controllerActiveValueLabel = createValueLabel(UiText.OptionsWindow.CONTROLLER_NONE_CONNECTED);
+        controllerStatusBadgeLabel = createBadgeLabel(UiText.OptionsWindow.CONTROLLER_STATUS_DISCONNECTED);
+        controllerStatusHelperLabel = new JLabel(UiText.OptionsWindow.CONTROLLER_STATUS_HELPER);
+        controllerStatusHelperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        controllerStatusHelperLabel.setForeground(mutedText);
+
+        controllerDeadzoneSlider = new JSlider(0, 95, Settings.controllerDeadzonePercent);
+        controllerDeadzoneSlider.setOpaque(false);
+        controllerDeadzoneSlider.addChangeListener(event -> {
+            if (updatingControllerUi) {
+                return;
+            }
+            Settings.controllerDeadzonePercent = controllerDeadzoneSlider.getValue();
+            if (controllerDeadzoneValueLabel != null) {
+                controllerDeadzoneValueLabel.setText(UiText.OptionsWindow.PercentValue(Settings.controllerDeadzonePercent));
+            }
+            if (!controllerDeadzoneSlider.getValueIsAdjusting()) {
+                Config.Save();
+            }
+        });
+        controllerDeadzoneValueLabel = createValueLabel(UiText.OptionsWindow.PercentValue(Settings.controllerDeadzonePercent));
+
+        JPanel grid = new JPanel(new GridLayout(0, 2, 12, 12));
+        grid.setOpaque(false);
+        grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_SELECTION_LABEL, controllerSelector));
+        grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_ACTIVE_LABEL, controllerActiveValueLabel));
+        grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_DEADZONE_LABEL, wrapControllerDeadzoneControls()));
+        grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_STATUS_LABEL, wrapControllerStatusControls()));
+
+        card.add(topRow, BorderLayout.NORTH);
+        card.add(grid, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JComponent createControllerLiveTesterCard() {
+        JPanel card = new JPanel(new GridLayout(1, 2, 12, 0));
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+
+        controllerLiveInputsArea = createCompactReadoutLabel(UiText.OptionsWindow.CONTROLLER_LIVE_NONE);
+        controllerMappedButtonsArea = createCompactReadoutLabel(UiText.OptionsWindow.CONTROLLER_MAPPED_NONE);
+
+        card.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_LIVE_INPUTS_LABEL, controllerLiveInputsArea));
+        card.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_MAPPED_BUTTONS_LABEL, controllerMappedButtonsArea));
+        return card;
+    }
+
+    private JComponent createControllerBindingCard(DuckJoypad.Button button) {
+        JPanel card = new JPanel(new BorderLayout(12, 0));
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+
+        JLabel buttonLabel = new JLabel(formatButtonName(button));
+        buttonLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
+        buttonLabel.setForeground(accentColour);
+
+        JLabel helperLabel = new JLabel(helperText(button));
+        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        helperLabel.setForeground(mutedText);
+
+        JPanel labelPanel = new JPanel(new BorderLayout(0, 4));
+        labelPanel.setOpaque(false);
+        labelPanel.add(buttonLabel, BorderLayout.NORTH);
+        labelPanel.add(helperLabel, BorderLayout.CENTER);
+
+        JButton bindingButton = createPrimaryButton(Settings.controllerBindings.GetBindingText(button));
+        bindingButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        bindingButton.setPreferredSize(new Dimension(148, 38));
+        bindingButton.addActionListener(event -> captureControllerBinding(button));
+        controllerBindingButtons.put(button, bindingButton);
+
+        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonWrap.setOpaque(false);
+        buttonWrap.add(bindingButton);
+
+        card.add(labelPanel, BorderLayout.CENTER);
+        card.add(buttonWrap, BorderLayout.EAST);
+        return card;
     }
 
     private JComponent createShortcutPanel() {
@@ -2547,6 +2780,221 @@ public class OptionsWindow extends DuckWindow {
         removeDispatcher.run();
     }
 
+    private void captureControllerBinding(DuckJoypad.Button button) {
+        if (controllerInputService.GetInitialisationError() != null) {
+            JOptionPane.showMessageDialog(this, controllerInputService.GetInitialisationError(),
+                    UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controllerInputService.GetActiveController().isEmpty()) {
+            JOptionPane.showMessageDialog(this, UiText.OptionsWindow.CONTROLLER_NO_ACTIVE_DEVICE_MESSAGE,
+                    UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        JDialog dialog = new JDialog(this,
+                UiText.OptionsWindow.ControllerRebindDialogTitle(formatButtonName(button)),
+                true);
+        dialog.setLayout(new BorderLayout());
+        dialog.getContentPane().setBackground(panelBackground);
+
+        JPanel content = new JPanel(new BorderLayout(0, 8));
+        content.setBackground(cardBackground);
+        content.setBorder(createCardBorder());
+
+        JLabel title = new JLabel(UiText.OptionsWindow.ControllerRebindDialogPrompt(formatButtonName(button)),
+                SwingConstants.CENTER);
+        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 18f));
+        title.setForeground(accentColour);
+
+        JLabel helper = new JLabel(UiText.OptionsWindow.CONTROLLER_CAPTURE_HELPER, SwingConstants.CENTER);
+        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
+        helper.setForeground(mutedText);
+
+        content.add(title, BorderLayout.NORTH);
+        content.add(helper, BorderLayout.CENTER);
+        dialog.add(content, BorderLayout.CENTER);
+        dialog.setSize(520, 180);
+        dialog.setLocationRelativeTo(this);
+
+        Set<ControllerBinding> blockedInputs = new HashSet<>(controllerInputService.PollActiveInputs());
+        Timer captureTimer = new Timer(25, event -> {
+            List<ControllerBinding> activeInputs = controllerInputService.PollActiveInputs();
+            blockedInputs.retainAll(activeInputs);
+
+            ControllerBinding candidate = null;
+            for (ControllerBinding activeInput : activeInputs) {
+                if (!blockedInputs.contains(activeInput)) {
+                    candidate = activeInput;
+                    break;
+                }
+            }
+
+            if (candidate == null) {
+                return;
+            }
+
+            Settings.controllerBindings.SetBinding(button, candidate);
+            refreshControllerBindingButtons();
+            refreshControllerStatus();
+            Config.Save();
+            dialog.dispose();
+        });
+
+        dialog.getRootPane().registerKeyboardAction(event -> dialog.dispose(),
+                KeyStroke.getKeyStroke(KeyEvent.VK_ESCAPE, 0),
+                JComponent.WHEN_IN_FOCUSED_WINDOW);
+        dialog.addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent event) {
+                captureTimer.stop();
+            }
+        });
+
+        captureTimer.start();
+        dialog.setVisible(true);
+        captureTimer.stop();
+    }
+
+    private void refreshControllerStatus() {
+        if (controllerSelector == null || controllerEnabledCheckBox == null || controllerStatusBadgeLabel == null
+                || controllerStatusHelperLabel == null || controllerActiveValueLabel == null
+                || controllerLiveInputsArea == null || controllerMappedButtonsArea == null) {
+            return;
+        }
+        if (!isControlsTabSelected()) {
+            return;
+        }
+
+        List<ControllerInputService.ControllerDevice> devices = controllerInputService.GetAvailableControllers();
+        syncControllerSelectorModel(devices);
+
+        updatingControllerUi = true;
+        try {
+            if (controllerEnabledCheckBox.isSelected() != Settings.controllerInputEnabled) {
+                controllerEnabledCheckBox.setSelected(Settings.controllerInputEnabled);
+            }
+            if (controllerDeadzoneSlider != null && !controllerDeadzoneSlider.getValueIsAdjusting()
+                    && controllerDeadzoneSlider.getValue() != Settings.controllerDeadzonePercent) {
+                controllerDeadzoneSlider.setValue(Settings.controllerDeadzonePercent);
+            }
+            if (controllerDeadzoneValueLabel != null) {
+                controllerDeadzoneValueLabel.setText(UiText.OptionsWindow.PercentValue(Settings.controllerDeadzonePercent));
+            }
+        } finally {
+            updatingControllerUi = false;
+        }
+
+        String error = controllerInputService.GetInitialisationError();
+        if (error != null && !error.isBlank()) {
+            controllerStatusBadgeLabel.setText(UiText.OptionsWindow.CONTROLLER_STATUS_UNAVAILABLE);
+            controllerStatusHelperLabel.setText(error);
+            controllerActiveValueLabel.setText(UiText.OptionsWindow.CONTROLLER_NONE_CONNECTED);
+            setCompactReadout(controllerLiveInputsArea, UiText.OptionsWindow.CONTROLLER_LIVE_NONE);
+            setCompactReadout(controllerMappedButtonsArea, UiText.OptionsWindow.CONTROLLER_MAPPED_NONE);
+            return;
+        }
+
+        Optional<ControllerInputService.ControllerDevice> activeController = controllerInputService.GetActiveController();
+        if (activeController.isPresent()) {
+            controllerStatusBadgeLabel.setText(Settings.controllerInputEnabled
+                    ? UiText.OptionsWindow.CONTROLLER_STATUS_CONNECTED
+                    : UiText.OptionsWindow.CONTROLLER_STATUS_DISABLED);
+            controllerStatusHelperLabel.setText(UiText.OptionsWindow.CONTROLLER_STATUS_HELPER);
+            controllerActiveValueLabel.setText(activeController.get().displayName());
+        } else {
+            controllerStatusBadgeLabel.setText(UiText.OptionsWindow.CONTROLLER_STATUS_DISCONNECTED);
+            controllerStatusHelperLabel.setText(UiText.OptionsWindow.CONTROLLER_NO_ACTIVE_DEVICE_MESSAGE);
+            controllerActiveValueLabel.setText(UiText.OptionsWindow.CONTROLLER_NONE_CONNECTED);
+        }
+
+        List<ControllerBinding> activeInputs = activeController.isPresent()
+                ? controllerInputService.PollActiveInputs()
+                : List.of();
+        setCompactReadout(controllerLiveInputsArea, activeInputs.isEmpty()
+                ? UiText.OptionsWindow.CONTROLLER_LIVE_NONE
+                : JoinControllerBindings(activeInputs));
+
+        if (!Settings.controllerInputEnabled) {
+            setCompactReadout(controllerMappedButtonsArea, UiText.OptionsWindow.CONTROLLER_MAPPED_DISABLED);
+            return;
+        }
+
+        EnumMap<DuckJoypad.Button, String> mappedPressedButtons = new EnumMap<>(DuckJoypad.Button.class);
+        for (DuckJoypad.Button button : controllerInputService.PollBoundButtons()) {
+            mappedPressedButtons.put(button, formatButtonName(button));
+        }
+        setCompactReadout(controllerMappedButtonsArea, mappedPressedButtons.isEmpty()
+                ? UiText.OptionsWindow.CONTROLLER_MAPPED_NONE
+                : String.join(", ", mappedPressedButtons.values()));
+    }
+
+    private void syncControllerSelectorModel(List<ControllerInputService.ControllerDevice> devices) {
+        if (controllerSelector == null) {
+            return;
+        }
+
+        List<String> deviceEntries = new ArrayList<>();
+        for (ControllerInputService.ControllerDevice device : devices) {
+            deviceEntries.add(device.id() + "|" + device.displayName());
+        }
+
+        boolean popupVisible = controllerSelector.isPopupVisible();
+        boolean deviceListChanged = !deviceEntries.equals(lastControllerDeviceEntries)
+                || controllerSelector.getModel().getSize() == 0;
+        if (deviceListChanged && !popupVisible) {
+            DefaultComboBoxModel<ControllerChoice> model = new DefaultComboBoxModel<>();
+            model.addElement(new ControllerChoice("", UiText.OptionsWindow.CONTROLLER_AUTO_SELECT));
+            for (ControllerInputService.ControllerDevice device : devices) {
+                model.addElement(new ControllerChoice(device.id(), device.displayName()));
+            }
+
+            updatingControllerUi = true;
+            try {
+                controllerSelector.setModel(model);
+                selectPreferredControllerChoice(model);
+            } finally {
+                updatingControllerUi = false;
+            }
+            lastControllerDeviceEntries = List.copyOf(deviceEntries);
+            return;
+        }
+
+        if (!popupVisible && controllerSelector.getModel().getSize() > 0) {
+            updatingControllerUi = true;
+            try {
+                selectPreferredControllerChoice((DefaultComboBoxModel<ControllerChoice>) controllerSelector.getModel());
+            } finally {
+                updatingControllerUi = false;
+            }
+        }
+    }
+
+    private void selectPreferredControllerChoice(DefaultComboBoxModel<ControllerChoice> model) {
+        String preferredId = Settings.preferredControllerId == null ? "" : Settings.preferredControllerId;
+        for (int index = 0; index < model.getSize(); index++) {
+            ControllerChoice choice = model.getElementAt(index);
+            if (preferredId.equals(choice.id())) {
+                if (controllerSelector.getSelectedIndex() != index) {
+                    controllerSelector.setSelectedIndex(index);
+                }
+                return;
+            }
+        }
+        if (controllerSelector.getSelectedIndex() != 0) {
+            controllerSelector.setSelectedIndex(0);
+        }
+    }
+
+    private String JoinControllerBindings(List<ControllerBinding> bindings) {
+        List<String> labels = new ArrayList<>();
+        for (ControllerBinding binding : bindings) {
+            labels.add(binding.ToDisplayText());
+        }
+        return labels.isEmpty() ? UiText.OptionsWindow.CONTROLLER_LIVE_NONE : String.join(", ", labels);
+    }
+
     private void refreshPaletteDetails() {
         GBColor[] palette = Settings.CurrentPalette();
         for (int i = 0; i < colorPreviews.length; i++) {
@@ -2597,6 +3045,15 @@ public class OptionsWindow extends DuckWindow {
             JButton bindingButton = bindingButtons.get(button);
             if (bindingButton != null) {
                 bindingButton.setText(Settings.inputBindings.GetKeyText(button));
+            }
+        }
+    }
+
+    private void refreshControllerBindingButtons() {
+        for (DuckJoypad.Button button : controlOrder()) {
+            JButton bindingButton = controllerBindingButtons.get(button);
+            if (bindingButton != null) {
+                bindingButton.setText(Settings.controllerBindings.GetBindingText(button));
             }
         }
     }
@@ -2662,6 +3119,70 @@ public class OptionsWindow extends DuckWindow {
         return UiText.OptionsWindow.DmgControlHelper(button.name());
     }
 
+    private JComponent wrapControllerDeadzoneControls() {
+        JPanel panel = new JPanel(new BorderLayout(8, 0));
+        panel.setOpaque(false);
+        panel.add(controllerDeadzoneSlider, BorderLayout.CENTER);
+        panel.add(controllerDeadzoneValueLabel, BorderLayout.EAST);
+        return panel;
+    }
+
+    private JComponent wrapControllerStatusControls() {
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
+        panel.setOpaque(false);
+        panel.add(controllerStatusBadgeLabel, BorderLayout.NORTH);
+        panel.add(controllerStatusHelperLabel, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private JLabel createCompactReadoutLabel(String text) {
+        JLabel label = new JLabel();
+        label.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        label.setForeground(accentColour);
+        label.setBorder(BorderFactory.createEmptyBorder(2, 0, 2, 0));
+        setCompactReadout(label, text);
+        return label;
+    }
+
+    private JLabel createValueLabel(String text) {
+        JLabel label = new JLabel(text);
+        label.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        label.setForeground(accentColour);
+        return label;
+    }
+
+    private JComponent createFieldCard(String labelText, JComponent component) {
+        JPanel panel = new JPanel(new BorderLayout(0, 6));
+        panel.setOpaque(false);
+
+        JLabel label = new JLabel(labelText);
+        label.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        label.setForeground(accentColour);
+
+        panel.add(label, BorderLayout.NORTH);
+        panel.add(component, BorderLayout.CENTER);
+        return panel;
+    }
+
+    private void setCompactReadout(JLabel label, String text) {
+        if (label == null) {
+            return;
+        }
+
+        String fullText = text == null || text.isBlank() ? UiText.OptionsWindow.CONTROLLER_LIVE_NONE : text;
+        String compactText = fullText.length() <= 58 ? fullText : fullText.substring(0, 55) + "...";
+        label.setText(compactText);
+        label.setToolTipText(compactText.equals(fullText) ? null : fullText);
+    }
+
+    private boolean isControlsTabSelected() {
+        if (tabs == null) {
+            return false;
+        }
+        int controlsTabIndex = tabs.indexOfTab(UiText.OptionsWindow.TAB_CONTROLS);
+        return controlsTabIndex < 0 || tabs.getSelectedIndex() == controlsTabIndex;
+    }
+
     private void updateSettingsColor(int index, Color color) {
         String hex = String.format("#%02X%02X%02X", color.getRed(), color.getGreen(), color.getBlue());
         Settings.SetPaletteColour(index, hex);
@@ -2719,6 +3240,13 @@ public class OptionsWindow extends DuckWindow {
         @Override
         public boolean getScrollableTracksViewportHeight() {
             return false;
+        }
+    }
+
+    private record ControllerChoice(String id, String label) {
+        @Override
+        public String toString() {
+            return label;
         }
     }
 }

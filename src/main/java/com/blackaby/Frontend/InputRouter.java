@@ -13,7 +13,11 @@ import java.awt.KeyEventDispatcher;
 import java.awt.KeyboardFocusManager;
 import java.awt.Window;
 import java.awt.event.KeyEvent;
+import java.util.EnumSet;
 import java.util.HashSet;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.Set;
 
 /**
@@ -24,8 +28,18 @@ public final class InputRouter implements KeyEventDispatcher {
 
     private final MainWindow mainWindow;
     private final DuckEmulation emulation;
+    private final ControllerInputService controllerInputService = ControllerInputService.Shared();
+    private final Object inputStateLock = new Object();
     private final Set<Integer> pressedKeyCodes = new HashSet<>();
     private final Set<Integer> consumedShortcutKeyCodes = new HashSet<>();
+    private final EnumSet<DuckJoypad.Button> keyboardPressedButtons = EnumSet.noneOf(DuckJoypad.Button.class);
+    private final EnumSet<DuckJoypad.Button> controllerPressedButtons = EnumSet.noneOf(DuckJoypad.Button.class);
+    private final ScheduledExecutorService controllerPollingExecutor = Executors.newSingleThreadScheduledExecutor(run -> {
+        Thread thread = new Thread(run, "gameduck-controller-input");
+        thread.setDaemon(true);
+        return thread;
+    });
+    private volatile boolean routedInputActive;
 
     /**
      * Creates an input router bound to the main window and emulator instance.
@@ -36,6 +50,7 @@ public final class InputRouter implements KeyEventDispatcher {
     public InputRouter(MainWindow mainWindow, DuckEmulation emulation) {
         this.mainWindow = mainWindow;
         this.emulation = emulation;
+        controllerPollingExecutor.scheduleAtFixedRate(this::PollControllerInput, 0L, 8L, TimeUnit.MILLISECONDS);
     }
 
     /**
@@ -48,8 +63,7 @@ public final class InputRouter implements KeyEventDispatcher {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         if (!ShouldRouteInput()) {
-            pressedKeyCodes.clear();
-            consumedShortcutKeyCodes.clear();
+            ClearAllInputStates();
             return false;
         }
 
@@ -63,9 +77,9 @@ public final class InputRouter implements KeyEventDispatcher {
         }
 
         if (event.getID() == KeyEvent.KEY_PRESSED) {
-            emulation.SetButtonPressed(button, true);
+            SetKeyboardButtonState(button, true);
         } else if (event.getID() == KeyEvent.KEY_RELEASED) {
-            emulation.SetButtonPressed(button, false);
+            SetKeyboardButtonState(button, false);
         }
 
         return false;
@@ -116,6 +130,62 @@ public final class InputRouter implements KeyEventDispatcher {
     private void TriggerShortcut(AppShortcut shortcut) {
         new GUIActions(mainWindow, shortcut.Action(), emulation)
                 .actionPerformed(new ActionEvent(mainWindow, ActionEvent.ACTION_PERFORMED, shortcut.name()));
+    }
+
+    private void PollControllerInput() {
+        boolean shouldRouteInput = ShouldRouteInput();
+        if (!shouldRouteInput) {
+            if (routedInputActive) {
+                ClearAllInputStates();
+                routedInputActive = false;
+            }
+            return;
+        }
+
+        routedInputActive = true;
+        ApplyControllerState(controllerInputService.PollBoundButtons());
+    }
+
+    private void SetKeyboardButtonState(DuckJoypad.Button button, boolean pressed) {
+        synchronized (inputStateLock) {
+            if (pressed) {
+                keyboardPressedButtons.add(button);
+            } else {
+                keyboardPressedButtons.remove(button);
+            }
+            ApplyCombinedState(button);
+        }
+    }
+
+    private void ApplyControllerState(EnumSet<DuckJoypad.Button> pressedButtons) {
+        synchronized (inputStateLock) {
+            for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
+                boolean nextPressed = pressedButtons.contains(button);
+                if (nextPressed) {
+                    controllerPressedButtons.add(button);
+                } else {
+                    controllerPressedButtons.remove(button);
+                }
+                ApplyCombinedState(button);
+            }
+        }
+    }
+
+    private void ApplyCombinedState(DuckJoypad.Button button) {
+        emulation.SetButtonPressed(button,
+                keyboardPressedButtons.contains(button) || controllerPressedButtons.contains(button));
+    }
+
+    private void ClearAllInputStates() {
+        synchronized (inputStateLock) {
+            pressedKeyCodes.clear();
+            consumedShortcutKeyCodes.clear();
+            keyboardPressedButtons.clear();
+            controllerPressedButtons.clear();
+            for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
+                emulation.SetButtonPressed(button, false);
+            }
+        }
     }
 
     /**
