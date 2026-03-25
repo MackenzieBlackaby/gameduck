@@ -4,13 +4,7 @@ This is a list of known bugs in the current version of GameDuck. If you encounte
 
 ## Functional
 
-- Some games may not run correctly or may experience graphical glitches. Compatibility is still being improved, and some titles may have specific issues, such as the spinning intro logo in Batman: The Video Game.
-
-- Notable visual glitches in Pokemon: Crystal.
-
 ## Performance
-
-- The emulator experiences slowdown and flickering in some cases. Notably, Super Mario Bros Deluxe has seen performance issues.
 
 ## UI/UX
 
