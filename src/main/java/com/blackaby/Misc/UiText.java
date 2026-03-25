@@ -148,8 +148,10 @@ public final class UiText {
 
         // Buttons and dialog titles.
         public static final String LOAD_BUTTON = "Load";
+        public static final String IMPORT_BUTTON = "Import";
         public static final String DELETE_BUTTON = "Delete";
         public static final String DELETE_CONFIRM_TITLE = "Delete Palette";
+        public static final String IMPORT_FAILED_TITLE = "Failed to import palettes";
 
         private PaletteManager() {
         }
@@ -170,6 +172,10 @@ public final class UiText {
             return gbcPalette ? "Delete GBC Palette" : DELETE_CONFIRM_TITLE;
         }
 
+        public static String ImportDialogTitle(boolean gbcPalette) {
+            return gbcPalette ? "Import GBC palettes" : "Import palettes";
+        }
+
         // Confirmation messages.
         public static String DeleteConfirmMessage(String paletteName) {
             return "Delete palette \"" + paletteName + "\"?";
@@ -179,6 +185,17 @@ public final class UiText {
             return gbcPalette
                     ? "Delete GBC palette \"" + paletteName + "\"?"
                     : DeleteConfirmMessage(paletteName);
+        }
+
+        public static String ImportSuccessMessage(boolean gbcPalette, int importedCount, int duplicateCount) {
+            String paletteLabel = gbcPalette ? "GBC palette sets" : "palettes";
+            return "Imported "
+                    + importedCount
+                    + " "
+                    + paletteLabel
+                    + ". Skipped "
+                    + duplicateCount
+                    + " duplicates.";
         }
     }
 

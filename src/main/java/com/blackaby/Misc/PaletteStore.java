@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -32,15 +33,22 @@ public final class PaletteStore {
     public record LoadResult(PaletteStore store, boolean migratedFromLegacy) {
     }
 
+    /**
+     * Result of merging imported palettes into the current store.
+     *
+     * @param importedCount number of palettes added
+     * @param duplicateCount number of palettes skipped as duplicates
+     */
+    public record MergeResult(int importedCount, int duplicateCount) {
+    }
+
     private static final Gson gson = new GsonBuilder()
             .setPrettyPrinting()
             .disableHtmlEscaping()
             .create();
 
-    private static final int currentVersion = 1;
     private static final int paletteSize = 4;
 
-    private int version = currentVersion;
     private ActivePalettes active = new ActivePalettes();
     private SavedPalettes saved = new SavedPalettes();
 
@@ -67,6 +75,21 @@ public final class PaletteStore {
         }
 
         return new LoadResult(new PaletteStore(), false);
+    }
+
+    /**
+     * Loads a palette store from JSON and fails when the file is not valid.
+     *
+     * @param path JSON palette file path
+     * @return loaded palette store
+     * @throws IOException when the file cannot be read
+     */
+    public static PaletteStore ReadStrict(Path path) throws IOException {
+        try (Reader reader = Files.newBufferedReader(path, StandardCharsets.UTF_8)) {
+            return Normalize(gson.fromJson(reader, PaletteStore.class));
+        } catch (JsonParseException exception) {
+            throw new IllegalArgumentException("The selected file is not a valid GameDuck palette JSON file.", exception);
+        }
     }
 
     /**
@@ -316,6 +339,64 @@ public final class PaletteStore {
     }
 
     /**
+     * Merges saved DMG palettes from another palette store.
+     *
+     * Existing palettes are preserved. Imported palettes are skipped when a saved
+     * palette with the same name or the same colours already exists.
+     *
+     * @param importedStore imported palette store
+     * @return merge summary
+     */
+    public MergeResult MergeSavedDmgPalettes(PaletteStore importedStore) {
+        PaletteStore safeImportedStore = Normalize(importedStore);
+        int importedCount = 0;
+        int duplicateCount = 0;
+
+        for (NamedPalette importedPalette : safeImportedStore.saved.dmg) {
+            if (FindDmgPaletteEntry(importedPalette.name) != null || HasMatchingDmgPalette(importedPalette.colors)) {
+                duplicateCount++;
+                continue;
+            }
+
+            saved.dmg.add(new NamedPalette(importedPalette.name, importedPalette.colors));
+            importedCount++;
+        }
+
+        return new MergeResult(importedCount, duplicateCount);
+    }
+
+    /**
+     * Merges saved GBC palettes from another palette store.
+     *
+     * Existing palettes are preserved. Imported palettes are skipped when a saved
+     * palette with the same name or the same colours already exists.
+     *
+     * @param importedStore imported palette store
+     * @return merge summary
+     */
+    public MergeResult MergeSavedGbcPalettes(PaletteStore importedStore) {
+        PaletteStore safeImportedStore = Normalize(importedStore);
+        int importedCount = 0;
+        int duplicateCount = 0;
+
+        for (NamedGbcPalette importedPalette : safeImportedStore.saved.gbc) {
+            if (FindGbcPaletteEntry(importedPalette.name) != null || HasMatchingGbcPalette(importedPalette)) {
+                duplicateCount++;
+                continue;
+            }
+
+            saved.gbc.add(new NamedGbcPalette(
+                    importedPalette.name,
+                    importedPalette.background,
+                    importedPalette.sprite0,
+                    importedPalette.sprite1));
+            importedCount++;
+        }
+
+        return new MergeResult(importedCount, duplicateCount);
+    }
+
+    /**
      * Immutable GBC palette set returned from lookups.
      *
      * @param background background palette colours
@@ -332,7 +413,6 @@ public final class PaletteStore {
     }
 
     private void NormalizeInPlace() {
-        version = currentVersion;
         active = active == null ? new ActivePalettes() : active;
         active.dmg = NormalizePalette(active.dmg, DefaultDmgPalette());
         active.gbc = active.gbc == null ? new GbcPalettes() : active.gbc;
@@ -578,6 +658,30 @@ public final class PaletteStore {
             }
         }
         return null;
+    }
+
+    private boolean HasMatchingDmgPalette(String[] colours) {
+        String[] normalizedColours = NormalizePalette(colours, DefaultDmgPalette());
+        for (NamedPalette palette : saved.dmg) {
+            if (Arrays.equals(palette.colors, normalizedColours)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean HasMatchingGbcPalette(NamedGbcPalette importedPalette) {
+        String[] normalizedBackground = NormalizePalette(importedPalette.background, DefaultGbcBackgroundPalette());
+        String[] normalizedSprite0 = NormalizePalette(importedPalette.sprite0, DefaultGbcSpritePalette0());
+        String[] normalizedSprite1 = NormalizePalette(importedPalette.sprite1, DefaultGbcSpritePalette1());
+        for (NamedGbcPalette palette : saved.gbc) {
+            if (Arrays.equals(palette.background, normalizedBackground)
+                    && Arrays.equals(palette.sprite0, normalizedSprite0)
+                    && Arrays.equals(palette.sprite1, normalizedSprite1)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final class ActivePalettes {

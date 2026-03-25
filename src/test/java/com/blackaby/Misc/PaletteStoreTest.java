@@ -120,6 +120,48 @@ class PaletteStoreTest {
         assertArrayEquals(new String[] { "#9ABCDE", "#ABCDEF", "#BCDEF0", "#CDEF01" }, gbcPalette.sprite1());
     }
 
+    @Test
+    void mergesImportedPalettesAndSkipsDuplicates() {
+        PaletteStore existingStore = new PaletteStore();
+        existingStore.SaveDmgPalette("Forest", new String[] { "#101010", "#202020", "#303030", "#404040" });
+        existingStore.SaveGbcPalette(
+                "Sky",
+                new String[] { "#001122", "#112233", "#223344", "#334455" },
+                new String[] { "#445566", "#556677", "#667788", "#778899" },
+                new String[] { "#8899AA", "#99AABB", "#AABBCC", "#BBCCDD" });
+
+        PaletteStore importedStore = new PaletteStore();
+        importedStore.SaveDmgPalette("Forest", new String[] { "#101010", "#202020", "#303030", "#404040" });
+        importedStore.SaveDmgPalette("Ocean", new String[] { "#111111", "#222222", "#333333", "#444444" });
+        importedStore.SaveDmgPalette("Sea", new String[] { "#111111", "#222222", "#333333", "#444444" });
+        importedStore.SaveGbcPalette(
+                "Sky",
+                new String[] { "#001122", "#112233", "#223344", "#334455" },
+                new String[] { "#445566", "#556677", "#667788", "#778899" },
+                new String[] { "#8899AA", "#99AABB", "#AABBCC", "#BBCCDD" });
+        importedStore.SaveGbcPalette(
+                "Sunrise",
+                new String[] { "#102132", "#213243", "#324354", "#435465" },
+                new String[] { "#546576", "#657687", "#768798", "#8798A9" },
+                new String[] { "#98A9BA", "#A9BACB", "#BACBDC", "#CBDCED" });
+        importedStore.SaveGbcPalette(
+                "Dawn",
+                new String[] { "#102132", "#213243", "#324354", "#435465" },
+                new String[] { "#546576", "#657687", "#768798", "#8798A9" },
+                new String[] { "#98A9BA", "#A9BACB", "#BACBDC", "#CBDCED" });
+
+        PaletteStore.MergeResult dmgMergeResult = existingStore.MergeSavedDmgPalettes(importedStore);
+        PaletteStore.MergeResult gbcMergeResult = existingStore.MergeSavedGbcPalettes(importedStore);
+
+        assertEquals(1, dmgMergeResult.importedCount());
+        assertEquals(2, dmgMergeResult.duplicateCount());
+        assertEquals(List.of("Forest", "Ocean"), existingStore.SavedDmgPaletteNames());
+
+        assertEquals(1, gbcMergeResult.importedCount());
+        assertEquals(2, gbcMergeResult.duplicateCount());
+        assertEquals(List.of("Sky", "Sunrise"), existingStore.SavedGbcPaletteNames());
+    }
+
     private static String EncodeLegacyName(String name) {
         return Base64.getUrlEncoder().withoutPadding().encodeToString(name.getBytes(StandardCharsets.UTF_8));
     }

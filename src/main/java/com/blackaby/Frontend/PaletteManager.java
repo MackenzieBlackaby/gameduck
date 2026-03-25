@@ -17,8 +17,11 @@ import javax.swing.ListSelectionModel;
 import javax.swing.border.Border;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.FileDialog;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 /**
@@ -125,6 +128,9 @@ public final class PaletteManager extends DuckWindow {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         buttonPanel.setOpaque(false);
 
+        JButton importButton = CreateSecondaryButton(UiText.PaletteManager.IMPORT_BUTTON);
+        importButton.addActionListener(event -> importPalettes(paletteList));
+
         JButton deleteButton = CreateSecondaryButton(UiText.PaletteManager.DELETE_BUTTON);
         deleteButton.addActionListener(event -> {
             String selectedPalette = paletteList.getSelectedValue();
@@ -159,6 +165,7 @@ public final class PaletteManager extends DuckWindow {
             dispose();
         });
 
+        buttonPanel.add(importButton);
         buttonPanel.add(deleteButton);
         buttonPanel.add(loadButton);
         card.add(buttonPanel, BorderLayout.SOUTH);
@@ -189,6 +196,43 @@ public final class PaletteManager extends DuckWindow {
             return;
         }
         Config.DeletePalette(paletteName);
+    }
+
+    private void importPalettes(JList<String> paletteList) {
+        File importFile = promptForPaletteImportFile();
+        if (importFile == null) {
+            return;
+        }
+
+        try {
+            var mergeResult = paletteKind == PaletteKind.GBC
+                    ? Config.ImportGbcPalettes(importFile.toPath())
+                    : Config.ImportPalettes(importFile.toPath());
+            RefreshPaletteList();
+            if (!paletteListModel.isEmpty()) {
+                paletteList.setSelectedIndex(0);
+            }
+            JOptionPane.showMessageDialog(this,
+                    UiText.PaletteManager.ImportSuccessMessage(
+                            paletteKind == PaletteKind.GBC,
+                            mergeResult.importedCount(),
+                            mergeResult.duplicateCount()));
+        } catch (IOException | IllegalArgumentException exception) {
+            JOptionPane.showMessageDialog(this,
+                    exception.getMessage(),
+                    UiText.PaletteManager.IMPORT_FAILED_TITLE,
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private File promptForPaletteImportFile() {
+        FileDialog fileDialog = new FileDialog(this,
+                UiText.PaletteManager.ImportDialogTitle(paletteKind == PaletteKind.GBC),
+                FileDialog.LOAD);
+        fileDialog.setAlwaysOnTop(true);
+        fileDialog.setFilenameFilter((directory, name) -> name.toLowerCase().endsWith(".json"));
+        fileDialog.setVisible(true);
+        return fileDialog.getFiles().length == 0 ? null : fileDialog.getFiles()[0];
     }
 
     private Border CreateCardBorder() {

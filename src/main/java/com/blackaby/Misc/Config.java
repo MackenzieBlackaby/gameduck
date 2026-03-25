@@ -221,6 +221,54 @@ public final class Config {
     }
 
     /**
+     * Imports saved DMG palettes from another palette JSON file.
+     *
+     * @param path palette JSON file
+     * @return merge summary
+     * @throws IOException when the file cannot be read
+     */
+    public static synchronized PaletteStore.MergeResult ImportPalettes(Path path) throws IOException {
+        EnsureLoaded();
+        PaletteStore importedStore = PaletteStore.ReadStrict(path);
+        PaletteStore.MergeResult mergeResult = paletteStore.MergeSavedDmgPalettes(importedStore);
+        SyncCurrentPalette();
+        SyncAppTheme();
+        SyncInputBindings();
+        SyncControllerBindings();
+        SyncAppShortcuts();
+        SyncSoundSettings();
+        SyncEmulationSettings();
+        SyncWindowSettings();
+        SyncLibrarySettings();
+        Persist();
+        return mergeResult;
+    }
+
+    /**
+     * Imports saved GBC palettes from another palette JSON file.
+     *
+     * @param path palette JSON file
+     * @return merge summary
+     * @throws IOException when the file cannot be read
+     */
+    public static synchronized PaletteStore.MergeResult ImportGbcPalettes(Path path) throws IOException {
+        EnsureLoaded();
+        PaletteStore importedStore = PaletteStore.ReadStrict(path);
+        PaletteStore.MergeResult mergeResult = paletteStore.MergeSavedGbcPalettes(importedStore);
+        SyncCurrentPalette();
+        SyncAppTheme();
+        SyncInputBindings();
+        SyncControllerBindings();
+        SyncAppShortcuts();
+        SyncSoundSettings();
+        SyncEmulationSettings();
+        SyncWindowSettings();
+        SyncLibrarySettings();
+        Persist();
+        return mergeResult;
+    }
+
+    /**
      * Returns the saved theme names in display order.
      *
      * @return saved theme names
