@@ -35,6 +35,7 @@ public class DuckPPU {
     private static final int screenHeight = 144;
     private static final int screenWidth = 160;
     private static final int maxSpritesPerScanline = 10;
+    private static final int noSpritePixel = Integer.MIN_VALUE;
 
     private static final int regLcdc = DuckAddresses.LCDC;
     private static final int regStat = DuckAddresses.STAT;
@@ -329,7 +330,7 @@ public class DuckPPU {
         display.setPixel(x, scanline, backgroundColour, false);
 
         int spriteColour = ResolveSpritePixel(x, lcdControl, cgbMode);
-        if (spriteColour != -1) {
+        if (spriteColour != noSpritePixel) {
             display.setPixel(x, scanline, spriteColour, false);
         }
 
@@ -411,7 +412,7 @@ public class DuckPPU {
 
     private int ResolveSpritePixel(int screenX, int lcdControl, boolean cgbMode) {
         if ((lcdControl & 0x02) == 0) {
-            return -1;
+            return noSpritePixel;
         }
 
         if (!cgbMode) {
@@ -424,11 +425,11 @@ public class DuckPPU {
 
         for (int spriteIndex = 0; spriteIndex < visibleSpriteCount; spriteIndex++) {
             int colour = ResolveSpritePixelFromEntry(screenX, spriteIndex, use8x16, cgbMode, bgMasterPriority);
-            if (colour != -1) {
+            if (colour != noSpritePixel) {
                 return colour;
             }
         }
-        return -1;
+        return noSpritePixel;
     }
 
     private int ResolveSpritePixelFromEntry(int screenX, int spriteIndex, boolean use8x16, boolean cgbMode,
@@ -437,7 +438,7 @@ public class DuckPPU {
         int attributes = visibleSpriteAttributes[spriteIndex];
         int spriteStartX = visibleSpriteX[spriteIndex];
         if (screenX < spriteStartX || screenX >= spriteStartX + 8) {
-            return -1;
+            return noSpritePixel;
         }
 
         int line = scanline - visibleSpriteY[spriteIndex];
@@ -466,16 +467,16 @@ public class DuckPPU {
         int colourIndex = (high << 1) | low;
 
         if (colourIndex == 0) {
-            return -1;
+            return noSpritePixel;
         }
 
         if (cgbMode) {
             if (bgMasterPriority && backgroundPriorityBuffer[screenX] != 0
                     && (((attributes & 0x80) != 0) || backgroundTilePriorityBuffer[screenX])) {
-                return -1;
+                return noSpritePixel;
             }
         } else if ((attributes & 0x80) != 0 && backgroundPriorityBuffer[screenX] != 0) {
-            return -1;
+            return noSpritePixel;
         }
 
         return cgbMode

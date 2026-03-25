@@ -123,4 +123,34 @@ class DuckPpuTest {
         assertEquals(0x04, memory.Read(DuckAddresses.STAT) & 0x04);
         assertEquals(DuckCPU.Interrupt.LCD_STAT.GetMask(), memory.Read(DuckAddresses.INTERRUPT_FLAG) & 0x02);
     }
+
+    @Test
+    void rendersPureWhiteCgbSpritePixelsInsteadOfTreatingThemAsTransparent() {
+        DuckMemory memory = new DuckMemory();
+        memory.LoadRom(EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x80, "ppu.gbc", "ppu"), true);
+        DuckCPU cpu = new DuckCPU(memory, null, EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x80, "ppu.gbc", "ppu"));
+        memory.SetCpu(cpu);
+        memory.InitialiseCgbBootState();
+
+        memory.Write(DuckAddresses.BCPS, 0x80);
+        memory.Write(DuckAddresses.BCPD, 0x00);
+        memory.Write(DuckAddresses.BCPD, 0x00);
+
+        memory.Write(0x8000, 0x80);
+        memory.Write(0x8001, 0x00);
+        memory.Write(0xFE00, 0x10);
+        memory.Write(0xFE01, 0x08);
+        memory.Write(0xFE02, 0x00);
+        memory.Write(0xFE03, 0x00);
+
+        DuckDisplay display = new DuckDisplay();
+        DuckPPU ppu = new DuckPPU(cpu, memory, display);
+
+        for (int index = 0; index < DuckPPU.oamDuration + DuckPPU.vramDuration; index++) {
+            ppu.Step();
+        }
+
+        DuckDisplay.FrameState frame = display.SnapshotFrameState();
+        assertEquals(0xFFFFFFFF, frame.backBuffer()[0]);
+    }
 }
