@@ -329,7 +329,7 @@ public final class ControllerInputService {
             backendErrors.add(pluginError);
         }
         if (!scanWarnings.isEmpty()) {
-            backendErrors.add(scanWarnings.getFirst());
+            backendErrors.add(scanWarnings.get(0));
         }
     }
 
@@ -384,7 +384,7 @@ public final class ControllerInputService {
             }
         }
 
-        activeController = controllerHandles.getFirst();
+        activeController = controllerHandles.get(0);
         return activeController;
     }
 
@@ -460,7 +460,7 @@ public final class ControllerInputService {
 
     private String DetermineInitialisationError(List<String> backendErrors, boolean noControllersDiscovered) {
         if (noControllersDiscovered && backendErrors != null && !backendErrors.isEmpty()) {
-            return backendErrors.getFirst();
+            return backendErrors.get(0);
         }
         return null;
     }
