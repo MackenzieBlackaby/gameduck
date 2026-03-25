@@ -154,9 +154,31 @@ public final class UiText {
         private PaletteManager() {
         }
 
+        public static String WindowTitle(boolean gbcPalette) {
+            return gbcPalette ? "GBC Palette Manager" : WINDOW_TITLE;
+        }
+
+        public static String Title(boolean gbcPalette) {
+            return gbcPalette ? "Saved GBC Palettes" : TITLE;
+        }
+
+        public static String Subtitle(boolean gbcPalette) {
+            return gbcPalette ? "Load or delete saved GBC palette sets" : SUBTITLE;
+        }
+
+        public static String DeleteConfirmTitle(boolean gbcPalette) {
+            return gbcPalette ? "Delete GBC Palette" : DELETE_CONFIRM_TITLE;
+        }
+
         // Confirmation messages.
         public static String DeleteConfirmMessage(String paletteName) {
             return "Delete palette \"" + paletteName + "\"?";
+        }
+
+        public static String DeleteConfirmMessage(boolean gbcPalette, String paletteName) {
+            return gbcPalette
+                    ? "Delete GBC palette \"" + paletteName + "\"?"
+                    : DeleteConfirmMessage(paletteName);
         }
     }
 
@@ -573,6 +595,8 @@ public final class UiText {
         public static final String GBC_SPRITE0_PALETTE_HELPER = "Used by sprites selecting OBP0";
         public static final String GBC_SPRITE1_PALETTE_TITLE = "Sprite Palette 1";
         public static final String GBC_SPRITE1_PALETTE_HELPER = "Used by sprites selecting OBP1";
+        public static final String SAVE_CURRENT_GBC_PALETTE = "Save Current GBC Palette";
+        public static final String SAVE_CURRENT_GBC_PALETTE_HELPER = "";
         public static final String RESET_GBC_SETTINGS_BUTTON = "Reset GBC Settings";
 
         // -----------------------------------------------------------------

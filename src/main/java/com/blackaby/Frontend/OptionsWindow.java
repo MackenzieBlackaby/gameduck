@@ -495,6 +495,67 @@ public class OptionsWindow extends DuckWindow {
                 UiText.OptionsWindow.GBC_SPRITE1_PALETTE_HELPER,
                 Settings.CurrentGbcSpritePalette1()));
 
+        JPanel actionCard = new JPanel(new BorderLayout(14, 0));
+        actionCard.setOpaque(false);
+        actionCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+        actionCard.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JPanel textColumn = new JPanel();
+        textColumn.setLayout(new BoxLayout(textColumn, BoxLayout.Y_AXIS));
+        textColumn.setOpaque(false);
+
+        JLabel paletteLabel = createFieldLabel(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE);
+        JLabel helperLabel = new JLabel(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE_HELPER);
+        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        helperLabel.setForeground(mutedText);
+
+        JTextField paletteNameField = new JTextField();
+        paletteNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
+        paletteNameField.setPreferredSize(new Dimension(240, 38));
+        paletteNameField.setFont(Styling.menuFont.deriveFont(13f));
+        paletteNameField.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(cardBorder, 1, true),
+                BorderFactory.createEmptyBorder(8, 12, 8, 12)));
+
+        textColumn.add(paletteLabel);
+        if (shouldRenderUiText(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE_HELPER)) {
+            textColumn.add(Box.createVerticalStrut(4));
+            textColumn.add(helperLabel);
+            textColumn.add(Box.createVerticalStrut(8));
+        } else {
+            textColumn.add(Box.createVerticalStrut(8));
+        }
+        textColumn.add(paletteNameField);
+
+        JPanel buttonColumn = new JPanel(new GridLayout(1, 2, 8, 0));
+        buttonColumn.setOpaque(false);
+
+        JButton savePaletteButton = createPrimaryButton(UiText.OptionsWindow.SAVE_PALETTE_BUTTON);
+        savePaletteButton.addActionListener(event -> {
+            String name = paletteNameField.getText().trim();
+            if (name.isEmpty()) {
+                JOptionPane.showMessageDialog(this, UiText.OptionsWindow.PaletteNameRequiredMessage(),
+                        UiText.Common.WARNING_TITLE,
+                        JOptionPane.WARNING_MESSAGE);
+                return;
+            }
+
+            Config.SaveGbcPalette(name);
+            JOptionPane.showMessageDialog(this, UiText.OptionsWindow.PaletteSavedMessage(name));
+        });
+
+        JButton loadPaletteButton = createSecondaryButton(UiText.OptionsWindow.BROWSE_BUTTON);
+        loadPaletteButton.addActionListener(
+                event -> new PaletteManager(PaletteManager.PaletteKind.GBC, this::refreshPaletteDetails));
+
+        buttonColumn.add(savePaletteButton);
+        buttonColumn.add(loadPaletteButton);
+
+        actionCard.add(textColumn, BorderLayout.CENTER);
+        actionCard.add(buttonColumn, BorderLayout.EAST);
+
         JButton resetGbcPaletteButton = createSecondaryButton(UiText.OptionsWindow.RESET_GBC_SETTINGS_BUTTON);
         resetGbcPaletteButton.addActionListener(event -> {
             Settings.ResetGbcPaletteMode();
@@ -518,6 +579,8 @@ public class OptionsWindow extends DuckWindow {
         container.add(toggleStack);
         container.add(Box.createVerticalStrut(10));
         container.add(paletteGrid);
+        container.add(Box.createVerticalStrut(10));
+        container.add(actionCard);
         container.add(Box.createVerticalStrut(10));
         container.add(actions);
         return container;
@@ -601,11 +664,18 @@ public class OptionsWindow extends DuckWindow {
         title.setForeground(accentColour);
 
         text.add(title);
+        if (shouldRenderUiText(helperText)) {
+            JLabel helper = new JLabel(helperText);
+            helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+            helper.setForeground(mutedText);
+            text.add(Box.createVerticalStrut(3));
+            text.add(helper);
+        }
 
         JPanel swatchGrid = new JPanel(new GridLayout(2, 2, 8, 8));
         swatchGrid.setOpaque(false);
         for (int colourIndex = 0; colourIndex < palette.length; colourIndex++) {
-            swatchGrid.add(createGbcPaletteSwatch(paletteIndex, colourIndex, palette[colourIndex]));
+            swatchGrid.add(createGbcPaletteSwatch(paletteIndex, titleText, colourIndex, palette[colourIndex]));
         }
 
         card.add(text, BorderLayout.NORTH);
@@ -613,8 +683,14 @@ public class OptionsWindow extends DuckWindow {
         return card;
     }
 
-    private JComponent createGbcPaletteSwatch(int paletteIndex, int colourIndex, GBColor colour) {
+    private JComponent createGbcPaletteSwatch(int paletteIndex, String paletteTitle, int colourIndex, GBColor colour) {
         int flatIndex = (paletteIndex * 4) + colourIndex;
+        MouseAdapter chooseListener = new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent event) {
+                chooseGbcPaletteColor(paletteIndex, colourIndex);
+            }
+        };
 
         JPanel swatch = new JPanel();
         swatch.setPreferredSize(new Dimension(52, 52));
@@ -622,6 +698,10 @@ public class OptionsWindow extends DuckWindow {
         swatch.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(new Color(58, 92, 132, 45), 1, true),
                 BorderFactory.createEmptyBorder(3, 3, 3, 3)));
+        swatch.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        swatch.setToolTipText(UiText.OptionsWindow.ChooseColorTitle(
+                paletteTitle + " " + UiText.OptionsWindow.GbcPaletteButtonLabel(colourIndex)));
+        swatch.addMouseListener(chooseListener);
         gbcColorPreviews[flatIndex] = swatch;
 
         JLabel hexLabel = new JLabel(colour.ToHex().toUpperCase());
@@ -636,6 +716,10 @@ public class OptionsWindow extends DuckWindow {
 
         JPanel hexWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
         hexWrap.setOpaque(false);
+        hexWrap.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        hexWrap.addMouseListener(chooseListener);
+        hexLabel.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        hexLabel.addMouseListener(chooseListener);
         hexWrap.add(hexLabel);
 
         swatch.setLayout(new BorderLayout());

@@ -22,9 +22,14 @@ import java.awt.Font;
 import java.util.List;
 
 /**
- * Browser for loading and deleting saved DMG palettes.
+ * Browser for loading and deleting saved DMG and GBC palettes.
  */
 public final class PaletteManager extends DuckWindow {
+
+    public enum PaletteKind {
+        DMG,
+        GBC
+    }
 
     private final Color panelBackground;
     private final Color cardBackground;
@@ -32,6 +37,7 @@ public final class PaletteManager extends DuckWindow {
     private final Color accentColour;
     private final Color mutedTextColour;
     private final DefaultListModel<String> paletteListModel = new DefaultListModel<>();
+    private final PaletteKind paletteKind;
     private final Runnable onPaletteChanged;
 
     /**
@@ -40,7 +46,18 @@ public final class PaletteManager extends DuckWindow {
      * @param onPaletteChanged callback fired after a palette is loaded
      */
     public PaletteManager(Runnable onPaletteChanged) {
-        super(UiText.PaletteManager.WINDOW_TITLE, 460, 360, false);
+        this(PaletteKind.DMG, onPaletteChanged);
+    }
+
+    /**
+     * Creates the palette browser for the requested palette type.
+     *
+     * @param paletteKind      saved palette library to browse
+     * @param onPaletteChanged callback fired after a palette is loaded
+     */
+    public PaletteManager(PaletteKind paletteKind, Runnable onPaletteChanged) {
+        super(UiText.PaletteManager.WindowTitle(paletteKind == PaletteKind.GBC), 460, 360, false);
+        this.paletteKind = paletteKind;
         this.onPaletteChanged = onPaletteChanged;
         panelBackground = Styling.appBackgroundColour;
         cardBackground = Styling.surfaceColour;
@@ -63,11 +80,13 @@ public final class PaletteManager extends DuckWindow {
         header.setBackground(panelBackground);
         header.setBorder(BorderFactory.createEmptyBorder(20, 24, 12, 24));
 
-        JLabel titleLabel = new JLabel(UiText.PaletteManager.TITLE);
+        boolean gbcPalette = paletteKind == PaletteKind.GBC;
+
+        JLabel titleLabel = new JLabel(UiText.PaletteManager.Title(gbcPalette));
         titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 24f));
         titleLabel.setForeground(accentColour);
 
-        JLabel subtitleLabel = new JLabel(UiText.PaletteManager.SUBTITLE);
+        JLabel subtitleLabel = new JLabel(UiText.PaletteManager.Subtitle(gbcPalette));
         subtitleLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
         subtitleLabel.setForeground(mutedTextColour);
 
@@ -113,11 +132,13 @@ public final class PaletteManager extends DuckWindow {
                 return;
             }
 
+            boolean gbcPalette = paletteKind == PaletteKind.GBC;
             int result = JOptionPane.showConfirmDialog(this,
-                    UiText.PaletteManager.DeleteConfirmMessage(selectedPalette), UiText.PaletteManager.DELETE_CONFIRM_TITLE,
+                    UiText.PaletteManager.DeleteConfirmMessage(gbcPalette, selectedPalette),
+                    UiText.PaletteManager.DeleteConfirmTitle(gbcPalette),
                     JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (result == JOptionPane.YES_OPTION) {
-                Config.DeletePalette(selectedPalette);
+                DeletePalette(selectedPalette);
                 RefreshPaletteList();
                 if (!paletteListModel.isEmpty()) {
                     paletteList.setSelectedIndex(0);
@@ -132,7 +153,7 @@ public final class PaletteManager extends DuckWindow {
                 return;
             }
 
-            if (Config.LoadPalette(selectedPalette) && onPaletteChanged != null) {
+            if (LoadPalette(selectedPalette) && onPaletteChanged != null) {
                 onPaletteChanged.run();
             }
             dispose();
@@ -148,10 +169,26 @@ public final class PaletteManager extends DuckWindow {
 
     private void RefreshPaletteList() {
         paletteListModel.clear();
-        List<String> paletteNames = Config.GetSavedPaletteNames();
+        List<String> paletteNames = paletteKind == PaletteKind.GBC
+                ? Config.GetSavedGbcPaletteNames()
+                : Config.GetSavedPaletteNames();
         for (String paletteName : paletteNames) {
             paletteListModel.addElement(paletteName);
         }
+    }
+
+    private boolean LoadPalette(String paletteName) {
+        return paletteKind == PaletteKind.GBC
+                ? Config.LoadGbcPalette(paletteName)
+                : Config.LoadPalette(paletteName);
+    }
+
+    private void DeletePalette(String paletteName) {
+        if (paletteKind == PaletteKind.GBC) {
+            Config.DeleteGbcPalette(paletteName);
+            return;
+        }
+        Config.DeletePalette(paletteName);
     }
 
     private Border CreateCardBorder() {

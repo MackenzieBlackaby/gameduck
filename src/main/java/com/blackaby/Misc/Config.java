@@ -28,6 +28,8 @@ public final class Config {
     private static final String currentPalettePrefix = "palette.current.";
     private static final String savedPaletteListKey = "palette.names";
     private static final String savedPalettePrefix = "palette.saved.";
+    private static final String savedGbcPaletteListKey = "palette.gbc.saved.names";
+    private static final String savedGbcPalettePrefix = "palette.gbc.saved.";
     private static final String savedThemeListKey = "theme.saved.names";
     private static final String savedThemePrefix = "theme.saved.";
     private static final String inputPrefix = "input.";
@@ -138,6 +140,38 @@ public final class Config {
     }
 
     /**
+     * Saves the current GBC colourisation palettes under a user-supplied name.
+     *
+     * @param name palette name
+     */
+    public static void SaveGbcPalette(String name) {
+        synchronized (Config.class) {
+            EnsureLoaded();
+
+            String encodedName = EncodeName(name);
+            List<String> paletteNames = GetSavedGbcPaletteNamesInternal();
+            if (!paletteNames.contains(name)) {
+                paletteNames.add(name);
+            }
+
+            SyncSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".background.", Settings.CurrentGbcBackgroundPalette());
+            SyncSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite0.", Settings.CurrentGbcSpritePalette0());
+            SyncSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite1.", Settings.CurrentGbcSpritePalette1());
+            properties.setProperty(savedGbcPaletteListKey, String.join(",", EncodeNames(paletteNames)));
+            SyncCurrentPalette();
+            SyncAppTheme();
+            SyncInputBindings();
+            SyncControllerBindings();
+            SyncAppShortcuts();
+            SyncSoundSettings();
+            SyncEmulationSettings();
+            SyncWindowSettings();
+            SyncLibrarySettings();
+            Persist();
+        }
+    }
+
+    /**
      * Saves the current host theme under a user-supplied name.
      *
      * @param name theme name
@@ -181,6 +215,16 @@ public final class Config {
     }
 
     /**
+     * Returns the saved GBC palette names in display order.
+     *
+     * @return saved GBC palette names
+     */
+    public static synchronized List<String> GetSavedGbcPaletteNames() {
+        EnsureLoaded();
+        return new ArrayList<>(GetSavedGbcPaletteNamesInternal());
+    }
+
+    /**
      * Returns the saved theme names in display order.
      *
      * @return saved theme names
@@ -209,6 +253,36 @@ public final class Config {
             Settings.SetPaletteColour(index, value);
             found = true;
         }
+
+        if (found) {
+            SyncCurrentPalette();
+            SyncAppTheme();
+            SyncInputBindings();
+            SyncControllerBindings();
+            SyncAppShortcuts();
+            SyncSoundSettings();
+            SyncWindowSettings();
+            SyncLibrarySettings();
+            Persist();
+        }
+
+        return found;
+    }
+
+    /**
+     * Loads a saved GBC colourisation palette set into the active settings.
+     *
+     * @param name palette name
+     * @return {@code true} if the palette existed
+     */
+    public static synchronized boolean LoadGbcPalette(String name) {
+        EnsureLoaded();
+
+        String encodedName = EncodeName(name);
+        boolean found = false;
+        found |= ApplySavedGbcPalette(savedGbcPalettePrefix + encodedName + ".background.", 0);
+        found |= ApplySavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite0.", 1);
+        found |= ApplySavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite1.", 2);
 
         if (found) {
             SyncCurrentPalette();
@@ -280,6 +354,34 @@ public final class Config {
         List<String> paletteNames = GetSavedPaletteNamesInternal();
         paletteNames.remove(name);
         properties.setProperty(savedPaletteListKey, String.join(",", EncodeNames(paletteNames)));
+        SyncCurrentPalette();
+        SyncAppTheme();
+        SyncInputBindings();
+        SyncControllerBindings();
+        SyncAppShortcuts();
+        SyncSoundSettings();
+        SyncEmulationSettings();
+        SyncWindowSettings();
+        SyncLibrarySettings();
+        Persist();
+    }
+
+    /**
+     * Deletes a stored GBC palette set.
+     *
+     * @param name palette name
+     */
+    public static synchronized void DeleteGbcPalette(String name) {
+        EnsureLoaded();
+
+        String encodedName = EncodeName(name);
+        RemoveSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".background.");
+        RemoveSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite0.");
+        RemoveSavedGbcPalette(savedGbcPalettePrefix + encodedName + ".sprite1.");
+
+        List<String> paletteNames = GetSavedGbcPaletteNamesInternal();
+        paletteNames.remove(name);
+        properties.setProperty(savedGbcPaletteListKey, String.join(",", EncodeNames(paletteNames)));
         SyncCurrentPalette();
         SyncAppTheme();
         SyncInputBindings();
@@ -552,6 +654,21 @@ public final class Config {
         return names;
     }
 
+    private static List<String> GetSavedGbcPaletteNamesInternal() {
+        String stored = properties.getProperty(savedGbcPaletteListKey, "");
+        List<String> names = new ArrayList<>();
+        if (stored.isBlank()) {
+            return names;
+        }
+
+        for (String encodedName : stored.split(",")) {
+            if (!encodedName.isBlank()) {
+                names.add(DecodeName(encodedName));
+            }
+        }
+        return names;
+    }
+
     private static List<String> GetSavedThemeNamesInternal() {
         String stored = properties.getProperty(savedThemeListKey, "");
         List<String> names = new ArrayList<>();
@@ -599,6 +716,29 @@ public final class Config {
     private static void SyncGbcPalette(String keyPrefix, GBColor[] palette) {
         for (int colourIndex = 0; colourIndex < palette.length; colourIndex++) {
             properties.setProperty(keyPrefix + colourIndex, palette[colourIndex].ToHex());
+        }
+    }
+
+    private static void SyncSavedGbcPalette(String keyPrefix, GBColor[] palette) {
+        SyncGbcPalette(keyPrefix, palette);
+    }
+
+    private static boolean ApplySavedGbcPalette(String keyPrefix, int paletteIndex) {
+        boolean found = false;
+        for (int colourIndex = 0; colourIndex < 4; colourIndex++) {
+            String value = properties.getProperty(keyPrefix + colourIndex);
+            if (value == null) {
+                continue;
+            }
+            Settings.SetGbcPaletteColour(paletteIndex, colourIndex, value);
+            found = true;
+        }
+        return found;
+    }
+
+    private static void RemoveSavedGbcPalette(String keyPrefix) {
+        for (int colourIndex = 0; colourIndex < 4; colourIndex++) {
+            properties.remove(keyPrefix + colourIndex);
         }
     }
 
