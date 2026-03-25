@@ -35,7 +35,7 @@ class QuickStateManagerTest {
                             false, 0, 0, 0, false, 0, 0x8000, 0, false, new int[2][0x2000], new int[8][0x1000],
                             new int[0x40], new int[0x40], null),
                     new DuckTimer.TimerState(0x1234, true, 2, true),
-                    new DuckPPU.PpuState(1, 42, 123, true),
+                    new DuckPPU.PpuState(1, 42, 123, true, 17, 6, true),
                     new DuckJoypad.JoypadState(0x10, 0x03),
                     null,
                     new DuckDisplay.FrameState(new int[] { 1, 2 }, new int[] { 3, 4 }),

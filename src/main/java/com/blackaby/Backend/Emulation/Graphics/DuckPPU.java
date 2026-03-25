@@ -21,7 +21,10 @@ public class DuckPPU {
             int modeOrdinal,
             int scanline,
             int cycle,
-            boolean statInterruptLine) implements java.io.Serializable {
+            boolean statInterruptLine,
+            int pixelTransferX,
+            int windowLineCounter,
+            boolean windowRenderedOnCurrentScanline) implements java.io.Serializable {
     }
 
     public static final int oamDuration = 80;
@@ -79,6 +82,10 @@ public class DuckPPU {
     private int cycle;
     private boolean statInterruptLine;
     private int completedFrames;
+    private int pixelTransferX;
+    private int visibleSpriteCount;
+    private int windowLineCounter;
+    private boolean windowRenderedOnCurrentScanline;
 
     /**
      * Creates a PPU bound to the current CPU, memory bus, and display target.
@@ -104,25 +111,32 @@ public class DuckPPU {
             return;
         }
 
+        // LYC comparison is a live signal, so games that rewrite LYC mid-frame
+        // can immediately retrigger STAT without waiting for LY to change.
+        UpdateLycCompare();
         cycle++;
 
         switch (mode) {
             case OAM -> {
                 if (cycle >= oamDuration) {
                     cycle -= oamDuration;
+                    BeginPixelTransfer();
                     SetMode(PpuMode.VRAM);
                 }
             }
             case VRAM -> {
+                while (pixelTransferX < screenWidth && pixelTransferX < cycle) {
+                    RenderNextPixel();
+                }
                 if (cycle >= vramDuration) {
                     cycle -= vramDuration;
                     SetMode(PpuMode.HBLANK);
-                    RenderScanline();
                 }
             }
             case HBLANK -> {
                 if (cycle >= scanlineCycles - oamDuration - vramDuration) {
                     cycle -= scanlineCycles - oamDuration - vramDuration;
+                    CompleteCurrentScanline();
                     scanline++;
 
                     memory.WriteDirect(regLy, scanline);
@@ -132,7 +146,7 @@ public class DuckPPU {
                         SetMode(PpuMode.VBLANK);
                         cpu.RequestInterrupt(DuckCPU.Interrupt.VBLANK);
                         completedFrames++;
-                        display.presentFrame();
+                        display.presentFrame(!memory.IsCgbMode());
                     } else {
                         SetMode(PpuMode.OAM);
                     }
@@ -145,6 +159,8 @@ public class DuckPPU {
 
                     if (scanline >= screenHeight + vblankLines) {
                         scanline = 0;
+                        windowLineCounter = 0;
+                        windowRenderedOnCurrentScanline = false;
                         SetMode(PpuMode.OAM);
                     }
 
@@ -161,7 +177,8 @@ public class DuckPPU {
      * @return PPU state snapshot
      */
     public PpuState CaptureState() {
-        return new PpuState(mode.ordinal(), scanline, cycle, statInterruptLine);
+        return new PpuState(mode.ordinal(), scanline, cycle, statInterruptLine,
+                pixelTransferX, windowLineCounter, windowRenderedOnCurrentScanline);
     }
 
     /**
@@ -180,6 +197,12 @@ public class DuckPPU {
         scanline = state.scanline();
         cycle = Math.max(0, state.cycle());
         statInterruptLine = state.statInterruptLine();
+        pixelTransferX = Math.max(0, Math.min(screenWidth, state.pixelTransferX()));
+        windowLineCounter = Math.max(0, state.windowLineCounter());
+        windowRenderedOnCurrentScanline = state.windowRenderedOnCurrentScanline();
+        visibleSpriteCount = (mode == PpuMode.VRAM || mode == PpuMode.HBLANK)
+                ? LoadSpritesOnScanline((memory.Read(regLcdc) & 0x04) != 0)
+                : 0;
         completedFrames = 0;
     }
 
@@ -220,6 +243,10 @@ public class DuckPPU {
         mode = PpuMode.HBLANK;
         statInterruptLine = false;
         completedFrames = 0;
+        pixelTransferX = 0;
+        visibleSpriteCount = 0;
+        windowLineCounter = 0;
+        windowRenderedOnCurrentScanline = false;
         memory.WriteDirect(regLy, 0);
 
         int stat = memory.Read(regStat);
@@ -263,11 +290,15 @@ public class DuckPPU {
         statInterruptLine = lineHigh;
     }
 
-    private void RenderScanline() {
-        int lcdControl = memory.Read(regLcdc);
-        boolean cgbMode = memory.IsCgbMode();
-        boolean useGbcColourisation = ShouldUseGbcColourisation();
-        if (!cgbMode) {
+    private void BeginPixelTransfer() {
+        pixelTransferX = 0;
+        windowRenderedOnCurrentScanline = false;
+        Arrays.fill(backgroundPriorityBuffer, 0);
+        Arrays.fill(backgroundTilePriorityBuffer, false);
+        visibleSpriteCount = LoadSpritesOnScanline((memory.Read(regLcdc) & 0x04) != 0);
+
+        if (!memory.IsCgbMode()) {
+            boolean useGbcColourisation = ShouldUseGbcColourisation();
             if (useGbcColourisation) {
                 LoadPalette(Settings.gbcBackgroundPaletteObjects, activeBackgroundPalette);
                 LoadPalette(Settings.gbcSpritePalette0Objects, activeSpritePalette0);
@@ -277,162 +308,137 @@ public class DuckPPU {
                 LoadDmgPalette(activeSpritePalette0);
                 LoadDmgPalette(activeSpritePalette1);
             }
+        }
+    }
 
+    private void CompleteCurrentScanline() {
+        if (windowRenderedOnCurrentScanline) {
+            windowLineCounter++;
+            windowRenderedOnCurrentScanline = false;
+        }
+        pixelTransferX = 0;
+        visibleSpriteCount = 0;
+    }
+
+    private void RenderNextPixel() {
+        int x = pixelTransferX;
+        int lcdControl = memory.Read(regLcdc);
+        boolean cgbMode = memory.IsCgbMode();
+
+        int backgroundColour = ResolveBackgroundPixel(x, lcdControl, cgbMode);
+        display.setPixel(x, scanline, backgroundColour, false);
+
+        int spriteColour = ResolveSpritePixel(x, lcdControl, cgbMode);
+        if (spriteColour != -1) {
+            display.setPixel(x, scanline, spriteColour, false);
+        }
+
+        pixelTransferX++;
+    }
+
+    private int ResolveBackgroundPixel(int screenX, int lcdControl, boolean cgbMode) {
+        if (!cgbMode) {
             DecodePalette(memory.Read(regBgp), activeBackgroundPalette, decodedBackgroundPalette);
+        }
+
+        if (!cgbMode && (lcdControl & 0x01) == 0) {
+            backgroundPriorityBuffer[screenX] = 0;
+            backgroundTilePriorityBuffer[screenX] = false;
+            return decodedBackgroundPalette[0];
+        }
+
+        int windowY = memory.Read(regWy);
+        int windowX = memory.Read(regWx) - 7;
+        boolean windowEnabled = (lcdControl & 0x20) != 0
+                && scanline >= windowY
+                && screenX >= windowX
+                && windowX < screenWidth;
+        if (windowEnabled) {
+            windowRenderedOnCurrentScanline = true;
+            return SampleBackgroundLayerPixel(screenX, lcdControl, cgbMode, true, windowX, windowLineCounter);
+        }
+        return SampleBackgroundLayerPixel(screenX, lcdControl, cgbMode, false, windowX, 0);
+    }
+
+    private int SampleBackgroundLayerPixel(int screenX, int lcdControl, boolean cgbMode, boolean windowLayer,
+            int windowX, int activeWindowLine) {
+        boolean unsignedTileData = (lcdControl & 0x10) != 0;
+        int tileMapBase = windowLayer
+                ? (((lcdControl & 0x40) != 0) ? 0x9C00 : 0x9800)
+                : (((lcdControl & 0x08) != 0) ? 0x9C00 : 0x9800);
+        int tileDataBase = unsignedTileData ? 0x8000 : 0x9000;
+        int xPosition = windowLayer ? (screenX - windowX) : ((screenX + memory.Read(regScx)) & 0xFF);
+        int yPosition = windowLayer ? activeWindowLine : ((scanline + memory.Read(regScy)) & 0xFF);
+        int tileRow = yPosition / 8;
+        int tileColumn = (xPosition & 0xFF) / 8;
+
+        int tileAddress = tileMapBase + (tileRow * 32) + tileColumn;
+        int tileNumber = cgbMode ? memory.ReadVideoRam(0, tileAddress) : memory.Read(tileAddress);
+        int tileAttributes = cgbMode ? memory.ReadVideoRam(1, tileAddress) : 0;
+        if (!unsignedTileData) {
+            tileNumber = (byte) tileNumber;
+        }
+
+        int tileLineAddress = tileDataBase + (tileNumber * 16);
+        int tileLine = yPosition % 8;
+        if (cgbMode && (tileAttributes & 0x40) != 0) {
+            tileLine = 7 - tileLine;
+        }
+        int lineOffset = tileLine * 2;
+        int vramBank = cgbMode && (tileAttributes & 0x08) != 0 ? 1 : 0;
+        int lowByte = cgbMode
+                ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset)
+                : memory.Read(tileLineAddress + lineOffset);
+        int highByte = cgbMode
+                ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset + 1)
+                : memory.Read(tileLineAddress + lineOffset + 1);
+
+        int bit = 7 - (xPosition % 8);
+        if (cgbMode && (tileAttributes & 0x20) != 0) {
+            bit = xPosition % 8;
+        }
+        int high = (highByte >> bit) & 1;
+        int low = (lowByte >> bit) & 1;
+        int colourIndex = (high << 1) | low;
+
+        backgroundPriorityBuffer[screenX] = colourIndex;
+        backgroundTilePriorityBuffer[screenX] = cgbMode && (tileAttributes & 0x80) != 0;
+
+        return cgbMode
+                ? memory.ReadCgbBackgroundPaletteColourRgb(tileAttributes & 0x07, colourIndex)
+                : decodedBackgroundPalette[colourIndex];
+    }
+
+    private int ResolveSpritePixel(int screenX, int lcdControl, boolean cgbMode) {
+        if ((lcdControl & 0x02) == 0) {
+            return -1;
+        }
+
+        if (!cgbMode) {
             DecodePalette(memory.Read(regObp0), activeSpritePalette0, decodedSpritePalette0);
             DecodePalette(memory.Read(regObp1), activeSpritePalette1, decodedSpritePalette1);
         }
 
-        Arrays.fill(backgroundPriorityBuffer, 0);
-        Arrays.fill(backgroundTilePriorityBuffer, false);
-
-        if (cgbMode || (lcdControl & 0x01) != 0) {
-            RenderBackground(lcdControl, cgbMode ? null : decodedBackgroundPalette);
-            if ((lcdControl & 0x20) != 0) {
-                RenderWindow(lcdControl, cgbMode ? null : decodedBackgroundPalette);
-            }
-        } else {
-            int white = decodedBackgroundPalette[0];
-            for (int x = 0; x < screenWidth; x++) {
-                display.setPixel(x, scanline, white, false);
-            }
-        }
-
-        if ((lcdControl & 0x02) != 0) {
-            RenderSprites(lcdControl, cgbMode ? null : decodedSpritePalette0, cgbMode ? null : decodedSpritePalette1);
-        }
-    }
-
-    private void RenderBackground(int lcdControl, int[] activeBackgroundPalette) {
-        int scrollY = memory.Read(regScy);
-        int scrollX = memory.Read(regScx);
-        boolean cgbMode = memory.IsCgbMode();
-        int[] backgroundPalette = cgbMode ? null : activeBackgroundPalette;
-
-        boolean unsignedTileData = (lcdControl & 0x10) != 0;
-        int tileMapBase = ((lcdControl & 0x08) != 0) ? 0x9C00 : 0x9800;
-        int tileDataBase = unsignedTileData ? 0x8000 : 0x9000;
-
-        int yPosition = (scanline + scrollY) & 0xFF;
-        int tileRow = yPosition / 8;
-
-        for (int x = 0; x < screenWidth; x++) {
-            int xPosition = (x + scrollX) & 0xFF;
-            int tileColumn = xPosition / 8;
-
-            int tileAddress = tileMapBase + (tileRow * 32) + tileColumn;
-            int tileNumber = cgbMode ? memory.ReadVideoRam(0, tileAddress) : memory.Read(tileAddress);
-            int tileAttributes = cgbMode ? memory.ReadVideoRam(1, tileAddress) : 0;
-            if (!unsignedTileData) {
-                tileNumber = (byte) tileNumber;
-            }
-
-            int tileLineAddress = tileDataBase + (tileNumber * 16);
-            int tileLine = yPosition % 8;
-            if (cgbMode && (tileAttributes & 0x40) != 0) {
-                tileLine = 7 - tileLine;
-            }
-            int lineOffset = tileLine * 2;
-            int vramBank = cgbMode && (tileAttributes & 0x08) != 0 ? 1 : 0;
-            int lowByte = cgbMode
-                    ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset)
-                    : memory.Read(tileLineAddress + lineOffset);
-            int highByte = cgbMode
-                    ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset + 1)
-                    : memory.Read(tileLineAddress + lineOffset + 1);
-
-            int bit = 7 - (xPosition % 8);
-            if (cgbMode && (tileAttributes & 0x20) != 0) {
-                bit = xPosition % 8;
-            }
-            int high = (highByte >> bit) & 1;
-            int low = (lowByte >> bit) & 1;
-            int colourIndex = (high << 1) | low;
-
-            backgroundPriorityBuffer[x] = colourIndex;
-            backgroundTilePriorityBuffer[x] = cgbMode && (tileAttributes & 0x80) != 0;
-
-            int colour = cgbMode
-                    ? memory.ReadCgbBackgroundPaletteColourRgb(tileAttributes & 0x07, colourIndex)
-                    : backgroundPalette[colourIndex];
-            display.setPixel(x, scanline, colour, false);
-        }
-    }
-
-    private void RenderWindow(int lcdControl, int[] activeBackgroundPalette) {
-        int windowY = memory.Read(regWy);
-        int windowX = memory.Read(regWx) - 7;
-        if (scanline < windowY || windowX >= screenWidth) {
-            return;
-        }
-
-        boolean cgbMode = memory.IsCgbMode();
-        int[] backgroundPalette = cgbMode ? null : activeBackgroundPalette;
-        boolean unsignedTileData = (lcdControl & 0x10) != 0;
-        int tileMapBase = ((lcdControl & 0x40) != 0) ? 0x9C00 : 0x9800;
-        int tileDataBase = unsignedTileData ? 0x8000 : 0x9000;
-        int yPosition = scanline - windowY;
-        int tileRow = yPosition / 8;
-        int startX = Math.max(windowX, 0);
-
-        for (int x = startX; x < screenWidth; x++) {
-            int xPosition = x - windowX;
-            int tileColumn = xPosition / 8;
-
-            int tileAddress = tileMapBase + (tileRow * 32) + tileColumn;
-            int tileNumber = cgbMode ? memory.ReadVideoRam(0, tileAddress) : memory.Read(tileAddress);
-            int tileAttributes = cgbMode ? memory.ReadVideoRam(1, tileAddress) : 0;
-            if (!unsignedTileData) {
-                tileNumber = (byte) tileNumber;
-            }
-
-            int tileLineAddress = tileDataBase + (tileNumber * 16);
-            int tileLine = yPosition % 8;
-            if (cgbMode && (tileAttributes & 0x40) != 0) {
-                tileLine = 7 - tileLine;
-            }
-            int lineOffset = tileLine * 2;
-            int vramBank = cgbMode && (tileAttributes & 0x08) != 0 ? 1 : 0;
-            int lowByte = cgbMode
-                    ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset)
-                    : memory.Read(tileLineAddress + lineOffset);
-            int highByte = cgbMode
-                    ? memory.ReadVideoRam(vramBank, tileLineAddress + lineOffset + 1)
-                    : memory.Read(tileLineAddress + lineOffset + 1);
-
-            int bit = 7 - (xPosition % 8);
-            if (cgbMode && (tileAttributes & 0x20) != 0) {
-                bit = xPosition % 8;
-            }
-            int high = (highByte >> bit) & 1;
-            int low = (lowByte >> bit) & 1;
-            int colourIndex = (high << 1) | low;
-
-            backgroundPriorityBuffer[x] = colourIndex;
-            backgroundTilePriorityBuffer[x] = cgbMode && (tileAttributes & 0x80) != 0;
-
-            int colour = cgbMode
-                    ? memory.ReadCgbBackgroundPaletteColourRgb(tileAttributes & 0x07, colourIndex)
-                    : backgroundPalette[colourIndex];
-            display.setPixel(x, scanline, colour, false);
-        }
-    }
-
-    private void RenderSprites(int lcdControl, int[] activeSpritePalette0, int[] activeSpritePalette1) {
         boolean use8x16 = (lcdControl & 0x04) != 0;
-        boolean cgbMode = memory.IsCgbMode();
         boolean bgMasterPriority = cgbMode && (lcdControl & 0x01) != 0;
-        int visibleSpriteCount = LoadSpritesOnScanline(use8x16);
+
         for (int spriteIndex = 0; spriteIndex < visibleSpriteCount; spriteIndex++) {
-            DrawSprite(spriteIndex, use8x16, cgbMode, bgMasterPriority, activeSpritePalette0, activeSpritePalette1);
+            int colour = ResolveSpritePixelFromEntry(screenX, spriteIndex, use8x16, cgbMode, bgMasterPriority);
+            if (colour != -1) {
+                return colour;
+            }
         }
+        return -1;
     }
 
-    private void DrawSprite(int spriteIndex, boolean use8x16, boolean cgbMode, boolean bgMasterPriority,
-            int[] activeSpritePalette0, int[] activeSpritePalette1) {
+    private int ResolveSpritePixelFromEntry(int screenX, int spriteIndex, boolean use8x16, boolean cgbMode,
+            boolean bgMasterPriority) {
         int spriteHeight = use8x16 ? 16 : 8;
         int attributes = visibleSpriteAttributes[spriteIndex];
-        int[] palette = cgbMode ? null : (((attributes & 0x10) != 0) ? activeSpritePalette1 : activeSpritePalette0);
+        int spriteStartX = visibleSpriteX[spriteIndex];
+        if (screenX < spriteStartX || screenX >= spriteStartX + 8) {
+            return -1;
+        }
 
         int line = scanline - visibleSpriteY[spriteIndex];
         if ((attributes & 0x40) != 0) {
@@ -453,35 +459,28 @@ public class DuckPPU {
         int lowByte = cgbMode ? memory.ReadVideoRam(vramBank, tileAddress) : memory.Read(tileAddress);
         int highByte = cgbMode ? memory.ReadVideoRam(vramBank, tileAddress + 1) : memory.Read(tileAddress + 1);
 
-        for (int x = 0; x < 8; x++) {
-            int pixelX = visibleSpriteX[spriteIndex] + x;
-            if (pixelX < 0 || pixelX >= screenWidth) {
-                continue;
-            }
+        int localX = screenX - spriteStartX;
+        int bit = (attributes & 0x20) != 0 ? localX : 7 - localX;
+        int high = (highByte >> bit) & 1;
+        int low = (lowByte >> bit) & 1;
+        int colourIndex = (high << 1) | low;
 
-            int bit = (attributes & 0x20) != 0 ? x : 7 - x;
-            int high = (highByte >> bit) & 1;
-            int low = (lowByte >> bit) & 1;
-            int colourIndex = (high << 1) | low;
-
-            if (colourIndex == 0) {
-                continue;
-            }
-
-            if (cgbMode) {
-                if (bgMasterPriority && backgroundPriorityBuffer[pixelX] != 0
-                        && (((attributes & 0x80) != 0) || backgroundTilePriorityBuffer[pixelX])) {
-                    continue;
-                }
-            } else if ((attributes & 0x80) != 0 && backgroundPriorityBuffer[pixelX] != 0) {
-                continue;
-            }
-
-            int colour = cgbMode
-                    ? memory.ReadCgbObjectPaletteColourRgb(attributes & 0x07, colourIndex)
-                    : palette[colourIndex];
-            display.setPixel(pixelX, scanline, colour, false);
+        if (colourIndex == 0) {
+            return -1;
         }
+
+        if (cgbMode) {
+            if (bgMasterPriority && backgroundPriorityBuffer[screenX] != 0
+                    && (((attributes & 0x80) != 0) || backgroundTilePriorityBuffer[screenX])) {
+                return -1;
+            }
+        } else if ((attributes & 0x80) != 0 && backgroundPriorityBuffer[screenX] != 0) {
+            return -1;
+        }
+
+        return cgbMode
+                ? memory.ReadCgbObjectPaletteColourRgb(attributes & 0x07, colourIndex)
+                : (((attributes & 0x10) != 0) ? decodedSpritePalette1[colourIndex] : decodedSpritePalette0[colourIndex]);
     }
 
     private int LoadSpritesOnScanline(boolean use8x16) {

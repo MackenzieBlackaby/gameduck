@@ -35,4 +35,18 @@ class DuckDisplayTest {
         assertEquals(Color.BLACK.getRGB(), snapshot.frontBuffer()[(10 * 160) + 10]);
         assertEquals(Color.BLACK.getRGB(), snapshot.backBuffer()[(10 * 160) + 10]);
     }
+
+    @Test
+    void presentFrameCanBlendWithPreviousFrameForGhosting() {
+        DuckDisplay display = new DuckDisplay();
+        display.setPixel(0, 0, Color.BLACK.getRGB(), false);
+        display.presentFrame();
+        display.setPixel(0, 0, Color.WHITE.getRGB(), false);
+
+        display.presentFrame(true);
+
+        DuckDisplay.FrameState snapshot = display.SnapshotFrameState();
+        assertEquals(0x9F9F9F, snapshot.frontBuffer()[0] & 0xFFFFFF);
+        assertEquals(Color.WHITE.getRGB(), snapshot.backBuffer()[0]);
+    }
 }

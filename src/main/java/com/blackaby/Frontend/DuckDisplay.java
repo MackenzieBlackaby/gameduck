@@ -137,12 +137,28 @@ public class DuckDisplay extends JPanel {
      * Copies the completed emulation back buffer to the image presented on the EDT.
      */
     public void presentFrame() {
+        presentFrame(false);
+    }
+
+    /**
+     * Copies the completed emulation back buffer to the image presented on the EDT.
+     *
+     * @param blendWithPreviousFrame whether to blend the new frame with the
+     * previously displayed image to approximate LCD persistence
+     */
+    public void presentFrame(boolean blendWithPreviousFrame) {
         if (backBuffer == null || frontBuffer == null) {
             return;
         }
 
         synchronized (frameLock) {
-            System.arraycopy(backBuffer, 0, frontBuffer, 0, backBuffer.length);
+            if (!blendWithPreviousFrame) {
+                System.arraycopy(backBuffer, 0, frontBuffer, 0, backBuffer.length);
+            } else {
+                for (int index = 0; index < backBuffer.length; index++) {
+                    frontBuffer[index] = BlendRgb(frontBuffer[index], backBuffer[index]);
+                }
+            }
         }
 
         RequestRepaint();
@@ -272,5 +288,20 @@ public class DuckDisplay extends JPanel {
             repaintQueued.set(false);
             repaint();
         });
+    }
+
+    private int BlendRgb(int previousRgb, int currentRgb) {
+        int previousRed = (previousRgb >> 16) & 0xFF;
+        int previousGreen = (previousRgb >> 8) & 0xFF;
+        int previousBlue = previousRgb & 0xFF;
+
+        int currentRed = (currentRgb >> 16) & 0xFF;
+        int currentGreen = (currentRgb >> 8) & 0xFF;
+        int currentBlue = currentRgb & 0xFF;
+
+        int blendedRed = ((previousRed * 3) + (currentRed * 5)) / 8;
+        int blendedGreen = ((previousGreen * 3) + (currentGreen * 5)) / 8;
+        int blendedBlue = ((previousBlue * 3) + (currentBlue * 5)) / 8;
+        return (blendedRed << 16) | (blendedGreen << 8) | blendedBlue;
     }
 }

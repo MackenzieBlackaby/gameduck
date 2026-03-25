@@ -60,4 +60,67 @@ class DuckPpuTest {
         assertEquals(DuckCPU.Interrupt.VBLANK.GetMask(), memory.Read(DuckAddresses.INTERRUPT_FLAG) & 0x01);
         assertEquals(1, ppu.ConsumeCompletedFrames());
     }
+
+    @Test
+    void midScanlineScrollChangesAffectLaterPixels() {
+        DuckMemory memory = new DuckMemory();
+        memory.LoadRom(EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x00, "ppu.gb", "ppu"), false);
+        DuckCPU cpu = new DuckCPU(memory, null, EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x00, "ppu.gb", "ppu"));
+        memory.SetCpu(cpu);
+        memory.InitialiseDmgBootState();
+        memory.Write(DuckAddresses.BGP, 0xE4);
+        memory.Write(0x9800, 0x00);
+        memory.Write(0x9801, 0x01);
+        memory.Write(0x8000, 0x00);
+        memory.Write(0x8001, 0x00);
+        memory.Write(0x8010, 0xFF);
+        memory.Write(0x8011, 0x00);
+        memory.Write(DuckAddresses.SCX, 0x00);
+
+        DuckDisplay display = new DuckDisplay();
+        DuckPPU ppu = new DuckPPU(cpu, memory, display);
+
+        for (int index = 0; index < DuckPPU.oamDuration + 1; index++) {
+            ppu.Step();
+        }
+        memory.Write(DuckAddresses.SCX, 0x08);
+        for (int index = 0; index < 2; index++) {
+            ppu.Step();
+        }
+
+        DuckDisplay.FrameState frame = display.SnapshotFrameState();
+        assertEquals(Settings.gbColour0Object.ToRgb(), frame.backBuffer()[0]);
+        assertEquals(Settings.gbColour1Object.ToRgb(), frame.backBuffer()[1]);
+        assertEquals(Settings.gbColour1Object.ToRgb(), frame.backBuffer()[2]);
+    }
+
+    @Test
+    void rewritingLycToCurrentLineTriggersStatWithoutWaitingForNextScanline() {
+        DuckMemory memory = new DuckMemory();
+        memory.LoadRom(EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x00, "ppu.gb", "ppu"), false);
+        DuckCPU cpu = new DuckCPU(memory, null, EmulatorTestUtils.CreateBlankRom(0x00, 2, 0x00, 0x00, "ppu.gb", "ppu"));
+        memory.SetCpu(cpu);
+        memory.InitialiseDmgBootState();
+        memory.Write(DuckAddresses.INTERRUPT_FLAG, 0x00);
+        memory.Write(DuckAddresses.STAT, 0x40);
+        memory.Write(DuckAddresses.LYC, 0x01);
+
+        DuckPPU ppu = new DuckPPU(cpu, memory, new DuckDisplay());
+
+        for (int index = 0; index < 456; index++) {
+            ppu.Step();
+        }
+
+        assertEquals(1, memory.Read(DuckAddresses.LY));
+        memory.Write(DuckAddresses.INTERRUPT_FLAG, 0x00);
+        memory.Write(DuckAddresses.LYC, 0x02);
+        ppu.Step();
+        memory.Write(DuckAddresses.INTERRUPT_FLAG, 0x00);
+        memory.Write(DuckAddresses.LYC, 0x01);
+
+        ppu.Step();
+
+        assertEquals(0x04, memory.Read(DuckAddresses.STAT) & 0x04);
+        assertEquals(DuckCPU.Interrupt.LCD_STAT.GetMask(), memory.Read(DuckAddresses.INTERRUPT_FLAG) & 0x02);
+    }
 }
