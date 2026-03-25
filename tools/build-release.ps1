@@ -3,6 +3,7 @@ param(
     [string]$Version = "0.2",
     [string]$MainClass = "com.blackaby.Main",
     [string]$AppName = "GameDuck",
+    [string]$IconPath,
     [switch]$RunTests
 )
 
@@ -61,6 +62,89 @@ function Copy-IfExists([string]$Source, [string]$Destination) {
     }
 }
 
+function Write-LittleEndianUInt16([System.IO.BinaryWriter]$Writer, [UInt16]$Value) {
+    $Writer.Write([System.BitConverter]::GetBytes($Value))
+}
+
+function Write-LittleEndianUInt32([System.IO.BinaryWriter]$Writer, [UInt32]$Value) {
+    $Writer.Write([System.BitConverter]::GetBytes($Value))
+}
+
+function Resolve-ReleaseIconSource([string]$RepoRoot, [string]$RequestedIconPath) {
+    $candidates = @()
+    if ($RequestedIconPath) {
+        if ([System.IO.Path]::IsPathRooted($RequestedIconPath)) {
+            $candidates += $RequestedIconPath
+        }
+        else {
+            $candidates += (Join-Path $RepoRoot $RequestedIconPath)
+        }
+    }
+
+    $candidates += @(
+        (Join-Path $RepoRoot "src\main\resources\Images\LogoNoBG128.png"),
+        (Join-Path $RepoRoot "design\LogoNoBG128.png"),
+        (Join-Path $RepoRoot "src\main\resources\Images\LogoBG128.png"),
+        (Join-Path $RepoRoot "design\LogoBG128.png"),
+        (Join-Path $RepoRoot "src\main\resources\Images\LogoCroppedNoBG128.png"),
+        (Join-Path $RepoRoot "design\LogoCroppedNoBG128.png")
+    )
+
+    foreach ($candidate in $candidates) {
+        if ($candidate -and (Test-Path $candidate)) {
+            return (Resolve-Path $candidate).Path
+        }
+    }
+
+    return $null
+}
+
+function New-IcoFromPng([string]$SourcePng, [string]$DestinationIco) {
+    Add-Type -AssemblyName System.Drawing
+
+    $image = [System.Drawing.Image]::FromFile($SourcePng)
+    try {
+        if ($image.Width -ne $image.Height) {
+            throw "Icon source must be square, but '$SourcePng' is $($image.Width)x$($image.Height)."
+        }
+        if ($image.Width -gt 256 -or $image.Height -gt 256) {
+            throw "Icon source must be 256x256 or smaller, but '$SourcePng' is $($image.Width)x$($image.Height)."
+        }
+
+        $pngBytes = [System.IO.File]::ReadAllBytes($SourcePng)
+        $iconDir = Split-Path -Parent $DestinationIco
+        New-Item -ItemType Directory -Force -Path $iconDir | Out-Null
+
+        $fileStream = [System.IO.File]::Open($DestinationIco, [System.IO.FileMode]::Create, [System.IO.FileAccess]::Write)
+        try {
+            $writer = New-Object System.IO.BinaryWriter($fileStream)
+            try {
+                Write-LittleEndianUInt16 $writer 0
+                Write-LittleEndianUInt16 $writer 1
+                Write-LittleEndianUInt16 $writer 1
+                $writer.Write([byte]($(if ($image.Width -ge 256) { 0 } else { $image.Width })))
+                $writer.Write([byte]($(if ($image.Height -ge 256) { 0 } else { $image.Height })))
+                $writer.Write([byte]0)
+                $writer.Write([byte]0)
+                Write-LittleEndianUInt16 $writer 1
+                Write-LittleEndianUInt16 $writer 32
+                Write-LittleEndianUInt32 $writer ([UInt32]$pngBytes.Length)
+                Write-LittleEndianUInt32 $writer 22
+                $writer.Write($pngBytes)
+            }
+            finally {
+                $writer.Dispose()
+            }
+        }
+        finally {
+            $fileStream.Dispose()
+        }
+    }
+    finally {
+        $image.Dispose()
+    }
+}
+
 $repoRoot = Get-RepoRoot
 Set-Location $repoRoot
 
@@ -72,6 +156,7 @@ $versionFolder = Join-Path $releaseRoot ("v{0}" -f $Version)
 $buildRoot = Join-Path $repoRoot "build"
 $stageDir = Join-Path $buildRoot "release-stage"
 $appImageDest = Join-Path $buildRoot "app-image"
+$releaseAssetsDir = Join-Path $buildRoot "release-assets"
 $appFolderName = "{0}-v{1}-windows-x64" -f $AppName, $Version
 $appImageDir = Join-Path $versionFolder $appFolderName
 $zipName = "{0}-v{1}.0-windows-x64.zip" -f $AppName, $Version
@@ -79,11 +164,15 @@ $zipPath = Join-Path $versionFolder $zipName
 $checksumsPath = Join-Path $versionFolder "SHA256SUMS.txt"
 $publishPath = Join-Path $versionFolder "PUBLISH.txt"
 $releaseNotesPath = Join-Path $versionFolder "GITHUB-RELEASE.md"
+$generatedIconPath = Join-Path $releaseAssetsDir ("{0}.ico" -f $AppName)
+$iconSourcePath = Resolve-ReleaseIconSource -RepoRoot $repoRoot -RequestedIconPath $IconPath
+$dependencyJarNames = @()
 
 Write-Host "==> Repo root: $repoRoot"
 Write-Host "==> Cleaning previous staged release output"
 Remove-IfExists $stageDir
 Remove-IfExists $appImageDest
+Remove-IfExists $releaseAssetsDir
 Remove-IfExists $versionFolder
 New-Item -ItemType Directory -Force $stageDir | Out-Null
 New-Item -ItemType Directory -Force $versionFolder | Out-Null
@@ -116,17 +205,45 @@ try {
     $targetDir = Join-Path $repoRoot "target"
     $jar = Get-ArtifactJar $TargetDir
     Write-Host "==> Using jar: $($jar.Name)"
+
+    $dependencyArgs = @(
+        "dependency:copy-dependencies",
+        "-DincludeScope=runtime",
+        "-DoutputDirectory=$stageDir"
+    )
+    Write-Host ("==> Copying runtime dependencies: mvn {0}" -f ($dependencyArgs -join " "))
+    & mvn @dependencyArgs
+    if ($LASTEXITCODE -ne 0) {
+        throw "Maven dependency copy failed with exit code $LASTEXITCODE"
+    }
+
     Copy-Item $jar.FullName $stageDir -Force
+    $dependencyJarNames = Get-ChildItem -Path $stageDir -Filter "*.jar" -File |
+        Where-Object { $_.Name -ne $jar.Name } |
+        Sort-Object Name |
+        Select-Object -ExpandProperty Name
+
+    $jpackageArgs = @(
+        "--type", "app-image",
+        "--name", $AppName,
+        "--input", $stageDir,
+        "--main-jar", $jar.Name,
+        "--main-class", $MainClass,
+        "--app-version", $Version,
+        "--dest", $appImageDest
+    )
+
+    if ($iconSourcePath) {
+        Write-Host "==> Generating Windows icon from: $iconSourcePath"
+        New-IcoFromPng -SourcePng $iconSourcePath -DestinationIco $generatedIconPath
+        $jpackageArgs += @("--icon", $generatedIconPath)
+    }
+    else {
+        Write-Warning "No PNG icon source was found. The Windows app image will use the default jpackage icon."
+    }
 
     Write-Host "==> Building Windows app image with jpackage"
-    & jpackage `
-        --type app-image `
-        --name $AppName `
-        --input $stageDir `
-        --main-jar $jar.Name `
-        --main-class $MainClass `
-        --app-version $Version `
-        --dest $appImageDest
+    & jpackage @jpackageArgs
 
     if ($LASTEXITCODE -ne 0) {
         throw "jpackage failed with exit code $LASTEXITCODE"
@@ -190,11 +307,19 @@ try {
         "Upload to GitHub release: $zipLeaf",
         "Launcher after extract: $appFolderName\\$AppName.exe",
         "Main class: $MainClass",
-        "Packaged jar: app\\$($jar.Name)",
+        "Packaged main jar: app\\$($jar.Name)",
+        "Packaged runtime dependency jars: $($dependencyJarNames.Count)",
         "Built with: mvn $($mvnArgs -join ' ')",
         "jpackage: app-image",
         "Portable folders seeded: cache, library\\roms, quickstates, saves"
     )
+
+    if ($dependencyJarNames.Count -gt 0) {
+        $publishLines += "Dependency jars: $($dependencyJarNames -join ', ')"
+    }
+    if ($iconSourcePath) {
+        $publishLines += "Windows icon source: $iconSourcePath"
+    }
 
     if (-not $copiedLicense) {
         $publishLines += "Note: no LICENSE/LICENCE file was found at repo root to copy into the release bundle."
@@ -216,6 +341,7 @@ try {
         "- Click-to-run Windows app image with bundled Java runtime",
         "- $AppName.exe launcher",
         "- Packaged runnable jar under app\\$($jar.Name)",
+        "- Runtime dependency jars bundled under app\\",
         "- Portable working folders: cache, library\\roms, quickstates, saves",
         "- Project README"
     )
@@ -234,6 +360,7 @@ try {
         "- Built with mvn $($mvnArgs -join ' ')",
         "- Packaged using jpackage --type app-image",
         "- Main class: $MainClass",
+        "- Runtime dependency jars bundled: $($dependencyJarNames.Count)",
         "",
         "## Checksum",
         "",

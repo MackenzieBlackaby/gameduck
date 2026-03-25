@@ -67,6 +67,7 @@
                 <configuration>
                     <archive>
                         <manifest>
+                            <addClasspath>true</addClasspath>
                             <mainClass>com.blackaby.Main</mainClass>
                         </manifest>
                     </archive>
