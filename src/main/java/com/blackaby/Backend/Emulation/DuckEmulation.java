@@ -225,10 +225,10 @@ public class DuckEmulation implements Runnable {
                     }
 
                     int tCycles = cpu.Execute();
-                    StepHardware(tCycles);
+                    int masterCycles = StepHardware(tCycles);
 
-                    executedCycles += tCycles;
-                    availableCycles -= tCycles;
+                    executedCycles += masterCycles;
+                    availableCycles -= masterCycles;
                 }
             }
 
@@ -490,15 +490,23 @@ public class DuckEmulation implements Runnable {
         return !Settings.preferDmgModeForGbcCompatibleGames;
     }
 
-    private void StepHardware(int tCycles) {
+    private int StepHardware(int tCycles) {
+        int masterCycles = memory.IsDoubleSpeedMode() ? Math.max(1, tCycles / 2) : tCycles;
+
         for (int index = 0; index < tCycles; index++) {
             timer.Tick();
             memory.TickDma();
-            ppu.Step();
-            apu.Tick();
             HandleSerial();
         }
+
+        for (int index = 0; index < masterCycles; index++) {
+            ppu.Step();
+            memory.TickHdma(ppu.IsHblankTransferWindowOpen());
+            apu.Tick();
+        }
+
         frames += ppu.ConsumeCompletedFrames();
+        return masterCycles;
     }
 
     private void HandleSerial() {
