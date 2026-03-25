@@ -521,9 +521,9 @@ public final class UiText {
         // Section card titles and descriptions used across the tab pages.
         // Keep each title/description pair together for the card it belongs to.
         // -----------------------------------------------------------------
-        public static final String SECTION_PALETTE_TITLE = "Game Boy Palette Customisation";
+        public static final String SECTION_PALETTE_TITLE = "Game Boy Colourisation";
         public static final String SECTION_PALETTE_DESCRIPTION = "";
-        public static final String SECTION_GBC_TITLE = "Game Boy Colour Colourisation";
+        public static final String SECTION_GBC_TITLE = "Game Boy Color Colourisation";
         public static final String SECTION_GBC_DESCRIPTION = "";
         public static final String SECTION_CONTROLS_TITLE = "Input Mapping";
         public static final String SECTION_CONTROLS_DESCRIPTION = "Rebind the Game Boy button mapping";
@@ -561,7 +561,7 @@ public final class UiText {
         // -----------------------------------------------------------------
         public static final String GBC_COMPATIBLE_MODE_TITLE = "GBC Colourisation mode";
         public static final String GBC_COMPATIBLE_MODE_HELPER = "Switch between GBC and GB emulation for games compatible with both (Game restart required)";
-        public static final String GBC_NON_CGB_MODE_TITLE = "Non-CGB Colour Mode";
+        public static final String GBC_NON_CGB_MODE_TITLE = "Non-GBC Colour Mode";
         public static final String GBC_NON_CGB_MODE_HELPER = "Choose between using the GB or GBC colourisation of GB roms";
         public static final String DMG_PALETTE_MODE_GB = "GB Original";
         public static final String DMG_PALETTE_MODE_GBC = "GBC Colourisation";
@@ -767,7 +767,7 @@ public final class UiText {
         public static final String MANAGED_PATH_TITLE = "Managed Path";
         public static final String INSERT_BOOT_ROM_BUTTON = "Insert GB Boot ROM";
         public static final String REMOVE_BOOT_ROM_BUTTON = "Remove GB Boot ROM";
-        public static final String USE_CGB_BOOT_ROM_CHECKBOX = "Use Game Boy Colour boot rom";
+        public static final String USE_CGB_BOOT_ROM_CHECKBOX = "Use Game Boy Color boot rom";
         public static final String BOOT_ROM_FILE_DIALOG_TITLE = "Select a boot ROM";
         public static final String CGB_BOOT_SEQUENCE_TITLE = "GBC Boot Sequence";
         public static final String CGB_BOOT_SEQUENCE_HELPER = "Run CGB-capable cartridges through an installed GBC boot ROM instead of jumping straight to the post-boot CGB hardware state";
