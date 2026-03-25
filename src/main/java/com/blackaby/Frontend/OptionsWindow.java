@@ -791,8 +791,12 @@ public class OptionsWindow extends DuckWindow {
             Config.Save();
         });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        JButton rebindAllControlsButton = createPrimaryButton(UiText.OptionsWindow.REBIND_ALL_CONTROLS_BUTTON);
+        rebindAllControlsButton.addActionListener(event -> captureAllBindings());
+
+        JPanel actions = new JPanel(new GridLayout(1, 2, 8, 0));
         actions.setOpaque(false);
+        actions.add(rebindAllControlsButton);
         actions.add(resetControlsButton);
         container.add(actions, BorderLayout.SOUTH);
 
@@ -853,8 +857,12 @@ public class OptionsWindow extends DuckWindow {
             Config.Save();
         });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        JButton rebindAllControllerButton = createPrimaryButton(UiText.OptionsWindow.CONTROLLER_REBIND_ALL_BUTTON);
+        rebindAllControllerButton.addActionListener(event -> captureAllControllerBindings());
+
+        JPanel actions = new JPanel(new GridLayout(1, 2, 8, 0));
         actions.setOpaque(false);
+        actions.add(rebindAllControllerButton);
         actions.add(resetControllerButton);
         container.add(actions, BorderLayout.SOUTH);
         return container;
@@ -1549,7 +1557,17 @@ public class OptionsWindow extends DuckWindow {
         stack.add(channelCard);
         stack.add(Box.createVerticalStrut(10));
 
-        stack.add(createAudioEnhancementCard(enhancementChainModel));
+        JCheckBox enhancementEnabledCheckBox = new JCheckBox(UiText.OptionsWindow.AUDIO_ENHANCEMENTS_ENABLED_CHECKBOX,
+                Settings.IsAudioEnhancementChainEnabled());
+        enhancementEnabledCheckBox.setOpaque(false);
+        enhancementEnabledCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        enhancementEnabledCheckBox.setForeground(accentColour);
+        enhancementEnabledCheckBox.addActionListener(event -> {
+            Settings.SetAudioEnhancementChainEnabled(enhancementEnabledCheckBox.isSelected());
+            Config.Save();
+        });
+
+        stack.add(createAudioEnhancementCard(enhancementChainModel, enhancementEnabledCheckBox));
 
         container.add(stack, BorderLayout.CENTER);
 
@@ -1569,6 +1587,7 @@ public class OptionsWindow extends DuckWindow {
                 refreshChannelVolumeLabel(channelIndex, channelVolumeLabels);
             }
             enhancementChainModel.clear();
+            enhancementEnabledCheckBox.setSelected(Settings.IsAudioEnhancementChainEnabled());
             Config.Save();
         });
 
@@ -1580,7 +1599,8 @@ public class OptionsWindow extends DuckWindow {
         return container;
     }
 
-    private JComponent createAudioEnhancementCard(DefaultListModel<AudioEnhancementPreset> enhancementChainModel) {
+    private JComponent createAudioEnhancementCard(DefaultListModel<AudioEnhancementPreset> enhancementChainModel,
+            JCheckBox enhancementEnabledCheckBox) {
         JPanel card = new JPanel(new BorderLayout(0, 14));
         card.setBackground(Styling.cardTintColour);
         card.setBorder(BorderFactory.createCompoundBorder(
@@ -1604,6 +1624,15 @@ public class OptionsWindow extends DuckWindow {
         header.add(title);
         header.add(Box.createVerticalStrut(4));
         header.add(helper);
+
+        JPanel topRow = new JPanel(new BorderLayout(8, 0));
+        topRow.setOpaque(false);
+        topRow.add(header, BorderLayout.CENTER);
+
+        JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        toggleWrap.setOpaque(false);
+        toggleWrap.add(enhancementEnabledCheckBox);
+        topRow.add(toggleWrap, BorderLayout.EAST);
 
         JPanel addCard = new JPanel(new BorderLayout(12, 0));
         addCard.setOpaque(true);
@@ -1757,7 +1786,7 @@ public class OptionsWindow extends DuckWindow {
         body.add(Box.createVerticalStrut(12));
         body.add(chainCard);
 
-        card.add(header, BorderLayout.NORTH);
+        card.add(topRow, BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
         return card;
     }
@@ -1884,16 +1913,17 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createWindowPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
-        panel.setOpaque(false);
+        JPanel container = new JPanel(new BorderLayout(0, 14));
+        container.setOpaque(false);
 
-        GridBagConstraints gbc = baseConstraints();
+        JPanel stack = new JPanel();
+        stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
+        stack.setOpaque(false);
 
-        JCheckBox fillWindowCheckBox = new JCheckBox(UiText.OptionsWindow.WINDOW_FILL_CHECKBOX,
-                Settings.fillWindowOutput);
+        JCheckBox fillWindowCheckBox = new JCheckBox(UiText.OptionsWindow.WINDOW_FILL_CHECKBOX, Settings.fillWindowOutput);
+        fillWindowCheckBox.setOpaque(false);
         fillWindowCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         fillWindowCheckBox.setForeground(accentColour);
-        fillWindowCheckBox.setBackground(cardBackground);
         fillWindowCheckBox.addActionListener(event -> {
             Settings.fillWindowOutput = fillWindowCheckBox.isSelected();
             Config.Save();
@@ -1901,26 +1931,14 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.ApplyWindowMode();
             }
         });
-        panel.add(fillWindowCheckBox, gbc);
+        stack.add(createSimpleWindowOptionCard(fillWindowCheckBox));
+        stack.add(Box.createVerticalStrut(10));
 
-        gbc.gridy++;
-        gbc.gridx = 0;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(8, 0, 12, 0);
-        JLabel helperLabel = new JLabel(
-                "<html>" + UiText.OptionsWindow.WINDOW_FILL_HELPER + "</html>");
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        helperLabel.setForeground(mutedText);
-        panel.add(helperLabel, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(12, 0, 0, 12);
-        gbc.gridwidth = 1;
         JCheckBox serialOutputCheckBox = new JCheckBox(UiText.OptionsWindow.SERIAL_OUTPUT_CHECKBOX,
                 Settings.showSerialOutput);
+        serialOutputCheckBox.setOpaque(false);
         serialOutputCheckBox.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         serialOutputCheckBox.setForeground(accentColour);
-        serialOutputCheckBox.setBackground(cardBackground);
         serialOutputCheckBox.addActionListener(event -> {
             Settings.showSerialOutput = serialOutputCheckBox.isSelected();
             Config.Save();
@@ -1928,24 +1946,9 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.RefreshWindowPanels();
             }
         });
-        panel.add(serialOutputCheckBox, gbc);
+        stack.add(createSimpleWindowOptionCard(serialOutputCheckBox));
+        stack.add(Box.createVerticalStrut(10));
 
-        gbc.gridy++;
-        gbc.gridx = 0;
-        gbc.gridwidth = 2;
-        gbc.insets = new Insets(8, 0, 12, 0);
-        JLabel serialHelperLabel = new JLabel("<html>" + UiText.OptionsWindow.SERIAL_OUTPUT_HELPER + "</html>");
-        serialHelperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        serialHelperLabel.setForeground(mutedText);
-        panel.add(serialHelperLabel, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(12, 0, 8, 0);
-        JLabel gameArtModeLabel = createFieldLabel(UiText.OptionsWindow.GAME_ART_MODE_LABEL);
-        panel.add(gameArtModeLabel, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 12, 0);
         JComboBox<GameArtDisplayMode> gameArtModeSelector = new JComboBox<>(GameArtDisplayMode.values());
         gameArtModeSelector.setSelectedItem(Settings.gameArtDisplayMode);
         gameArtModeSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
@@ -1961,23 +1964,9 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.RefreshWindowPanels();
             }
         });
-        panel.add(gameArtModeSelector, gbc);
+        stack.add(createSelectorWindowOptionCard(UiText.OptionsWindow.GAME_ART_MODE_LABEL, gameArtModeSelector));
 
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 16, 0);
-        JLabel gameArtHelperLabel = new JLabel("<html>" + UiText.OptionsWindow.GAME_ART_MODE_HELPER + "<br><br>"
-                + Settings.gameArtDisplayMode.Description() + "</html>");
-        gameArtHelperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        gameArtHelperLabel.setForeground(mutedText);
-        panel.add(gameArtHelperLabel, gbc);
-
-        gameArtModeSelector.addActionListener(event -> {
-            Object selectedItem = gameArtModeSelector.getSelectedItem();
-            if (selectedItem instanceof GameArtDisplayMode selectedMode) {
-                gameArtHelperLabel.setText("<html>" + UiText.OptionsWindow.GAME_ART_MODE_HELPER + "<br><br>"
-                        + selectedMode.Description() + "</html>");
-            }
-        });
+        container.add(stack, BorderLayout.CENTER);
 
         JButton resetWindowButton = createSecondaryButton(UiText.OptionsWindow.RESET_WINDOW_BUTTON);
         resetWindowButton.addActionListener(event -> {
@@ -1985,20 +1974,17 @@ public class OptionsWindow extends DuckWindow {
             fillWindowCheckBox.setSelected(Settings.fillWindowOutput);
             serialOutputCheckBox.setSelected(Settings.showSerialOutput);
             gameArtModeSelector.setSelectedItem(Settings.gameArtDisplayMode);
-            gameArtHelperLabel.setText("<html>" + UiText.OptionsWindow.GAME_ART_MODE_HELPER + "<br><br>"
-                    + Settings.gameArtDisplayMode.Description() + "</html>");
             Config.Save();
             if (mainWindow != null) {
                 mainWindow.RefreshWindowPanels();
             }
         });
 
-        gbc.gridy++;
-        gbc.insets = new Insets(12, 0, 0, 0);
-        gbc.anchor = GridBagConstraints.CENTER;
-        panel.add(resetWindowButton, gbc);
-
-        return panel;
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
+        actions.setOpaque(false);
+        actions.add(resetWindowButton);
+        container.add(actions, BorderLayout.SOUTH);
+        return container;
     }
 
     private JComponent createLibraryPanel() {
@@ -2179,6 +2165,17 @@ public class OptionsWindow extends DuckWindow {
         stack.setOpaque(false);
         stack.add(createSaveDataSection());
         stack.add(Box.createVerticalStrut(12));
+        stack.add(createDmgBootRomSection());
+        stack.add(Box.createVerticalStrut(12));
+        stack.add(createCgbBootRomSection());
+
+        container.add(stack, BorderLayout.CENTER);
+        return container;
+    }
+
+    private JComponent createDmgBootRomSection() {
+        JPanel container = new JPanel(new BorderLayout(0, 10));
+        container.setOpaque(false);
 
         boolean bootRomInstalled = BootRomManager.HasDmgBootRom();
         JCheckBox useBootRomCheckBox = new JCheckBox(UiText.OptionsWindow.USE_DMG_BOOT_ROM_CHECKBOX,
@@ -2228,8 +2225,6 @@ public class OptionsWindow extends DuckWindow {
 
         bootCard.add(bootText, BorderLayout.CENTER);
         bootCard.add(bootToggleWrap, BorderLayout.EAST);
-        stack.add(bootCard);
-        stack.add(Box.createVerticalStrut(10));
 
         JPanel detailsCard = new JPanel(new BorderLayout(0, 14));
         detailsCard.setBackground(Styling.cardTintColour);
@@ -2292,14 +2287,6 @@ public class OptionsWindow extends DuckWindow {
         pathCard.add(pathTitle, BorderLayout.NORTH);
         pathCard.add(pathLabel, BorderLayout.CENTER);
 
-        detailsCard.add(statusRow, BorderLayout.NORTH);
-        detailsCard.add(pathCard, BorderLayout.CENTER);
-        stack.add(detailsCard);
-        stack.add(Box.createVerticalStrut(12));
-        stack.add(createCgbBootRomSection());
-
-        container.add(stack, BorderLayout.CENTER);
-
         JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
         buttonRow.setOpaque(false);
 
@@ -2338,11 +2325,12 @@ public class OptionsWindow extends DuckWindow {
         });
         buttonRow.add(removeBootRomButton);
 
-        JPanel actions = new JPanel(new BorderLayout());
-        actions.setOpaque(false);
-        actions.add(buttonRow, BorderLayout.WEST);
-        container.add(actions, BorderLayout.SOUTH);
+        detailsCard.add(statusRow, BorderLayout.NORTH);
+        detailsCard.add(pathCard, BorderLayout.CENTER);
+        detailsCard.add(buttonRow, BorderLayout.SOUTH);
 
+        container.add(bootCard, BorderLayout.NORTH);
+        container.add(detailsCard, BorderLayout.CENTER);
         return container;
     }
 
@@ -2635,7 +2623,35 @@ public class OptionsWindow extends DuckWindow {
         reopenWithCurrentTab();
     }
 
-    private void captureBinding(DuckJoypad.Button button) {
+    private void captureAllBindings() {
+        for (DuckJoypad.Button button : controlOrder()) {
+            if (!captureBinding(button)) {
+                break;
+            }
+        }
+    }
+
+    private void captureAllControllerBindings() {
+        if (controllerInputService.GetInitialisationError() != null) {
+            JOptionPane.showMessageDialog(this, controllerInputService.GetInitialisationError(),
+                    UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (controllerInputService.GetActiveController().isEmpty()) {
+            JOptionPane.showMessageDialog(this, UiText.OptionsWindow.CONTROLLER_NO_ACTIVE_DEVICE_MESSAGE,
+                    UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        for (DuckJoypad.Button button : controlOrder()) {
+            if (!captureControllerBinding(button)) {
+                break;
+            }
+        }
+    }
+
+    private boolean captureBinding(DuckJoypad.Button button) {
         JDialog dialog = new JDialog(this, UiText.OptionsWindow.RebindDialogTitle(formatButtonName(button)), true);
         dialog.setLayout(new BorderLayout());
         dialog.getContentPane().setBackground(panelBackground);
@@ -2661,6 +2677,7 @@ public class OptionsWindow extends DuckWindow {
 
         KeyboardFocusManager focusManager = KeyboardFocusManager.getCurrentKeyboardFocusManager();
         final boolean[] removed = { false };
+        final boolean[] captured = { false };
 
         KeyEventDispatcher dispatcher = event -> {
             if (event.getID() != KeyEvent.KEY_PRESSED) {
@@ -2673,6 +2690,7 @@ public class OptionsWindow extends DuckWindow {
             }
 
             Settings.inputBindings.SetKeyCode(button, event.getKeyCode());
+            captured[0] = true;
             refreshBindingButtons();
             Config.Save();
             dialog.dispose();
@@ -2702,6 +2720,7 @@ public class OptionsWindow extends DuckWindow {
         SwingUtilities.invokeLater(dialog::requestFocusInWindow);
         dialog.setVisible(true);
         removeDispatcher.run();
+        return captured[0];
     }
 
     private void captureShortcut(AppShortcut shortcut) {
@@ -2780,17 +2799,17 @@ public class OptionsWindow extends DuckWindow {
         removeDispatcher.run();
     }
 
-    private void captureControllerBinding(DuckJoypad.Button button) {
+    private boolean captureControllerBinding(DuckJoypad.Button button) {
         if (controllerInputService.GetInitialisationError() != null) {
             JOptionPane.showMessageDialog(this, controllerInputService.GetInitialisationError(),
                     UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
-            return;
+            return false;
         }
 
         if (controllerInputService.GetActiveController().isEmpty()) {
             JOptionPane.showMessageDialog(this, UiText.OptionsWindow.CONTROLLER_NO_ACTIVE_DEVICE_MESSAGE,
                     UiText.OptionsWindow.CONTROLLER_WINDOW_TITLE, JOptionPane.WARNING_MESSAGE);
-            return;
+            return false;
         }
 
         JDialog dialog = new JDialog(this,
@@ -2819,6 +2838,7 @@ public class OptionsWindow extends DuckWindow {
         dialog.setLocationRelativeTo(this);
 
         Set<ControllerBinding> blockedInputs = new HashSet<>(controllerInputService.PollActiveInputs());
+        final boolean[] captured = { false };
         Timer captureTimer = new Timer(25, event -> {
             List<ControllerBinding> activeInputs = controllerInputService.PollActiveInputs();
             blockedInputs.retainAll(activeInputs);
@@ -2836,6 +2856,7 @@ public class OptionsWindow extends DuckWindow {
             }
 
             Settings.controllerBindings.SetBinding(button, candidate);
+            captured[0] = true;
             refreshControllerBindingButtons();
             refreshControllerStatus();
             Config.Save();
@@ -2855,6 +2876,7 @@ public class OptionsWindow extends DuckWindow {
         captureTimer.start();
         dialog.setVisible(true);
         captureTimer.stop();
+        return captured[0];
     }
 
     private void refreshControllerStatus() {
@@ -3162,6 +3184,31 @@ public class OptionsWindow extends DuckWindow {
         panel.add(label, BorderLayout.NORTH);
         panel.add(component, BorderLayout.CENTER);
         return panel;
+    }
+
+    private JComponent createSimpleWindowOptionCard(JComponent component) {
+        JPanel card = new JPanel(new BorderLayout());
+        card.setOpaque(true);
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+        card.add(component, BorderLayout.CENTER);
+        return card;
+    }
+
+    private JComponent createSelectorWindowOptionCard(String labelText, JComponent selector) {
+        JPanel card = new JPanel(new BorderLayout(0, 10));
+        card.setOpaque(true);
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+
+        JLabel label = createFieldLabel(labelText);
+        card.add(label, BorderLayout.NORTH);
+        card.add(selector, BorderLayout.CENTER);
+        return card;
     }
 
     private void setCompactReadout(JLabel label, String text) {

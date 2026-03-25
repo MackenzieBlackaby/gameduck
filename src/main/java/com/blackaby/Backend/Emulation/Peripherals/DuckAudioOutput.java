@@ -126,7 +126,9 @@ public class DuckAudioOutput {
             return;
         }
 
-        enhancementChain.SetPresets(Settings.CurrentAudioEnhancementChain());
+        enhancementChain.SetPresets(Settings.IsAudioEnhancementChainEnabled()
+                ? Settings.CurrentAudioEnhancementChain()
+                : java.util.List.of());
         appliedEnhancementChainVersion = currentVersion;
     }
 
