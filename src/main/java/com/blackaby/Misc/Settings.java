@@ -114,6 +114,9 @@ public final class Settings {
     /** Ordered host-side enhancement chain applied after APU mixing. */
     public static volatile List<AudioEnhancementPreset> audioEnhancementChain = List.of();
 
+    /** Whether the host-side enhancement chain should be applied to audio output. */
+    public static boolean audioEnhancementChainEnabled = true;
+
     /** Monotonic version used to refresh the live enhancement chain. */
     private static volatile long audioEnhancementChainVersion;
 
@@ -137,6 +140,9 @@ public final class Settings {
 
     /** Which bracketed suffixes should be removed from displayed game names. */
     public static GameNameBracketDisplayMode gameNameBracketDisplayMode = GameNameBracketDisplayMode.NONE;
+
+    /** Remembered library browser view mode. */
+    public static String libraryViewMode = "LIST";
 
     private Settings() {
     }
@@ -250,6 +256,7 @@ public final class Settings {
         masterVolume = 100;
         channelMuted = new boolean[] { false, false, false, false };
         channelVolume = new int[] { 100, 100, 100, 100 };
+        audioEnhancementChainEnabled = true;
         SetAudioEnhancementChainInternal(List.of(), false);
 
     }
@@ -310,6 +317,15 @@ public final class Settings {
     }
 
     /**
+     * Returns whether the host-side enhancement chain should be applied.
+     *
+     * @return {@code true} when the enhancement chain is enabled
+     */
+    public static boolean IsAudioEnhancementChainEnabled() {
+        return audioEnhancementChainEnabled;
+    }
+
+    /**
      * Returns the current enhancement-chain version for live audio refresh.
      *
      * @return enhancement-chain version
@@ -325,6 +341,20 @@ public final class Settings {
      */
     public static void SetAudioEnhancementChain(List<AudioEnhancementPreset> chain) {
         SetAudioEnhancementChainInternal(chain, true);
+    }
+
+    /**
+     * Enables or disables the host-side enhancement chain without losing the
+     * configured preset order.
+     *
+     * @param enabled whether enhancements should be applied
+     */
+    public static void SetAudioEnhancementChainEnabled(boolean enabled) {
+        if (audioEnhancementChainEnabled == enabled) {
+            return;
+        }
+        audioEnhancementChainEnabled = enabled;
+        audioEnhancementChainVersion++;
     }
 
     /**
@@ -351,6 +381,7 @@ public final class Settings {
      */
     public static void ResetLibrary() {
         gameNameBracketDisplayMode = GameNameBracketDisplayMode.NONE;
+        libraryViewMode = "LIST";
 
     }
 

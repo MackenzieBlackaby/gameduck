@@ -147,6 +147,35 @@ public final class GameLibraryStore {
     }
 
     /**
+     * Deletes a managed library entry and its stored ROM image.
+     *
+     * @param key entry key
+     * @throws IOException when the stored ROM cannot be removed
+     */
+    public static synchronized void DeleteEntry(String key) throws IOException {
+        if (key == null || key.isBlank()) {
+            return;
+        }
+
+        EnsureLoaded();
+        LibraryEntry entry = ReadEntry(key);
+        if (entry == null) {
+            return;
+        }
+
+        Files.deleteIfExists(entry.romPath());
+
+        String prefix = entryPrefix + key;
+        List<String> propertyNames = new ArrayList<>(properties.stringPropertyNames());
+        for (String propertyName : propertyNames) {
+            if (propertyName.startsWith(prefix)) {
+                properties.remove(propertyName);
+            }
+        }
+        Persist();
+    }
+
+    /**
      * Returns whether a managed library entry is favourited.
      *
      * @param key entry key

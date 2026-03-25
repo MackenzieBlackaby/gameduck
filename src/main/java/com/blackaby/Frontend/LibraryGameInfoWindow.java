@@ -1,7 +1,10 @@
 package com.blackaby.Frontend;
 
 import com.blackaby.Backend.Emulation.Misc.ROM;
+import com.blackaby.Backend.Helpers.GameArtProvider;
+import com.blackaby.Backend.Helpers.GameLibraryStore;
 import com.blackaby.Backend.Helpers.GameLibraryStore.LibraryEntry;
+import com.blackaby.Backend.Helpers.GameMetadataStore;
 import com.blackaby.Backend.Helpers.LibretroMetadataProvider;
 import com.blackaby.Backend.Helpers.LibretroMetadataProvider.LibretroMetadata;
 import com.blackaby.Misc.UiText;
@@ -43,14 +46,24 @@ public final class LibraryGameInfoWindow extends DuckWindow {
     private final Color cardBorder;
     private final Color accentColour;
     private final Color mutedTextColour;
+    private final Runnable artworkUpdatedAction;
+    private final Runnable entryDeletedAction;
     private final JLabel publisherValueLabel = new JLabel();
     private final JLabel releaseYearValueLabel = new JLabel();
     private final JLabel databaseValueLabel = new JLabel();
+    private final JButton getArtworkButton = new JButton();
+    private final JButton deleteRomButton = new JButton();
 
     public LibraryGameInfoWindow(LibraryEntry entry, ROM rom) {
+        this(entry, rom, null, null);
+    }
+
+    public LibraryGameInfoWindow(LibraryEntry entry, ROM rom, Runnable artworkUpdatedAction, Runnable entryDeletedAction) {
         super(UiText.LibraryWindow.INFO_WINDOW_TITLE, 760, 640, true);
         this.entry = entry;
         this.rom = rom;
+        this.artworkUpdatedAction = artworkUpdatedAction;
+        this.entryDeletedAction = entryDeletedAction;
         panelBackground = Styling.appBackgroundColour;
         cardBackground = Styling.surfaceColour;
         cardBorder = Styling.surfaceBorderColour;
@@ -148,9 +161,23 @@ public final class LibraryGameInfoWindow extends DuckWindow {
         JPanel actionRow = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         actionRow.setOpaque(false);
 
+        getArtworkButton.setText(UiText.LibraryWindow.INFO_GET_ARTWORK_BUTTON);
+        stylePrimaryButton(getArtworkButton);
+        getArtworkButton.addActionListener(event -> requestArtwork());
+        actionRow.add(getArtworkButton);
+
+        actionRow.add(javax.swing.Box.createHorizontalStrut(8));
+
         JButton explorerButton = createPrimaryButton(UiText.LibraryWindow.INFO_OPEN_EXPLORER_BUTTON);
         explorerButton.addActionListener(event -> openInExplorer(entry.romPath()));
         actionRow.add(explorerButton);
+
+        actionRow.add(javax.swing.Box.createHorizontalStrut(8));
+
+        deleteRomButton.setText(UiText.LibraryWindow.INFO_DELETE_ROM_BUTTON);
+        styleSecondaryButton(deleteRomButton);
+        deleteRomButton.addActionListener(event -> deleteRom());
+        actionRow.add(deleteRomButton);
 
         content.add(details, BorderLayout.CENTER);
         content.add(actionRow, BorderLayout.SOUTH);
@@ -230,6 +257,79 @@ public final class LibraryGameInfoWindow extends DuckWindow {
         databaseValueLabel.setText(asHtml(valueOrUnknown(metadata.databaseName())));
     }
 
+    private void requestArtwork() {
+        if (entry == null) {
+            return;
+        }
+
+        getArtworkButton.setEnabled(false);
+        getArtworkButton.setText(UiText.MainWindow.FETCHING_ARTWORK);
+
+        CompletableFuture
+                .supplyAsync(() -> GameArtProvider.FindGameArt(entry.ArtDescriptor()))
+                .thenAccept(result -> SwingUtilities.invokeLater(() -> {
+                    getArtworkButton.setEnabled(true);
+                    getArtworkButton.setText(UiText.LibraryWindow.INFO_GET_ARTWORK_BUTTON);
+
+                    if (result.isPresent()) {
+                        GameArtProvider.GameArtResult gameArtResult = result.get();
+                        if (gameArtResult.matchedGameName() != null && !gameArtResult.matchedGameName().isBlank()) {
+                            GameMetadataStore.RememberLibretroTitle(entry.SaveIdentity(), gameArtResult.matchedGameName());
+                        }
+                        if (artworkUpdatedAction != null) {
+                            artworkUpdatedAction.run();
+                        }
+                        JOptionPane.showMessageDialog(this,
+                                UiText.OptionsWindow.InfoArtworkFetchedMessage(resolveDisplayName()));
+                        return;
+                    }
+
+                    JOptionPane.showMessageDialog(this,
+                            UiText.OptionsWindow.InfoArtworkMissingMessage(resolveDisplayName()),
+                            UiText.LibraryWindow.INFO_ARTWORK_FETCH_FAILED_TITLE,
+                            JOptionPane.INFORMATION_MESSAGE);
+                }))
+                .exceptionally(exception -> {
+                    SwingUtilities.invokeLater(() -> {
+                        getArtworkButton.setEnabled(true);
+                        getArtworkButton.setText(UiText.LibraryWindow.INFO_GET_ARTWORK_BUTTON);
+                        JOptionPane.showMessageDialog(this,
+                                exception.getMessage() == null ? UiText.OptionsWindow.InfoArtworkMissingMessage(resolveDisplayName())
+                                        : exception.getMessage(),
+                                UiText.LibraryWindow.INFO_ARTWORK_FETCH_FAILED_TITLE,
+                                JOptionPane.ERROR_MESSAGE);
+                    });
+                    return null;
+                });
+    }
+
+    private void deleteRom() {
+        if (entry == null) {
+            return;
+        }
+
+        int result = JOptionPane.showConfirmDialog(this,
+                UiText.OptionsWindow.InfoDeleteRomConfirmMessage(resolveDisplayName()),
+                UiText.LibraryWindow.INFO_DELETE_CONFIRM_TITLE,
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.WARNING_MESSAGE);
+        if (result != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        try {
+            GameLibraryStore.DeleteEntry(entry.key());
+            if (entryDeletedAction != null) {
+                entryDeletedAction.run();
+            }
+            JOptionPane.showMessageDialog(this, UiText.OptionsWindow.InfoDeleteRomSuccessMessage(resolveDisplayName()));
+            dispose();
+        } catch (IOException exception) {
+            JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.LibraryWindow.INFO_DELETE_FAILED_TITLE,
+                    JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
     private void openInExplorer(Path path) {
         if (path == null) {
             return;
@@ -306,6 +406,11 @@ public final class LibraryGameInfoWindow extends DuckWindow {
 
     private JButton createPrimaryButton(String text) {
         JButton button = new JButton(text);
+        stylePrimaryButton(button);
+        return button;
+    }
+
+    private void stylePrimaryButton(JButton button) {
         button.setFocusPainted(false);
         button.setOpaque(true);
         button.setContentAreaFilled(true);
@@ -316,7 +421,19 @@ public final class LibraryGameInfoWindow extends DuckWindow {
         button.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.primaryButtonBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(8, 16, 8, 16)));
-        return button;
+    }
+
+    private void styleSecondaryButton(JButton button) {
+        button.setFocusPainted(false);
+        button.setOpaque(true);
+        button.setContentAreaFilled(true);
+        button.setBorderPainted(false);
+        button.setBackground(Styling.buttonSecondaryBackground);
+        button.setForeground(accentColour);
+        button.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        button.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(cardBorder, 1, true),
+                BorderFactory.createEmptyBorder(8, 16, 8, 16)));
     }
 
     private javax.swing.border.Border createCardBorder() {

@@ -35,6 +35,7 @@ import java.awt.Dimension;
 import java.awt.FileDialog;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -359,7 +360,7 @@ public final class SaveDataManagerWindow extends DuckWindow {
 
     private void updateSelectionDetails(StoredGame game) {
         if (game == null) {
-            detailGameNameLabel.setText(currentEmptyTitle());
+            detailGameNameLabel.setText(asTitleHtml(currentEmptyTitle()));
             managedPathValueLabel.setText(asHtml(currentEmptyHelper()));
             saveSizesValueLabel.setText(asHtml(UiText.OptionsWindow.SAVE_DETAILS_NONE));
             saveFilesValueLabel.setText(asHtml(UiText.OptionsWindow.SAVE_DETAILS_NONE));
@@ -375,7 +376,7 @@ public final class SaveDataManagerWindow extends DuckWindow {
         boolean liveSession = isLiveSession(game);
         long liveSizeBytes = liveSession ? currentEmulation().SnapshotSaveData().length : -1L;
 
-        detailGameNameLabel.setText(resolveGameDisplayName(saveIdentity));
+        detailGameNameLabel.setText(asTitleHtml(resolveGameDisplayName(saveIdentity)));
         managedPathValueLabel.setText(asHtml(SaveFileManager.PreferredSavePath(saveIdentity).toString()));
         saveSizesValueLabel.setText(asHtml(liveSession
                 ? UiText.OptionsWindow.SaveManagerLiveSizeSummary(
@@ -707,6 +708,31 @@ public final class SaveDataManagerWindow extends DuckWindow {
         return "<html><body style='width: 240px'>" + escapeHtml(value) + "</body></html>";
     }
 
+    private String asTitleHtml(String value) {
+        return "<html><body style='width: 280px'>" + escapeHtml(value == null ? "" : value) + "</body></html>";
+    }
+
+    private String truncateToWidth(String value, FontMetrics metrics, int maxWidth) {
+        if (value == null || value.isBlank() || metrics == null || maxWidth <= 0) {
+            return value == null ? "" : value;
+        }
+        if (metrics.stringWidth(value) <= maxWidth) {
+            return value;
+        }
+
+        String ellipsis = "...";
+        int ellipsisWidth = metrics.stringWidth(ellipsis);
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < value.length(); index++) {
+            String next = builder.toString() + value.charAt(index);
+            if (metrics.stringWidth(next) + ellipsisWidth > maxWidth) {
+                break;
+            }
+            builder.append(value.charAt(index));
+        }
+        return builder.isEmpty() ? ellipsis : builder + ellipsis;
+    }
+
     private boolean containsIgnoreCase(String query, String... candidates) {
         String normalisedQuery = query == null ? "" : query.trim().toLowerCase();
         if (normalisedQuery.isBlank()) {
@@ -822,15 +848,20 @@ public final class SaveDataManagerWindow extends DuckWindow {
             }
             artPanel.setPreferredSize(new Dimension(listArtSize + 12, listArtSize + 12));
 
-            titleLabel.setText(resolveGameDisplayName(value.saveIdentity()));
-            titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+            Font titleFont = Styling.menuFont.deriveFont(Font.BOLD, 13f);
+            Font helperFont = Styling.menuFont.deriveFont(Font.PLAIN, 11f);
+            int availableTextWidth = Math.max(120, list.getWidth() - listArtSize - 72);
+
+            titleLabel.setText(truncateToWidth(resolveGameDisplayName(value.saveIdentity()),
+                    list.getFontMetrics(titleFont), availableTextWidth));
+            titleLabel.setFont(titleFont);
 
             String helperText = buildListHelperText(value);
             if (!value.saveIdentity().patchNames().isEmpty()) {
                 helperText = helperText + " | " + UiText.LibraryWindow.VariantLabel(value.saveIdentity().patchNames());
             }
-            helperLabel.setText(helperText);
-            helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 11f));
+            helperLabel.setText(truncateToWidth(helperText, list.getFontMetrics(helperFont), availableTextWidth));
+            helperLabel.setFont(helperFont);
 
             JPanel textStack = new JPanel();
             textStack.setOpaque(false);

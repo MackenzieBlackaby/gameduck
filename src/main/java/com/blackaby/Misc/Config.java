@@ -41,6 +41,7 @@ public final class Config {
     private static final String soundVolumeKey = "sound.volume";
     private static final String soundChannelMutedPrefix = "sound.channel.muted.";
     private static final String soundChannelVolumePrefix = "sound.channel.volume.";
+    private static final String soundEnhancementEnabledKey = "sound.enhancement.enabled";
     private static final String soundEnhancementChainKey = "sound.enhancement.chain";
     private static final String useBootRomKey = "emulation.use_boot_rom";
     private static final String useCgbBootRomKey = "emulation.use_cgb_boot_rom";
@@ -48,6 +49,7 @@ public final class Config {
     private static final String showSerialOutputKey = "ui.show_serial_output";
     private static final String gameArtDisplayModeKey = "ui.game_art_display_mode";
     private static final String gameNameBracketDisplayModeKey = "library.game_name_bracket_display_mode";
+    private static final String libraryViewModeKey = "library.view_mode";
     private static final String preferDmgModeForGbcCompatibleGamesKey = "palette.prefer_dmg_mode_for_gbc_compatible_games";
     private static final String gbcPaletteModeEnabledKey = "palette.gbc_mode_enabled";
     private static final String gbcBackgroundPalettePrefix = "palette.gbc.background.";
@@ -421,6 +423,8 @@ public final class Config {
         }
 
         Settings.SetAudioEnhancementChain(ParseAudioEnhancementChain(properties.getProperty(soundEnhancementChainKey, "")));
+        Settings.SetAudioEnhancementChainEnabled(
+                Boolean.parseBoolean(properties.getProperty(soundEnhancementEnabledKey, "true")));
     }
 
     private static void ApplyWindowSettings() {
@@ -442,7 +446,13 @@ public final class Config {
             Settings.gameNameBracketDisplayMode = GameNameBracketDisplayMode.valueOf(configuredMode);
         } catch (IllegalArgumentException exception) {
             Settings.ResetLibrary();
+            return;
         }
+
+        String configuredViewMode = properties.getProperty(libraryViewModeKey, "LIST");
+        Settings.libraryViewMode = configuredViewMode == null || configuredViewMode.isBlank()
+                ? "LIST"
+                : configuredViewMode;
     }
 
     private static void ApplyEmulationSettings() {
@@ -506,6 +516,7 @@ public final class Config {
             properties.setProperty(soundChannelVolumePrefix + channelIndex,
                     String.valueOf(Settings.GetChannelVolume(channelIndex)));
         }
+        properties.setProperty(soundEnhancementEnabledKey, String.valueOf(Settings.IsAudioEnhancementChainEnabled()));
         properties.setProperty(soundEnhancementChainKey, EncodeAudioEnhancementChain(Settings.CurrentAudioEnhancementChain()));
     }
 
@@ -522,6 +533,8 @@ public final class Config {
 
     private static void SyncLibrarySettings() {
         properties.setProperty(gameNameBracketDisplayModeKey, Settings.gameNameBracketDisplayMode.name());
+        properties.setProperty(libraryViewModeKey,
+                Settings.libraryViewMode == null || Settings.libraryViewMode.isBlank() ? "LIST" : Settings.libraryViewMode);
     }
 
     private static List<String> GetSavedPaletteNamesInternal() {

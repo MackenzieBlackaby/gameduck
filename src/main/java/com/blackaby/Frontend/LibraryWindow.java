@@ -5,8 +5,10 @@ import com.blackaby.Backend.Helpers.GameArtProvider;
 import com.blackaby.Backend.Helpers.GameLibraryStore;
 import com.blackaby.Backend.Helpers.GameLibraryStore.LibraryEntry;
 import com.blackaby.Backend.Helpers.GameMetadataStore;
+import com.blackaby.Misc.Config;
 import com.blackaby.Misc.GameArtDisplayMode;
 import com.blackaby.Misc.RomConsoleFilter;
+import com.blackaby.Misc.Settings;
 import com.blackaby.Misc.UiText;
 
 import javax.swing.BorderFactory;
@@ -35,6 +37,7 @@ import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
 import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GridLayout;
 import java.awt.Rectangle;
 import java.awt.event.ComponentAdapter;
@@ -131,6 +134,7 @@ public final class LibraryWindow extends DuckWindow {
         super(UiText.LibraryWindow.WINDOW_TITLE, 920, 620, true);
         this.mainWindow = mainWindow;
         this.emulation = emulation;
+        this.viewMode = resolveSavedViewMode();
         panelBackground = Styling.appBackgroundColour;
         cardBackground = Styling.surfaceColour;
         cardBorder = Styling.surfaceBorderColour;
@@ -456,7 +460,7 @@ public final class LibraryWindow extends DuckWindow {
     private void updateSelectionDetails(LibraryEntry entry) {
         if (entry == null) {
             String emptyText = currentEmptyText();
-            detailTitleLabel.setText(asHeadingHtml(emptyText));
+            detailTitleLabel.setText(asHeadingHtml(emptyText, 240));
             variantValueLabel.setText(asHtml(emptyText));
             setDetailPreviewPlaceholder(UiText.LibraryWindow.TITLE_SCREEN_MISSING);
             if (loadButton != null) {
@@ -473,7 +477,7 @@ public final class LibraryWindow extends DuckWindow {
             return;
         }
 
-        detailTitleLabel.setText(asHeadingHtml(resolveDisplayName(entry)));
+        detailTitleLabel.setText(asHeadingHtml(resolveDisplayName(entry), 240));
         variantValueLabel.setText(asHtml(UiText.LibraryWindow.VariantLabel(entry.patchNames())));
         updateDetailPreview(entry);
         if (loadButton != null) {
@@ -532,7 +536,9 @@ public final class LibraryWindow extends DuckWindow {
     }
 
     private void applyViewMode(ViewMode nextViewMode) {
-        viewMode = nextViewMode;
+        viewMode = nextViewMode == null ? ViewMode.LIST : nextViewMode;
+        Settings.libraryViewMode = viewMode.name();
+        Config.Save();
         if (entryList == null) {
             return;
         }
@@ -629,10 +635,32 @@ public final class LibraryWindow extends DuckWindow {
         }
 
         try {
-            new LibraryGameInfoWindow(entry, entry.LoadRom());
+            new LibraryGameInfoWindow(entry, entry.LoadRom(),
+                    () -> refreshArtworkForEntry(entry),
+                    this::refreshEntryList);
         } catch (IOException | IllegalArgumentException exception) {
             JOptionPane.showMessageDialog(this, exception.getMessage(), UiText.LibraryWindow.INFO_LOAD_ERROR_TITLE,
                     JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void refreshArtworkForEntry(LibraryEntry entry) {
+        if (entry == null) {
+            return;
+        }
+
+        artCache.remove(entry.key());
+        titleScreenCache.remove(entry.key());
+        artLoadingKeys.remove(entry.key());
+        titleScreenLoadingKeys.remove(entry.key());
+        requestArt(entry);
+        if (selectedEntryKey != null && selectedEntryKey.equals(entry.key())) {
+            updateDetailPreview(entry);
+        }
+        if (viewMode == ViewMode.LARGE_ICONS) {
+            rebuildLargeIconGrid();
+        } else if (entryList != null) {
+            entryList.repaint();
         }
     }
 
@@ -1033,11 +1061,11 @@ public final class LibraryWindow extends DuckWindow {
         return "<html><body style='width: 220px'>" + escapeHtml(value) + "</body></html>";
     }
 
-    private String asHeadingHtml(String value) {
+    private String asHeadingHtml(String value, int width) {
         if (value == null || value.isBlank()) {
-            return "<html><body style='width: 220px'>" + UiText.LibraryWindow.EMPTY + "</body></html>";
+            return "<html><body style='width: " + width + "px'>" + UiText.LibraryWindow.EMPTY + "</body></html>";
         }
-        return "<html><body style='width: 220px'>" + escapeHtml(value) + "</body></html>";
+        return "<html><body style='width: " + width + "px'>" + escapeHtml(value) + "</body></html>";
     }
 
     private String escapeHtml(String value) {
@@ -1051,6 +1079,39 @@ public final class LibraryWindow extends DuckWindow {
         return "<html><div style='width:" + Math.max(60, width) + "px; text-align:center;'>"
                 + escapeHtml(value == null ? "" : value)
                 + "</div></html>";
+    }
+
+    private String truncateToWidth(String value, FontMetrics metrics, int maxWidth) {
+        if (value == null || value.isBlank() || metrics == null || maxWidth <= 0) {
+            return value == null ? "" : value;
+        }
+        if (metrics.stringWidth(value) <= maxWidth) {
+            return value;
+        }
+
+        String ellipsis = "...";
+        int ellipsisWidth = metrics.stringWidth(ellipsis);
+        StringBuilder builder = new StringBuilder();
+        for (int index = 0; index < value.length(); index++) {
+            String next = builder.toString() + value.charAt(index);
+            if (metrics.stringWidth(next) + ellipsisWidth > maxWidth) {
+                break;
+            }
+            builder.append(value.charAt(index));
+        }
+        return builder.isEmpty() ? ellipsis : builder + ellipsis;
+    }
+
+    private ViewMode resolveSavedViewMode() {
+        String configuredMode = Settings.libraryViewMode;
+        if (configuredMode == null || configuredMode.isBlank()) {
+            return ViewMode.LIST;
+        }
+        try {
+            return ViewMode.valueOf(configuredMode);
+        } catch (IllegalArgumentException exception) {
+            return ViewMode.LIST;
+        }
     }
 
     private javax.swing.border.Border createCardBorder() {
@@ -1124,15 +1185,19 @@ public final class LibraryWindow extends DuckWindow {
                     ? UiText.LibraryWindow.FAVOURITE_BADGE + " | " + UiText.LibraryWindow.VariantLabel(value.patchNames())
                     : UiText.LibraryWindow.VariantLabel(value.patchNames());
 
-            titleLabel.setText(gameTitle);
-            helperLabel.setText(helperText);
+            int availableTextWidth = Math.max(120, list.getWidth()
+                    - (viewMode == ViewMode.SMALL_ICONS ? smallArtSize + 72 : 52));
+            Font titleFont = Styling.menuFont.deriveFont(Font.BOLD, 13f);
+            Font helperFont = Styling.menuFont.deriveFont(Font.PLAIN, 11f);
+            titleLabel.setText(truncateToWidth(gameTitle, list.getFontMetrics(titleFont), availableTextWidth));
+            helperLabel.setText(truncateToWidth(helperText, list.getFontMetrics(helperFont), availableTextWidth));
             titleLabel.setForeground(accentColour);
             helperLabel.setForeground(mutedTextColour);
 
             if (viewMode == ViewMode.LIST) {
                 setLayout(new BorderLayout(12, 0));
-                titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-                helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 11f));
+                titleLabel.setFont(titleFont);
+                helperLabel.setFont(helperFont);
 
                 JPanel textStack = new JPanel();
                 textStack.setOpaque(false);
@@ -1165,8 +1230,8 @@ public final class LibraryWindow extends DuckWindow {
                 setLayout(new BorderLayout(12, 0));
                 titleLabel.setHorizontalAlignment(SwingConstants.LEFT);
                 helperLabel.setHorizontalAlignment(SwingConstants.LEFT);
-                titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-                helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 11f));
+                titleLabel.setFont(titleFont);
+                helperLabel.setFont(helperFont);
 
                 JPanel textStack = new JPanel();
                 textStack.setOpaque(false);
