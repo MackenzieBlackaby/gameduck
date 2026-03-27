@@ -135,7 +135,10 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
         memory.SetJoypad(joypad);
         memory.SetApu(apu);
         memory.LoadRom(this.rom, ShouldUseCgbHardware(this.rom));
-        SaveFileManager.LoadSave(this.rom).ifPresent(memory::LoadSaveData);
+        SaveFileManager.LoadSaveBundle(this.rom).ifPresent(saveData -> {
+            memory.LoadSaveData(saveData.primaryData());
+            memory.LoadSupplementalSaveData(saveData.supplementalData());
+        });
         ManagedGameRegistry.RememberGame(this.rom);
         try {
             GameLibraryStore.RememberGame(this.rom);
@@ -196,7 +199,7 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
         display.clear();
 
         if (rom != null && memory != null && memory.HasSaveData()) {
-            SaveFileManager.Save(rom, memory.ExportSaveData());
+            SaveFileManager.Save(rom, memory.ExportSaveData(), memory.ExportSupplementalSaveData());
         }
 
         if (apu != null) {
@@ -365,7 +368,9 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
         if (!CanManageSaveData()) {
             throw new IllegalStateException("No battery-backed save data is available for the current game.");
         }
-        SaveFileManager.ExportSave(SnapshotSaveData(), destinationPath);
+        synchronized (stateLock) {
+            SaveFileManager.ExportSave(memory.ExportSaveData(), memory.ExportSupplementalSaveData(), destinationPath);
+        }
     }
 
     /**
@@ -381,10 +386,11 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
         }
 
         synchronized (stateLock) {
-            byte[] saveData = SaveFileManager.ImportSave(rom, sourcePath);
-            memory.LoadSaveData(saveData);
-            SaveFileManager.Save(rom, memory.ExportSaveData());
-            return saveData.length;
+            SaveFileManager.SaveDataBundle saveData = SaveFileManager.ImportSaveBundle(rom, sourcePath);
+            memory.LoadSaveData(saveData.primaryData());
+            memory.LoadSupplementalSaveData(saveData.supplementalData());
+            SaveFileManager.Save(rom, memory.ExportSaveData(), memory.ExportSupplementalSaveData());
+            return saveData.primaryData().length;
         }
     }
 
@@ -400,6 +406,7 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
 
         synchronized (stateLock) {
             memory.LoadSaveData(new byte[0]);
+            memory.LoadSupplementalSaveData(new byte[0]);
             SaveFileManager.DeleteSave(rom);
         }
     }

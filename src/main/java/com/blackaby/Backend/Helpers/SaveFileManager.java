@@ -50,6 +50,17 @@ public final class SaveFileManager {
         }
     }
 
+    public record SaveDataBundle(byte[] primaryData, byte[] supplementalData) {
+        public SaveDataBundle {
+            primaryData = primaryData == null ? new byte[0] : primaryData.clone();
+            supplementalData = supplementalData == null ? new byte[0] : supplementalData.clone();
+        }
+
+        public boolean HasAnyData() {
+            return primaryData.length > 0 || supplementalData.length > 0;
+        }
+    }
+
     private SaveFileManager() {
     }
 
@@ -60,7 +71,7 @@ public final class SaveFileManager {
      * @return save bytes when present
      */
     public static Optional<byte[]> LoadSave(ROM rom) {
-        return LoadSave(SaveIdentity.FromRom(rom));
+        return LoadSaveBundle(rom).map(SaveDataBundle::primaryData);
     }
 
     /**
@@ -70,33 +81,49 @@ public final class SaveFileManager {
      * @return save bytes when present
      */
     public static Optional<byte[]> LoadSave(SaveIdentity saveIdentity) {
+        return LoadSaveBundle(saveIdentity).map(SaveDataBundle::primaryData);
+    }
+
+    /**
+     * Loads managed save RAM and supplementary persistence data for a ROM.
+     *
+     * @param rom active ROM
+     * @return save bytes when present
+     */
+    public static Optional<SaveDataBundle> LoadSaveBundle(ROM rom) {
+        return LoadSaveBundle(SaveIdentity.FromRom(rom));
+    }
+
+    /**
+     * Loads managed save RAM and supplementary persistence data for a tracked game
+     * identity when save files are available.
+     *
+     * @param saveIdentity tracked save identity
+     * @return save bytes when present
+     */
+    public static Optional<SaveDataBundle> LoadSaveBundle(SaveIdentity saveIdentity) {
         if (saveIdentity == null || !saveIdentity.batteryBackedSave()) {
             return Optional.empty();
         }
 
         Path preferredPath = BuildSavePath(saveIdentity);
         Path fallbackPath = BuildFallbackSavePath(saveIdentity);
-        Path selectedPath = preferredPath;
+        Path preferredRtcPath = BuildRtcPath(preferredPath);
+        Path fallbackRtcPath = BuildRtcPath(fallbackPath);
 
-        if (!Files.exists(preferredPath) && !preferredPath.equals(fallbackPath) && Files.exists(fallbackPath)) {
-            try {
-                Files.createDirectories(preferredPath.getParent());
-                Files.move(fallbackPath, preferredPath);
-            } catch (IOException exception) {
-                selectedPath = fallbackPath;
-            }
-        }
+        MoveFallbackFilesToPreferred(preferredPath, fallbackPath);
+        MoveFallbackFilesToPreferred(preferredRtcPath, fallbackRtcPath);
 
-        if (!Files.exists(selectedPath) && !selectedPath.equals(preferredPath) && Files.exists(preferredPath)) {
-            selectedPath = preferredPath;
-        }
-
-        if (!Files.exists(selectedPath)) {
+        Path selectedPrimaryPath = SelectExistingPath(preferredPath, fallbackPath);
+        Path selectedRtcPath = SelectExistingPath(preferredRtcPath, fallbackRtcPath);
+        if (selectedPrimaryPath == null && selectedRtcPath == null) {
             return Optional.empty();
         }
 
         try {
-            return Optional.of(Files.readAllBytes(selectedPath));
+            byte[] primaryData = selectedPrimaryPath == null ? new byte[0] : Files.readAllBytes(selectedPrimaryPath);
+            byte[] supplementalData = selectedRtcPath == null ? new byte[0] : Files.readAllBytes(selectedRtcPath);
+            return Optional.of(new SaveDataBundle(primaryData, supplementalData));
         } catch (IOException exception) {
             return Optional.empty();
         }
@@ -109,7 +136,7 @@ public final class SaveFileManager {
      * @param saveData raw cartridge save bytes
      */
     public static void Save(ROM rom, byte[] saveData) {
-        Save(SaveIdentity.FromRom(rom), saveData);
+        Save(SaveIdentity.FromRom(rom), saveData, new byte[0]);
     }
 
     /**
@@ -119,18 +146,55 @@ public final class SaveFileManager {
      * @param saveData raw cartridge save bytes
      */
     public static void Save(SaveIdentity saveIdentity, byte[] saveData) {
-        if (saveIdentity == null || saveData == null || saveData.length == 0 || !saveIdentity.batteryBackedSave()) {
+        Save(saveIdentity, saveData, new byte[0]);
+    }
+
+    /**
+     * Writes the supplied save RAM and supplementary persistence data to disk for
+     * the active ROM.
+     *
+     * @param rom active ROM
+     * @param saveData raw cartridge save bytes
+     * @param supplementalData supplementary save bytes such as RTC state
+     */
+    public static void Save(ROM rom, byte[] saveData, byte[] supplementalData) {
+        Save(SaveIdentity.FromRom(rom), saveData, supplementalData);
+    }
+
+    /**
+     * Writes the supplied save RAM and supplementary persistence data to disk for
+     * a tracked game identity.
+     *
+     * @param saveIdentity tracked save identity
+     * @param saveData raw cartridge save bytes
+     * @param supplementalData supplementary save bytes such as RTC state
+     */
+    public static void Save(SaveIdentity saveIdentity, byte[] saveData, byte[] supplementalData) {
+        if (saveIdentity == null || !saveIdentity.batteryBackedSave()) {
+            return;
+        }
+
+        byte[] primaryData = saveData == null ? new byte[0] : saveData;
+        byte[] rtcData = supplementalData == null ? new byte[0] : supplementalData;
+        if (primaryData.length == 0 && rtcData.length == 0) {
             return;
         }
 
         Path preferredPath = PreferredSavePath(saveIdentity);
+        Path preferredRtcPath = BuildRtcPath(preferredPath);
         try {
             Files.createDirectories(preferredPath.getParent());
-            Files.write(preferredPath, saveData);
+            Files.write(preferredPath, primaryData);
+            if (rtcData.length > 0) {
+                Files.write(preferredRtcPath, rtcData);
+            } else {
+                Files.deleteIfExists(preferredRtcPath);
+            }
 
             Path fallbackPath = LegacySavePath(saveIdentity);
             if (!preferredPath.equals(fallbackPath)) {
                 Files.deleteIfExists(fallbackPath);
+                Files.deleteIfExists(BuildRtcPath(fallbackPath));
             }
         } catch (IOException exception) {
             exception.printStackTrace();
@@ -218,8 +282,10 @@ public final class SaveFileManager {
         List<SaveFileEntry> files = new ArrayList<>();
 
         AddSaveEntry(files, preferredPath, "Managed Save");
+        AddSaveEntry(files, BuildRtcPath(preferredPath), "Managed RTC");
         if (!preferredPath.equals(fallbackPath)) {
             AddSaveEntry(files, fallbackPath, "Legacy Save");
+            AddSaveEntry(files, BuildRtcPath(fallbackPath), "Legacy RTC");
         }
 
         files.sort(Comparator.comparing(SaveFileEntry::lastModified).reversed());
@@ -247,10 +313,13 @@ public final class SaveFileManager {
             return;
         }
 
-        Files.deleteIfExists(PreferredSavePath(saveIdentity));
+        Path preferredPath = PreferredSavePath(saveIdentity);
+        Files.deleteIfExists(preferredPath);
+        Files.deleteIfExists(BuildRtcPath(preferredPath));
         Path fallbackPath = LegacySavePath(saveIdentity);
-        if (!PreferredSavePath(saveIdentity).equals(fallbackPath)) {
+        if (!preferredPath.equals(fallbackPath)) {
             Files.deleteIfExists(fallbackPath);
+            Files.deleteIfExists(BuildRtcPath(fallbackPath));
         }
     }
 
@@ -263,7 +332,7 @@ public final class SaveFileManager {
      * @throws IOException when the file cannot be read or written
      */
     public static byte[] ImportSave(ROM rom, Path sourcePath) throws IOException {
-        return ImportSave(SaveIdentity.FromRom(rom), sourcePath);
+        return ImportSaveBundle(rom, sourcePath).primaryData();
     }
 
     /**
@@ -275,6 +344,32 @@ public final class SaveFileManager {
      * @throws IOException when the file cannot be read or written
      */
     public static byte[] ImportSave(SaveIdentity saveIdentity, Path sourcePath) throws IOException {
+        return ImportSaveBundle(saveIdentity, sourcePath).primaryData();
+    }
+
+    /**
+     * Imports an external save file and optional RTC sidecar into the managed
+     * location for a ROM.
+     *
+     * @param rom active ROM
+     * @param sourcePath external save file
+     * @return imported save bundle
+     * @throws IOException when the file cannot be read or written
+     */
+    public static SaveDataBundle ImportSaveBundle(ROM rom, Path sourcePath) throws IOException {
+        return ImportSaveBundle(SaveIdentity.FromRom(rom), sourcePath);
+    }
+
+    /**
+     * Imports an external save file and optional RTC sidecar into the managed
+     * location for a tracked game.
+     *
+     * @param saveIdentity tracked save identity
+     * @param sourcePath external save file
+     * @return imported save bundle
+     * @throws IOException when the file cannot be read or written
+     */
+    public static SaveDataBundle ImportSaveBundle(SaveIdentity saveIdentity, Path sourcePath) throws IOException {
         if (saveIdentity == null || !saveIdentity.batteryBackedSave()) {
             throw new IllegalArgumentException("This game does not support battery-backed saves.");
         }
@@ -283,19 +378,27 @@ public final class SaveFileManager {
         }
 
         byte[] saveData = Files.readAllBytes(sourcePath);
-        if (saveData.length == 0) {
+        byte[] rtcData = Files.exists(BuildRtcPath(sourcePath)) ? Files.readAllBytes(BuildRtcPath(sourcePath)) : new byte[0];
+        if (saveData.length == 0 && rtcData.length == 0) {
             throw new IOException("The selected save data file is empty.");
         }
 
         Path preferredPath = PreferredSavePath(saveIdentity);
         Files.createDirectories(preferredPath.getParent());
         Files.write(preferredPath, saveData);
+        Path preferredRtcPath = BuildRtcPath(preferredPath);
+        if (rtcData.length > 0) {
+            Files.write(preferredRtcPath, rtcData);
+        } else {
+            Files.deleteIfExists(preferredRtcPath);
+        }
 
         Path fallbackPath = LegacySavePath(saveIdentity);
         if (!preferredPath.equals(fallbackPath)) {
             Files.deleteIfExists(fallbackPath);
+            Files.deleteIfExists(BuildRtcPath(fallbackPath));
         }
-        return saveData;
+        return new SaveDataBundle(saveData, rtcData);
     }
 
     /**
@@ -306,8 +409,23 @@ public final class SaveFileManager {
      * @throws IOException when the file cannot be written
      */
     public static void ExportSave(byte[] saveData, Path destinationPath) throws IOException {
+        ExportSave(saveData, new byte[0], destinationPath);
+    }
+
+    /**
+     * Writes a save snapshot and optional RTC sidecar to an arbitrary external
+     * path.
+     *
+     * @param saveData raw save bytes
+     * @param supplementalData supplementary save bytes such as RTC state
+     * @param destinationPath destination file path
+     * @throws IOException when the file cannot be written
+     */
+    public static void ExportSave(byte[] saveData, byte[] supplementalData, Path destinationPath) throws IOException {
         if (saveData == null || saveData.length == 0) {
-            throw new IOException("No save data is available to export.");
+            if (supplementalData == null || supplementalData.length == 0) {
+                throw new IOException("No save data is available to export.");
+            }
         }
         if (destinationPath == null) {
             throw new IOException("Choose a destination file for the exported save.");
@@ -318,6 +436,12 @@ public final class SaveFileManager {
             Files.createDirectories(parent);
         }
         Files.write(destinationPath, saveData);
+        Path rtcPath = BuildRtcPath(destinationPath);
+        if (supplementalData != null && supplementalData.length > 0) {
+            Files.write(rtcPath, supplementalData);
+        } else {
+            Files.deleteIfExists(rtcPath);
+        }
     }
 
     /**
@@ -339,17 +463,9 @@ public final class SaveFileManager {
      * @throws IOException when the file cannot be read or written
      */
     public static void ExportSave(SaveIdentity saveIdentity, Path destinationPath) throws IOException {
-        Path sourcePath = ResolveExistingSavePath(saveIdentity)
+        SaveDataBundle saveData = LoadSaveBundle(saveIdentity)
                 .orElseThrow(() -> new IOException("No managed save file exists for this game."));
-        if (destinationPath == null) {
-            throw new IOException("Choose a destination file for the exported save.");
-        }
-
-        Path parent = destinationPath.getParent();
-        if (parent != null) {
-            Files.createDirectories(parent);
-        }
-        Files.copy(sourcePath, destinationPath, StandardCopyOption.REPLACE_EXISTING);
+        ExportSave(saveData.primaryData(), saveData.supplementalData(), destinationPath);
     }
 
     /**
@@ -384,6 +500,30 @@ public final class SaveFileManager {
         }
 
         return Optional.empty();
+    }
+
+    private static void MoveFallbackFilesToPreferred(Path preferredPath, Path fallbackPath) {
+        if (preferredPath == null || fallbackPath == null || preferredPath.equals(fallbackPath)
+                || Files.exists(preferredPath) || !Files.exists(fallbackPath)) {
+            return;
+        }
+
+        try {
+            Files.createDirectories(preferredPath.getParent());
+            Files.move(fallbackPath, preferredPath);
+        } catch (IOException exception) {
+            // Keep using the fallback path when migration fails.
+        }
+    }
+
+    private static Path SelectExistingPath(Path preferredPath, Path fallbackPath) {
+        if (preferredPath != null && Files.exists(preferredPath)) {
+            return preferredPath;
+        }
+        if (fallbackPath != null && Files.exists(fallbackPath)) {
+            return fallbackPath;
+        }
+        return null;
     }
 
     static Path BuildSavePath(ROM rom) {
@@ -451,6 +591,20 @@ public final class SaveFileManager {
                 .replaceAll("\\.+$", "")
                 .trim();
         return cleaned.isBlank() ? "unknown" : cleaned;
+    }
+
+    private static Path BuildRtcPath(Path savePath) {
+        if (savePath == null) {
+            return null;
+        }
+
+        String filename = savePath.getFileName().toString();
+        if (filename.endsWith(".sav")) {
+            filename = filename.substring(0, filename.length() - 4) + ".rtc";
+        } else {
+            filename = filename + ".rtc";
+        }
+        return savePath.resolveSibling(filename);
     }
 
     private static Path SaveDirectory() {

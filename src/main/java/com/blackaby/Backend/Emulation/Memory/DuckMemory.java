@@ -773,6 +773,15 @@ public class DuckMemory {
     }
 
     /**
+     * Exports supplementary cartridge persistence data such as RTC state.
+     *
+     * @return supplementary save bytes
+     */
+    public byte[] ExportSupplementalSaveData() {
+        return cartridge == null ? new byte[0] : cartridge.ExportSupplementalSaveData();
+    }
+
+    /**
      * Returns whether the currently loaded ROM advertises Game Boy Color
      * compatibility.
      *
@@ -808,6 +817,17 @@ public class DuckMemory {
     public void LoadSaveData(byte[] saveData) {
         if (cartridge != null) {
             cartridge.LoadSaveData(saveData);
+        }
+    }
+
+    /**
+     * Loads supplementary cartridge persistence data such as RTC state.
+     *
+     * @param saveData supplementary save bytes
+     */
+    public void LoadSupplementalSaveData(byte[] saveData) {
+        if (cartridge != null) {
+            cartridge.LoadSupplementalSaveData(saveData);
         }
     }
 

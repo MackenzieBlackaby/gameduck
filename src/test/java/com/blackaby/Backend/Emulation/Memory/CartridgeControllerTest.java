@@ -2,6 +2,7 @@ package com.blackaby.Backend.Emulation.Memory;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.junit.jupiter.api.Test;
 
@@ -66,7 +67,7 @@ class CartridgeControllerTest {
     @Test
     void mbc3SwitchesRomBankAndIgnoresRtcRamWindowWrites() {
         ROM rom = EmulatorTestUtils.CreatePatternedRom(0x13, 8, 0x03, 0x00, "mbc3.gb", "mbc3");
-        Mbc3CartridgeController controller = new Mbc3CartridgeController(rom);
+        Mbc3CartridgeController controller = new Mbc3CartridgeController(rom, () -> 0L);
 
         controller.Write(0x2000, 0x00);
         assertEquals(0x01, controller.ReadRom(0x4000));
@@ -80,9 +81,79 @@ class CartridgeControllerTest {
 
         controller.Write(0x4000, 0x08);
         controller.Write(DuckAddresses.EXTERNAL_RAM_START, 0x99);
-        assertEquals(0xFF, controller.ReadRam(0));
+        assertEquals(0x00, controller.ReadRam(0));
         controller.Write(0x4000, 0x02);
         assertEquals(0x55, controller.ReadRam(0));
+    }
+
+    @Test
+    void mbc3RtcLatchesAdvancesAndHonoursHaltWrites() {
+        ROM rom = EmulatorTestUtils.CreatePatternedRom(0x10, 8, 0x03, 0x00, "mbc3_rtc.gb", "mbc3-rtc");
+        long[] epochSeconds = { 0L };
+        Mbc3CartridgeController controller = new Mbc3CartridgeController(rom, () -> epochSeconds[0]);
+
+        controller.Write(0x0000, 0x0A);
+        controller.Write(0x4000, 0x08);
+        controller.Write(0x6000, 0x00);
+        controller.Write(0x6000, 0x01);
+        assertEquals(0x00, controller.ReadRam(0));
+
+        epochSeconds[0] = 75L;
+        controller.Write(0x6000, 0x00);
+        controller.Write(0x6000, 0x01);
+        assertEquals(0x0F, controller.ReadRam(0));
+        controller.Write(0x4000, 0x09);
+        assertEquals(0x01, controller.ReadRam(0));
+
+        controller.Write(0x4000, 0x0C);
+        controller.Write(DuckAddresses.EXTERNAL_RAM_START, 0x40);
+        epochSeconds[0] = 600L;
+        controller.Write(0x4000, 0x08);
+        assertEquals(0x0F, controller.ReadRam(0));
+
+        controller.Write(0x4000, 0x0C);
+        controller.Write(DuckAddresses.EXTERNAL_RAM_START, 0x00);
+        epochSeconds[0] = 601L;
+        controller.Write(0x6000, 0x00);
+        controller.Write(0x6000, 0x01);
+        controller.Write(0x4000, 0x08);
+        assertEquals(0x10, controller.ReadRam(0));
+    }
+
+    @Test
+    void mbc3RtcSupplementalStateRoundTripRestoresClockAndFlags() {
+        ROM rom = EmulatorTestUtils.CreatePatternedRom(0x10, 8, 0x03, 0x00, "mbc3_state.gb", "mbc3-state");
+        long[] epochSeconds = { 0L };
+        Mbc3CartridgeController controller = new Mbc3CartridgeController(rom, () -> epochSeconds[0]);
+        controller.Write(0x0000, 0x0A);
+        controller.Write(0x4000, 0x08);
+
+        epochSeconds[0] = 3661L;
+        controller.Write(0x6000, 0x00);
+        controller.Write(0x6000, 0x01);
+        controller.Write(0x4000, 0x0C);
+        controller.Write(DuckAddresses.EXTERNAL_RAM_START, 0xC0);
+
+        CartridgeController.MapperState state = controller.CaptureState();
+
+        epochSeconds[0] = 9999L;
+        Mbc3CartridgeController restored = new Mbc3CartridgeController(rom, () -> epochSeconds[0]);
+        restored.RestoreState(state);
+        restored.Write(0x0000, 0x0A);
+        restored.Write(0x4000, 0x08);
+        assertEquals(0x01, restored.ReadRam(0));
+        restored.Write(0x4000, 0x09);
+        assertEquals(0x01, restored.ReadRam(0));
+        restored.Write(0x4000, 0x0C);
+        assertEquals(0xC0, restored.ReadRam(0));
+    }
+
+    @Test
+    void mbc3RtcOnlyCartridgeStillReportsSaveSupport() {
+        ROM rom = EmulatorTestUtils.CreatePatternedRom(0x0F, 4, 0x00, 0x00, "mbc3_timer.gb", "mbc3-timer");
+        Mbc3CartridgeController controller = new Mbc3CartridgeController(rom, () -> 0L);
+
+        assertTrue(controller.SupportsSaveData());
     }
 
     @Test

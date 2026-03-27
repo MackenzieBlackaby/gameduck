@@ -227,6 +227,15 @@ public class ROM implements EmulatorMedia {
     }
 
     /**
+     * Returns whether this cartridge exposes the MBC3 real-time clock.
+     *
+     * @return {@code true} when the cartridge includes RTC hardware
+     */
+    public boolean HasRtc() {
+        return cartridgeTypeCode == 0x0F || cartridgeTypeCode == 0x10;
+    }
+
+    /**
      * Returns whether the cartridge advertises CGB compatibility.
      *
      * @return {@code true} when the header marks the ROM as Game Boy Color capable

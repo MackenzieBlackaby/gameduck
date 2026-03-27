@@ -78,6 +78,19 @@ class DuckMemoryTest {
         assertEquals(0xFF, memory.Read(DuckAddresses.HDMA5));
     }
 
+    @Test
+    void rtcOnlyMbc3CartridgeStillExposesManagedSaveSupport() {
+        byte[] romBytes = new byte[0x8000];
+        romBytes[0x0147] = 0x0F;
+        romBytes[0x0148] = 0x00;
+        romBytes[0x0149] = 0x00;
+
+        DuckMemory memory = new DuckMemory();
+        memory.LoadRom(ROM.FromBytes("rtc.gb", romBytes, "rtc"), false);
+
+        assertEquals(true, memory.HasSaveData());
+    }
+
     private static DuckMemory CreateCgbMemory() {
         byte[] romBytes = new byte[0x8000];
         romBytes[0x0143] = (byte) 0x80;

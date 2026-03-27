@@ -13,7 +13,8 @@ import java.util.Arrays;
  */
 public abstract class CartridgeController {
 
-    public record MapperState(String mapperType, byte[] ramData, int[] registers) implements java.io.Serializable {
+    public record MapperState(String mapperType, byte[] ramData, int[] registers, byte[] supplementalData)
+            implements java.io.Serializable {
     }
 
     protected final ROM rom;
@@ -153,7 +154,7 @@ public abstract class CartridgeController {
      * @return {@code true} when save files are supported
      */
     public boolean SupportsSaveData() {
-        return rom.HasBatteryBackedSave() && HasRam();
+        return rom.HasBatteryBackedSave() && (HasRam() || HasSupplementalSaveData());
     }
 
     /**
@@ -167,6 +168,15 @@ public abstract class CartridgeController {
             saveData[index] = (byte) (ramData[index] & 0xFF);
         }
         return saveData;
+    }
+
+    /**
+     * Returns a raw copy of any supplementary cartridge persistence data.
+     *
+     * @return supplementary save bytes
+     */
+    public byte[] ExportSupplementalSaveData() {
+        return new byte[0];
     }
 
     /**
@@ -186,6 +196,14 @@ public abstract class CartridgeController {
     }
 
     /**
+     * Replaces supplementary cartridge persistence data from raw bytes.
+     *
+     * @param saveData supplementary save bytes
+     */
+    public void LoadSupplementalSaveData(byte[] saveData) {
+    }
+
+    /**
      * Captures mapper registers and external RAM for quick-state persistence.
      *
      * @return mapper snapshot
@@ -194,7 +212,8 @@ public abstract class CartridgeController {
         return new MapperState(
                 getClass().getSimpleName(),
                 ExportSaveData(),
-                CaptureRegisters());
+                CaptureRegisters(),
+                ExportSupplementalSaveData());
     }
 
     /**
@@ -212,6 +231,11 @@ public abstract class CartridgeController {
 
         LoadSaveData(state.ramData());
         RestoreRegisters(state.registers());
+        LoadSupplementalSaveData(state.supplementalData());
+    }
+
+    protected boolean HasSupplementalSaveData() {
+        return false;
     }
 
     protected int[] CaptureRegisters() {
