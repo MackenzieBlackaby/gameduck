@@ -9,14 +9,19 @@ import com.blackaby.Frontend.Shaders.DisplayShaderManager;
 import com.blackaby.Frontend.Shaders.LoadedDisplayShader;
 import com.blackaby.Misc.Settings;
 
-import java.awt.*;
+import java.awt.Color;
+import java.awt.Dimension;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GraphicsEnvironment;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBufferInt;
 import java.util.Arrays;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
-import javax.swing.*;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 /**
  * A custom JPanel for rendering Game Boy display output.
