@@ -58,7 +58,7 @@ public class DuckTimer {
         if (overflowCounter > 0) {
             overflowCounter--;
             if (overflowCounter == 0 && timaOverflowPending) {
-                memory.SetTimaFromTimer(memory.Read(DuckAddresses.TMA));
+                memory.SetTimaFromTimer(memory.ReadRegisterDirect(DuckAddresses.TMA));
                 cpu.RequestInterrupt(DuckCPU.Interrupt.TIMER);
                 timaOverflowPending = false;
             }
@@ -73,7 +73,7 @@ public class DuckTimer {
      * Resets the divider and applies the usual divider glitch behaviour.
      */
     public void ResetDiv() {
-        int tac = memory.Read(DuckAddresses.TAC);
+        int tac = memory.ReadRegisterDirect(DuckAddresses.TAC);
         boolean timerEnabled = (tac & tacEnableBit) != 0;
         int monitoredBit = GetMonitoredBit(tac);
         boolean wasOne = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
@@ -91,7 +91,7 @@ public class DuckTimer {
      * Recomputes the sampled timer bit after external state changes.
      */
     public void SyncTimerBit() {
-        int tac = memory.Read(DuckAddresses.TAC);
+        int tac = memory.ReadRegisterDirect(DuckAddresses.TAC);
         boolean timerEnabled = (tac & tacEnableBit) != 0;
         int monitoredBit = GetMonitoredBit(tac);
         previousTimerBit = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
@@ -104,7 +104,7 @@ public class DuckTimer {
      * @param value new TAC value
      */
     public void WriteTac(int value) {
-        int oldTac = memory.Read(DuckAddresses.TAC);
+        int oldTac = memory.ReadRegisterDirect(DuckAddresses.TAC);
         boolean oldTimerBit = GetTimerBit(oldTac);
 
         memory.WriteDirect(DuckAddresses.TAC, 0xF8 | (value & 0x07));
@@ -160,7 +160,7 @@ public class DuckTimer {
     }
 
     private void UpdateTima() {
-        int tac = memory.Read(DuckAddresses.TAC);
+        int tac = memory.ReadRegisterDirect(DuckAddresses.TAC);
         boolean timerEnabled = (tac & tacEnableBit) != 0;
         int monitoredBit = GetMonitoredBit(tac);
         boolean currentTimerBit = timerEnabled && ((internalCounter & (1 << monitoredBit)) != 0);
@@ -173,7 +173,7 @@ public class DuckTimer {
     }
 
     private void IncrementTima() {
-        int tima = memory.Read(DuckAddresses.TIMA) & 0xFF;
+        int tima = memory.ReadRegisterDirect(DuckAddresses.TIMA);
         if (tima == 0xFF) {
             memory.SetTimaFromTimer(0x00);
             timaOverflowPending = true;

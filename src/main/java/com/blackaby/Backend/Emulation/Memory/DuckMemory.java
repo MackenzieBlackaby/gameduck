@@ -64,6 +64,8 @@ public class DuckMemory {
     private final int[][] wramBanks = new int[8][wramBankSize];
     private final int[] bgPaletteRam = new int[cgbPaletteRamSize];
     private final int[] objPaletteRam = new int[cgbPaletteRamSize];
+    private final int[] bgPaletteRgbCache = new int[32];
+    private final int[] objPaletteRgbCache = new int[32];
 
     private boolean cgbMode;
     private int activeVramBank;
@@ -179,6 +181,8 @@ public class DuckMemory {
             bgPaletteRam[index] = 0;
             objPaletteRam[index] = 0;
         }
+        Arrays.fill(bgPaletteRgbCache, 0);
+        Arrays.fill(objPaletteRgbCache, 0);
     }
 
     /**
@@ -352,8 +356,8 @@ public class DuckMemory {
         WriteDirect(DuckAddresses.SVBK, 0x01);
         WriteDirect(DuckAddresses.IE, 0x00);
 
-        InitialiseCgbPalettesToWhite(bgPaletteRam);
-        InitialiseCgbPalettesToWhite(objPaletteRam);
+        InitialiseCgbPalettesToWhite(bgPaletteRam, bgPaletteRgbCache);
+        InitialiseCgbPalettesToWhite(objPaletteRam, objPaletteRgbCache);
 
         WriteDirect(DuckAddresses.BOOT_ROM_DISABLE, 0x01);
     }
@@ -675,12 +679,12 @@ public class DuckMemory {
         }
 
         if (address == DuckAddresses.BCPD) {
-            WritePaletteData(bgPaletteRam, DuckAddresses.BCPS, value);
+            WritePaletteData(bgPaletteRam, bgPaletteRgbCache, DuckAddresses.BCPS, value);
             return;
         }
 
         if (address == DuckAddresses.OCPD) {
-            WritePaletteData(objPaletteRam, DuckAddresses.OCPS, value);
+            WritePaletteData(objPaletteRam, objPaletteRgbCache, DuckAddresses.OCPS, value);
             return;
         }
 
@@ -889,6 +893,17 @@ public class DuckMemory {
     }
 
     /**
+     * Returns the raw stored value for a memory-mapped register without applying
+     * CPU-visible read masks or peripheral callbacks.
+     *
+     * @param address register address
+     * @return underlying stored byte
+     */
+    public int ReadRegisterDirect(int address) {
+        return ram[address & 0xFFFF] & 0xFF;
+    }
+
+    /**
      * Reads from a specific VRAM bank regardless of the currently selected bank.
      *
      * @param bank    VRAM bank index
@@ -912,7 +927,9 @@ public class DuckMemory {
      * @return packed ARGB value
      */
     public int ReadCgbBackgroundPaletteColourRgb(int paletteIndex, int colourIndex) {
-        return ReadCgbPaletteColourRgb(bgPaletteRam, paletteIndex, colourIndex);
+        int safePaletteIndex = Math.max(0, Math.min(7, paletteIndex));
+        int safeColourIndex = Math.max(0, Math.min(3, colourIndex));
+        return bgPaletteRgbCache[(safePaletteIndex * 4) + safeColourIndex];
     }
 
     /**
@@ -923,7 +940,35 @@ public class DuckMemory {
      * @return packed ARGB value
      */
     public int ReadCgbObjectPaletteColourRgb(int paletteIndex, int colourIndex) {
-        return ReadCgbPaletteColourRgb(objPaletteRam, paletteIndex, colourIndex);
+        int safePaletteIndex = Math.max(0, Math.min(7, paletteIndex));
+        int safeColourIndex = Math.max(0, Math.min(3, colourIndex));
+        return objPaletteRgbCache[(safePaletteIndex * 4) + safeColourIndex];
+    }
+
+    /**
+     * Returns whether the serial port is currently requesting a transferred byte.
+     *
+     * @return {@code true} when the serial transfer-complete condition is active
+     */
+    public boolean IsSerialTransferInProgress() {
+        return (ram[DuckAddresses.SERIAL_CONTROL] & 0x81) == 0x81;
+    }
+
+    /**
+     * Returns the raw serial data register.
+     *
+     * @return pending serial byte
+     */
+    public int ReadSerialDataRegister() {
+        return ram[DuckAddresses.SERIAL_DATA] & 0xFF;
+    }
+
+    /**
+     * Applies the usual transfer-complete side effects for the serial port.
+     */
+    public void CompleteSerialTransfer() {
+        ram[DuckAddresses.SERIAL_DATA] = 0xFF;
+        ram[DuckAddresses.SERIAL_CONTROL] &= ~0x80;
     }
 
     /**
@@ -1009,6 +1054,8 @@ public class DuckMemory {
         CopyInto(state.wramBanks(), wramBanks);
         CopyInto(state.bgPaletteRam(), bgPaletteRam);
         CopyInto(state.objPaletteRam(), objPaletteRam);
+        RebuildCgbPaletteCache(bgPaletteRam, bgPaletteRgbCache);
+        RebuildCgbPaletteCache(objPaletteRam, objPaletteRgbCache);
 
         if (cartridge != null && state.cartridgeState() != null) {
             cartridge.RestoreState(state.cartridgeState());
@@ -1050,9 +1097,10 @@ public class DuckMemory {
         };
     }
 
-    private void WritePaletteData(int[] paletteRam, int indexRegister, int value) {
+    private void WritePaletteData(int[] paletteRam, int[] rgbCache, int indexRegister, int value) {
         int paletteIndex = ram[indexRegister] & 0x3F;
         paletteRam[paletteIndex] = value & 0xFF;
+        UpdateCgbPaletteCacheEntry(paletteRam, rgbCache, paletteIndex);
         if ((ram[indexRegister] & 0x80) != 0) {
             int nextIndex = (paletteIndex + 1) & 0x3F;
             ram[indexRegister] = (ram[indexRegister] & 0x80) | 0x40 | nextIndex;
@@ -1116,7 +1164,7 @@ public class DuckMemory {
         ram[DuckAddresses.HDMA5] = (hdmaBlocksRemaining - 1) & 0x7F;
     }
 
-    private void InitialiseCgbPalettesToWhite(int[] paletteRam) {
+    private void InitialiseCgbPalettesToWhite(int[] paletteRam, int[] rgbCache) {
         for (int paletteIndex = 0; paletteIndex < 8; paletteIndex++) {
             for (int colourIndex = 0; colourIndex < 4; colourIndex++) {
                 int base = (paletteIndex * 8) + (colourIndex * 2);
@@ -1124,12 +1172,22 @@ public class DuckMemory {
                 paletteRam[base + 1] = 0x7F;
             }
         }
+        RebuildCgbPaletteCache(paletteRam, rgbCache);
     }
 
-    private int ReadCgbPaletteColourRgb(int[] paletteRam, int paletteIndex, int colourIndex) {
-        int safePaletteIndex = Math.max(0, Math.min(7, paletteIndex));
-        int safeColourIndex = Math.max(0, Math.min(3, colourIndex));
-        int base = (safePaletteIndex * 8) + (safeColourIndex * 2);
+    private void RebuildCgbPaletteCache(int[] paletteRam, int[] rgbCache) {
+        for (int index = 0; index < rgbCache.length; index++) {
+            int base = index * 2;
+            rgbCache[index] = ReadCgbPaletteColourRgbFromRam(paletteRam, base);
+        }
+    }
+
+    private void UpdateCgbPaletteCacheEntry(int[] paletteRam, int[] rgbCache, int paletteIndex) {
+        int base = paletteIndex & 0x3E;
+        rgbCache[base >> 1] = ReadCgbPaletteColourRgbFromRam(paletteRam, base);
+    }
+
+    private int ReadCgbPaletteColourRgbFromRam(int[] paletteRam, int base) {
         int colour555 = paletteRam[base] | ((paletteRam[base + 1] & 0x7F) << 8);
         return Cgb555ToRgb(colour555);
     }

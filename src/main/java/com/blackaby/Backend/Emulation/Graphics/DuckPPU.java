@@ -74,10 +74,6 @@ public class DuckPPU {
     private final int[] activeBackgroundPalette = new int[4];
     private final int[] activeSpritePalette0 = new int[4];
     private final int[] activeSpritePalette1 = new int[4];
-    private final int[] decodedBackgroundPalette = new int[4];
-    private final int[] decodedSpritePalette0 = new int[4];
-    private final int[] decodedSpritePalette1 = new int[4];
-
     private PpuMode mode;
     private int scanline;
     private int cycle;
@@ -106,7 +102,7 @@ public class DuckPPU {
      * Advances the PPU by one T-cycle.
      */
     public void Step() {
-        int lcdControl = memory.Read(regLcdc);
+        int lcdControl = memory.ReadRegisterDirect(regLcdc);
         if ((lcdControl & 0x80) == 0) {
             HandleLcdDisabled();
             return;
@@ -147,7 +143,15 @@ public class DuckPPU {
                         SetMode(PpuMode.VBLANK);
                         cpu.RequestInterrupt(DuckCPU.Interrupt.VBLANK);
                         completedFrames++;
-                        display.presentFrame(!memory.IsCgbMode());
+                        if (memory.IsCgbMode()) {
+                            display.presentFrame(
+                                    DuckDisplay.DefaultCgbPreviousFrameBlendWeight(),
+                                    DuckDisplay.DefaultCgbCurrentFrameBlendWeight());
+                        } else {
+                            display.presentFrame(
+                                    DuckDisplay.DefaultDmgPreviousFrameBlendWeight(),
+                                    DuckDisplay.DefaultDmgCurrentFrameBlendWeight());
+                        }
                     } else {
                         SetMode(PpuMode.OAM);
                     }
@@ -202,7 +206,7 @@ public class DuckPPU {
         windowLineCounter = Math.max(0, state.windowLineCounter());
         windowRenderedOnCurrentScanline = state.windowRenderedOnCurrentScanline();
         visibleSpriteCount = (mode == PpuMode.VRAM || mode == PpuMode.HBLANK)
-                ? LoadSpritesOnScanline((memory.Read(regLcdc) & 0x04) != 0)
+                ? LoadSpritesOnScanline((memory.ReadRegisterDirect(regLcdc) & 0x04) != 0)
                 : 0;
         completedFrames = 0;
     }
@@ -233,7 +237,7 @@ public class DuckPPU {
      * @return {@code true} during visible-line H-Blank while the LCD is enabled
      */
     public boolean IsHblankTransferWindowOpen() {
-        return (memory.Read(regLcdc) & 0x80) != 0
+        return (memory.ReadRegisterDirect(regLcdc) & 0x80) != 0
                 && mode == PpuMode.HBLANK
                 && scanline < screenHeight;
     }
@@ -250,21 +254,21 @@ public class DuckPPU {
         windowRenderedOnCurrentScanline = false;
         memory.WriteDirect(regLy, 0);
 
-        int stat = memory.Read(regStat);
+        int stat = memory.ReadRegisterDirect(regStat);
         memory.WriteDirect(regStat, (stat & 0xFC) | 0x80);
     }
 
     private void SetMode(PpuMode newMode) {
         mode = newMode;
-        int stat = memory.Read(regStat);
+        int stat = memory.ReadRegisterDirect(regStat);
         memory.WriteDirect(regStat, (stat & 0xFC) | newMode.flag);
         UpdateStatInterruptLine();
     }
 
     private void UpdateLycCompare() {
-        int ly = memory.Read(regLy);
-        int lyc = memory.Read(regLyc);
-        int stat = memory.Read(regStat);
+        int ly = memory.ReadRegisterDirect(regLy);
+        int lyc = memory.ReadRegisterDirect(regLyc);
+        int stat = memory.ReadRegisterDirect(regStat);
 
         if (ly == lyc) {
             stat |= 0x04;
@@ -277,7 +281,7 @@ public class DuckPPU {
     }
 
     private void UpdateStatInterruptLine() {
-        int stat = memory.Read(regStat);
+        int stat = memory.ReadRegisterDirect(regStat);
         boolean coincidence = (stat & 0x04) != 0;
         boolean lineHigh = (mode == PpuMode.HBLANK && (stat & 0x08) != 0)
                 || (mode == PpuMode.VBLANK && (stat & 0x10) != 0)
@@ -296,7 +300,7 @@ public class DuckPPU {
         windowRenderedOnCurrentScanline = false;
         Arrays.fill(backgroundPriorityBuffer, 0);
         Arrays.fill(backgroundTilePriorityBuffer, false);
-        visibleSpriteCount = LoadSpritesOnScanline((memory.Read(regLcdc) & 0x04) != 0);
+        visibleSpriteCount = LoadSpritesOnScanline((memory.ReadRegisterDirect(regLcdc) & 0x04) != 0);
 
         if (!memory.IsCgbMode()) {
             boolean useGbcColourisation = ShouldUseGbcColourisation();
@@ -323,7 +327,7 @@ public class DuckPPU {
 
     private void RenderNextPixel() {
         int x = pixelTransferX;
-        int lcdControl = memory.Read(regLcdc);
+        int lcdControl = memory.ReadRegisterDirect(regLcdc);
         boolean cgbMode = memory.IsCgbMode();
 
         int backgroundColour = ResolveBackgroundPixel(x, lcdControl, cgbMode);
@@ -338,18 +342,14 @@ public class DuckPPU {
     }
 
     private int ResolveBackgroundPixel(int screenX, int lcdControl, boolean cgbMode) {
-        if (!cgbMode) {
-            DecodePalette(memory.Read(regBgp), activeBackgroundPalette, decodedBackgroundPalette);
-        }
-
         if (!cgbMode && (lcdControl & 0x01) == 0) {
             backgroundPriorityBuffer[screenX] = 0;
             backgroundTilePriorityBuffer[screenX] = false;
-            return decodedBackgroundPalette[0];
+            return ResolveDmgPaletteColour(memory.ReadRegisterDirect(regBgp), activeBackgroundPalette, 0);
         }
 
-        int windowY = memory.Read(regWy);
-        int windowX = memory.Read(regWx) - 7;
+        int windowY = memory.ReadRegisterDirect(regWy);
+        int windowX = memory.ReadRegisterDirect(regWx) - 7;
         boolean windowEnabled = (lcdControl & 0x20) != 0
                 && scanline >= windowY
                 && screenX >= windowX
@@ -368,8 +368,8 @@ public class DuckPPU {
                 ? (((lcdControl & 0x40) != 0) ? 0x9C00 : 0x9800)
                 : (((lcdControl & 0x08) != 0) ? 0x9C00 : 0x9800);
         int tileDataBase = unsignedTileData ? 0x8000 : 0x9000;
-        int xPosition = windowLayer ? (screenX - windowX) : ((screenX + memory.Read(regScx)) & 0xFF);
-        int yPosition = windowLayer ? activeWindowLine : ((scanline + memory.Read(regScy)) & 0xFF);
+        int xPosition = windowLayer ? (screenX - windowX) : ((screenX + memory.ReadRegisterDirect(regScx)) & 0xFF);
+        int yPosition = windowLayer ? activeWindowLine : ((scanline + memory.ReadRegisterDirect(regScy)) & 0xFF);
         int tileRow = yPosition / 8;
         int tileColumn = (xPosition & 0xFF) / 8;
 
@@ -407,17 +407,12 @@ public class DuckPPU {
 
         return cgbMode
                 ? memory.ReadCgbBackgroundPaletteColourRgb(tileAttributes & 0x07, colourIndex)
-                : decodedBackgroundPalette[colourIndex];
+                : ResolveDmgPaletteColour(memory.ReadRegisterDirect(regBgp), activeBackgroundPalette, colourIndex);
     }
 
     private int ResolveSpritePixel(int screenX, int lcdControl, boolean cgbMode) {
         if ((lcdControl & 0x02) == 0) {
             return noSpritePixel;
-        }
-
-        if (!cgbMode) {
-            DecodePalette(memory.Read(regObp0), activeSpritePalette0, decodedSpritePalette0);
-            DecodePalette(memory.Read(regObp1), activeSpritePalette1, decodedSpritePalette1);
         }
 
         boolean use8x16 = (lcdControl & 0x04) != 0;
@@ -481,7 +476,10 @@ public class DuckPPU {
 
         return cgbMode
                 ? memory.ReadCgbObjectPaletteColourRgb(attributes & 0x07, colourIndex)
-                : (((attributes & 0x10) != 0) ? decodedSpritePalette1[colourIndex] : decodedSpritePalette0[colourIndex]);
+                : ResolveDmgPaletteColour(
+                        memory.ReadRegisterDirect((attributes & 0x10) != 0 ? regObp1 : regObp0),
+                        (attributes & 0x10) != 0 ? activeSpritePalette1 : activeSpritePalette0,
+                        colourIndex);
     }
 
     private int LoadSpritesOnScanline(boolean use8x16) {
@@ -508,7 +506,7 @@ public class DuckPPU {
             }
         }
 
-        if ((!memory.IsCgbMode() || memory.Read(DuckAddresses.OPRI) != 0) && visibleSpriteCount > 1) {
+        if ((!memory.IsCgbMode() || memory.ReadRegisterDirect(DuckAddresses.OPRI) != 0) && visibleSpriteCount > 1) {
             SortVisibleSpritesByX(visibleSpriteCount);
         }
         return visibleSpriteCount;
@@ -537,13 +535,7 @@ public class DuckPPU {
         }
     }
 
-    private void DecodePalette(int paletteRegister, int[] paletteColours, int[] targetPalette) {
-        for (int colourIndex = 0; colourIndex < targetPalette.length; colourIndex++) {
-            targetPalette[colourIndex] = PaletteColourRgb(colourIndex, paletteRegister, paletteColours);
-        }
-    }
-
-    private int PaletteColourRgb(int colourIndex, int paletteRegister, int[] paletteColours) {
+    private int ResolveDmgPaletteColour(int paletteRegister, int[] paletteColours, int colourIndex) {
         int shift = colourIndex * 2;
         int colourId = (paletteRegister >> shift) & 0x03;
         return paletteColours[colourId];

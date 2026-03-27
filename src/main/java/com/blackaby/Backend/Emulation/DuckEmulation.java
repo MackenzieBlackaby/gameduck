@@ -42,8 +42,11 @@ import java.util.concurrent.locks.LockSupport;
 public class DuckEmulation implements Runnable, EmulatorRuntime {
 
     private static final double maxTimeAccumulator = 50_000_000.0;
-    private static final int maxCyclesPerRunSlice = 70_224;
-    private static final long minParkNanos = 100_000L;
+    private static final int minCyclesPerRunSlice = 2_048;
+    private static final int maxCyclesPerRunSlice = 17_556;
+    private static final long coarseParkThresholdNanos = 2_000_000L;
+    private static final long fineSpinThresholdNanos = 250_000L;
+    private static final double minRunSliceNanos = minCyclesPerRunSlice * Specifics.nanosecondsPerCycle;
 
     private DuckCPU cpu;
     private DuckMemory memory;
@@ -233,13 +236,8 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
 
             timeAccumulator = Math.min(timeAccumulator, maxTimeAccumulator);
             int availableCycles = (int) (timeAccumulator / Specifics.nanosecondsPerCycle);
-            if (availableCycles <= 0) {
-                long parkNanos = (long) (Specifics.nanosecondsPerCycle - timeAccumulator);
-                if (parkNanos >= minParkNanos) {
-                    LockSupport.parkNanos(parkNanos);
-                } else {
-                    Thread.onSpinWait();
-                }
+            if (availableCycles < minCyclesPerRunSlice) {
+                WaitForRunSlice(timeAccumulator);
                 continue;
             }
 
@@ -262,6 +260,25 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
 
             timeAccumulator -= executedCycles * Specifics.nanosecondsPerCycle;
         }
+    }
+
+    private void WaitForRunSlice(double timeAccumulator) {
+        long remainingNanos = (long) Math.ceil(Math.max(0.0, minRunSliceNanos - timeAccumulator));
+        if (remainingNanos <= 0L) {
+            return;
+        }
+
+        if (remainingNanos > coarseParkThresholdNanos) {
+            LockSupport.parkNanos(remainingNanos - fineSpinThresholdNanos);
+            return;
+        }
+
+        if (remainingNanos > fineSpinThresholdNanos) {
+            Thread.yield();
+            return;
+        }
+
+        Thread.onSpinWait();
     }
 
     /**
@@ -568,13 +585,9 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
     }
 
     private void HandleSerial() {
-        int serialControl = memory.Read(DuckAddresses.SERIAL_CONTROL);
-        int serialData = memory.Read(DuckAddresses.SERIAL_DATA);
-
-        if ((serialControl & 0x81) == 0x81) {
-            DebugLogger.SerialOutput(serialData);
-            memory.Write(DuckAddresses.SERIAL_DATA, 0xFF);
-            memory.Write(DuckAddresses.SERIAL_CONTROL, serialControl & ~0x80);
+        if (memory.IsSerialTransferInProgress()) {
+            DebugLogger.SerialOutput(memory.ReadSerialDataRegister());
+            memory.CompleteSerialTransfer();
             cpu.RequestInterrupt(DuckCPU.Interrupt.SERIAL);
         }
     }
