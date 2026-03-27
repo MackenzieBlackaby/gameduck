@@ -36,6 +36,7 @@ public final class InputRouter implements KeyEventDispatcher {
     private final Set<Integer> consumedShortcutKeyCodes = new HashSet<>();
     private final Set<String> keyboardPressedButtons = new HashSet<>();
     private final Set<String> controllerPressedButtons = new HashSet<>();
+    private final Set<String> polledControllerButtonIds = new HashSet<>();
     private final ScheduledExecutorService controllerPollingExecutor = Executors.newSingleThreadScheduledExecutor(run -> {
         Thread thread = new Thread(run, "gameduck-controller-input");
         thread.setDaemon(true);
@@ -198,11 +199,11 @@ public final class InputRouter implements KeyEventDispatcher {
     }
 
     private Set<String> PollControllerButtonIds() {
-        Set<String> buttonIds = new HashSet<>();
+        polledControllerButtonIds.clear();
         for (EmulatorButton button : controllerInputService.PollBoundButtons()) {
-            buttonIds.add(button.id());
+            polledControllerButtonIds.add(button.id());
         }
-        return buttonIds;
+        return polledControllerButtonIds;
     }
 
     /**

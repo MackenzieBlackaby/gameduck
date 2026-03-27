@@ -93,6 +93,7 @@ public final class ControllerInputService {
     private volatile String initialisationError;
     private boolean nativeLibrariesReady;
     private boolean missingRuntimeReported;
+    private final Map<String, Float> polledComponentValues = new HashMap<>();
     private List<ControllerHandle> controllerHandles = List.of();
     private ControllerHandle activeController;
 
@@ -182,7 +183,7 @@ public final class ControllerInputService {
                 return List.of();
             }
 
-            Map<String, Float> componentValues = PollComponentValues(handle);
+            Map<String, Float> componentValues = PollComponentValues(handle, polledComponentValues);
             List<ControllerBinding> activeInputs = new ArrayList<>();
             for (ComponentHandle component : handle.components()) {
                 Float value = componentValues.get(component.id());
@@ -220,7 +221,7 @@ public final class ControllerInputService {
         }
 
         float deadzone = Settings.controllerDeadzonePercent / 100f;
-        Map<String, Float> componentValues = PollComponentValues(handle);
+        Map<String, Float> componentValues = PollComponentValues(handle, polledComponentValues);
         EnumSet<DuckJoypad.Button> pressedButtons = EnumSet.noneOf(DuckJoypad.Button.class);
         for (DuckJoypad.Button button : DuckJoypad.Button.values()) {
             ControllerBinding binding = Settings.controllerBindings.GetBinding(button);
@@ -572,12 +573,12 @@ public final class ControllerInputService {
         return result instanceof Boolean pollResult && pollResult;
     }
 
-    private Map<String, Float> PollComponentValues(ControllerHandle handle) {
+    private Map<String, Float> PollComponentValues(ControllerHandle handle, Map<String, Float> componentValues) {
+        componentValues.clear();
         if (handle.backend() == ControllerBackend.XINPUT && handle.controller() instanceof XInputDevice xInputDevice) {
-            return PollXInputComponentValues(xInputDevice);
+            return PollXInputComponentValues(xInputDevice, componentValues);
         }
 
-        Map<String, Float> componentValues = new HashMap<>();
         for (ComponentHandle component : handle.components()) {
             Object value = Invoke(component.component(), "getPollData");
             if (value instanceof Float floatValue) {
@@ -587,8 +588,7 @@ public final class ControllerInputService {
         return componentValues;
     }
 
-    private Map<String, Float> PollXInputComponentValues(XInputDevice device) {
-        Map<String, Float> componentValues = new HashMap<>();
+    private Map<String, Float> PollXInputComponentValues(XInputDevice device, Map<String, Float> componentValues) {
         XInputComponents components = device.getComponents();
         XInputButtons buttons = components.getButtons();
         XInputAxes axes = components.getAxes();
