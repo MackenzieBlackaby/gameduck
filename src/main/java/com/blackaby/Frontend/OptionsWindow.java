@@ -16,7 +16,7 @@ import com.blackaby.Misc.AppShortcut;
 import com.blackaby.Misc.AppShortcutBindings;
 import com.blackaby.Misc.AppTheme;
 import com.blackaby.Misc.AppThemeColorRole;
-import com.blackaby.Misc.AppThemePreset;
+import com.blackaby.Misc.AudioEnhancementSetting;
 import com.blackaby.Misc.BootRomManager;
 import com.blackaby.Misc.Config;
 import com.blackaby.Misc.ControllerBinding;
@@ -25,18 +25,72 @@ import com.blackaby.Misc.GameNameBracketDisplayMode;
 import com.blackaby.Misc.Settings;
 import com.blackaby.Misc.UiText;
 
-import javax.swing.*;
+import javax.swing.BorderFactory;
+import javax.swing.Box;
+import javax.swing.BoxLayout;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.DefaultListCellRenderer;
+import javax.swing.DefaultListModel;
+import javax.swing.JButton;
+import javax.swing.JCheckBox;
+import javax.swing.JColorChooser;
+import javax.swing.JComboBox;
+import javax.swing.JComponent;
+import javax.swing.JDialog;
+import javax.swing.JFrame;
+import javax.swing.JLabel;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
+import javax.swing.JSpinner;
+import javax.swing.JTabbedPane;
+import javax.swing.JTextArea;
+import javax.swing.JTextField;
+import javax.swing.KeyStroke;
+import javax.swing.ScrollPaneConstants;
+import javax.swing.Scrollable;
+import javax.swing.SpinnerNumberModel;
+import javax.swing.SwingConstants;
+import javax.swing.SwingUtilities;
+import javax.swing.Timer;
 import javax.swing.border.Border;
-import java.awt.*;
+import javax.swing.event.ListDataEvent;
+import javax.swing.event.ListDataListener;
+import java.awt.BorderLayout;
+import java.awt.BasicStroke;
+import java.awt.Color;
+import java.awt.Component;
+import java.awt.Cursor;
+import java.awt.Desktop;
+import java.awt.Dimension;
+import java.awt.FileDialog;
+import java.awt.FlowLayout;
+import java.awt.Font;
+import java.awt.FontMetrics;
+import java.awt.Graphics;
+import java.awt.Graphics2D;
+import java.awt.GridBagConstraints;
+import java.awt.GridBagLayout;
+import java.awt.GridLayout;
+import java.awt.Insets;
+import java.awt.KeyEventDispatcher;
+import java.awt.KeyboardFocusManager;
+import java.awt.Point;
+import java.awt.Rectangle;
+import java.awt.RenderingHints;
 import java.awt.event.FocusAdapter;
 import java.awt.event.FocusEvent;
-import java.io.File;
-import java.io.IOException;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.geom.Ellipse2D;
+import java.awt.geom.Line2D;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -50,6 +104,7 @@ import java.util.Set;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 /**
  * Hosts the application options window.
@@ -116,8 +171,6 @@ public class OptionsWindow extends DuckWindow {
     private final JPanel[] gbcColorPreviews = new JPanel[12];
     private final JLabel[] gbcColorHexLabels = new JLabel[12];
     private final JPanel[] themeStripPreviews = new JPanel[AppThemeColorRole.values().length];
-    private final JPanel[] themeColorPreviews = new JPanel[AppThemeColorRole.values().length];
-    private final JLabel[] themeColorHexLabels = new JLabel[AppThemeColorRole.values().length];
     private final Map<EmulatorButton, JButton> bindingButtons = new HashMap<>();
     private final Map<EmulatorButton, JButton> controllerBindingButtons = new HashMap<>();
     private final EnumMap<AppShortcut, JButton> shortcutButtons = new EnumMap<>(AppShortcut.class);
@@ -454,24 +507,6 @@ public class OptionsWindow extends DuckWindow {
         return content;
     }
 
-    private JComponent createThemePresetsPanel() {
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setOpaque(false);
-
-        content.add(createThemePreviewBanner());
-        content.add(Box.createVerticalStrut(12));
-
-        JPanel grid = new JPanel(new GridLayout(2, 2, 10, 10));
-        grid.setOpaque(false);
-        for (AppThemePreset preset : AppThemePreset.values()) {
-            grid.add(createThemePresetCard(preset));
-        }
-
-        content.add(grid);
-        return content;
-    }
-
     private JComponent createGbcPalettePanel() {
         JPanel container = new JPanel();
         container.setLayout(new BoxLayout(container, BoxLayout.Y_AXIS));
@@ -755,39 +790,6 @@ public class OptionsWindow extends DuckWindow {
         cell.add(Box.createVerticalStrut(4));
         cell.add(chooseButton);
         return cell;
-    }
-
-    private JComponent createThemeColorsPanel() {
-        JPanel content = new JPanel();
-        content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
-        content.setOpaque(false);
-
-        JPanel grid = new JPanel(new GridLayout(3, 2, 10, 10));
-        grid.setOpaque(false);
-
-        AppTheme currentTheme = Settings.CurrentAppTheme();
-        for (AppThemeColorRole role : AppThemeColorRole.values()) {
-            grid.add(createThemeColorCard(role, currentTheme));
-        }
-
-        content.add(grid);
-        content.add(Box.createVerticalStrut(16));
-
-        JButton resetThemeButton = createSecondaryButton(UiText.OptionsWindow.RESET_THEME_BUTTON);
-        resetThemeButton.addActionListener(event -> {
-            Settings.ResetAppTheme();
-            Config.Save();
-            if (mainWindow != null) {
-                mainWindow.RefreshTheme();
-            }
-            reopenWithCurrentTab();
-        });
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        actions.setOpaque(false);
-        actions.add(resetThemeButton);
-        content.add(actions);
-        return content;
     }
 
     private JComponent createThemeLibraryPanel() {
@@ -1369,120 +1371,6 @@ public class OptionsWindow extends DuckWindow {
         return card;
     }
 
-    private JComponent createThemePresetCard(AppThemePreset preset) {
-        JPanel card = new JPanel(new BorderLayout(0, 10));
-        card.setBackground(Styling.cardTintColour);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
-
-        JLabel title = new JLabel(preset.Label());
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
-        title.setForeground(accentColour);
-
-        JLabel helper = new JLabel("<html><body style='width: 220px'>" + preset.Description() + "</body></html>");
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        JPanel swatches = new JPanel(new GridLayout(1, AppThemeColorRole.values().length, 6, 0));
-        swatches.setOpaque(false);
-        AppTheme theme = preset.Theme();
-        for (AppThemeColorRole role : AppThemeColorRole.values()) {
-            JPanel swatch = new JPanel();
-            swatch.setPreferredSize(new Dimension(28, 28));
-            swatch.setBackground(theme.CoreColour(role));
-            swatch.setBorder(BorderFactory.createLineBorder(new Color(58, 92, 132, 60), 1, true));
-            swatches.add(swatch);
-        }
-
-        JButton applyButton = createSecondaryButton(UiText.OptionsWindow.APPLY_THEME_BUTTON);
-        applyButton.addActionListener(event -> {
-            Settings.ApplyAppTheme(preset.Theme());
-            Config.Save();
-            if (mainWindow != null) {
-                mainWindow.RefreshTheme();
-            }
-            reopenWithCurrentTab();
-        });
-
-        JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
-        header.setOpaque(false);
-        header.add(title);
-        header.add(Box.createVerticalStrut(4));
-        header.add(helper);
-
-        card.add(header, BorderLayout.NORTH);
-        card.add(swatches, BorderLayout.CENTER);
-        card.add(applyButton, BorderLayout.SOUTH);
-        return card;
-    }
-
-    private JComponent createThemeColorCard(AppThemeColorRole role, AppTheme theme) {
-        JPanel card = new JPanel(new BorderLayout(10, 0));
-        card.setBackground(Styling.cardTintColour);
-        card.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
-
-        JLabel title = new JLabel(role.Label());
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
-        title.setForeground(accentColour);
-
-        JLabel helper = new JLabel(role.Description());
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        JPanel preview = new JPanel(new BorderLayout());
-        preview.setPreferredSize(new Dimension(58, 58));
-        preview.setMinimumSize(new Dimension(58, 58));
-        preview.setBackground(theme.CoreColour(role));
-        preview.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(58, 92, 132, 45), 1, true),
-                BorderFactory.createEmptyBorder(6, 6, 6, 6)));
-        themeColorPreviews[role.ordinal()] = preview;
-
-        JLabel hexLabel = new JLabel(theme.CoreHex(role));
-        hexLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 11f));
-        hexLabel.setForeground(accentColour);
-        hexLabel.setOpaque(true);
-        hexLabel.setBackground(new Color(255, 255, 255, 180));
-        hexLabel.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(160, 186, 216), 1, true),
-                BorderFactory.createEmptyBorder(4, 6, 4, 6)));
-        themeColorHexLabels[role.ordinal()] = hexLabel;
-
-        JPanel hexWrap = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        hexWrap.setOpaque(false);
-        hexWrap.add(hexLabel);
-        preview.add(hexWrap, BorderLayout.SOUTH);
-
-        JButton chooseButton = createSecondaryButton(UiText.OptionsWindow.CHOOSE_BUTTON);
-        chooseButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
-        chooseButton.setPreferredSize(new Dimension(92, 34));
-        chooseButton.addActionListener(event -> chooseThemeColor(role));
-
-        JPanel details = new JPanel();
-        details.setLayout(new BoxLayout(details, BoxLayout.Y_AXIS));
-        details.setOpaque(false);
-        details.add(title);
-        details.add(Box.createVerticalStrut(2));
-        details.add(helper);
-
-        JPanel rightColumn = new JPanel();
-        rightColumn.setLayout(new BoxLayout(rightColumn, BoxLayout.Y_AXIS));
-        rightColumn.setOpaque(false);
-        preview.setAlignmentX(Component.CENTER_ALIGNMENT);
-        chooseButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        rightColumn.add(preview);
-        rightColumn.add(Box.createVerticalStrut(8));
-        rightColumn.add(chooseButton);
-
-        card.add(details, BorderLayout.CENTER);
-        card.add(rightColumn, BorderLayout.EAST);
-        return card;
-    }
-
     private JComponent createSoundPanel() {
         JPanel container = new JPanel(new BorderLayout(0, 18));
         container.setOpaque(false);
@@ -1494,9 +1382,9 @@ public class OptionsWindow extends DuckWindow {
         JCheckBox[] channelMuteCheckBoxes = new JCheckBox[4];
         JSlider[] channelVolumeSliders = new JSlider[4];
         JLabel[] channelVolumeLabels = new JLabel[4];
-        DefaultListModel<AudioEnhancementPreset> enhancementChainModel = new DefaultListModel<>();
-        for (AudioEnhancementPreset preset : Settings.CurrentAudioEnhancementChain()) {
-            enhancementChainModel.addElement(preset);
+        DefaultListModel<AudioEnhancementSetting> enhancementChainModel = new DefaultListModel<>();
+        for (AudioEnhancementSetting setting : Settings.CurrentAudioEnhancementChain()) {
+            enhancementChainModel.addElement(setting);
         }
 
         JCheckBox soundEnabledCheckBox = new JCheckBox(UiText.OptionsWindow.SOUND_ENABLED_CHECKBOX,
@@ -1717,61 +1605,54 @@ public class OptionsWindow extends DuckWindow {
         return container;
     }
 
-    private JComponent createAudioEnhancementCard(DefaultListModel<AudioEnhancementPreset> enhancementChainModel,
+    private JComponent createAudioEnhancementCard(DefaultListModel<AudioEnhancementSetting> enhancementChainModel,
             JCheckBox enhancementEnabledCheckBox) {
-        JPanel card = new JPanel(new BorderLayout(0, 14));
-        card.setBackground(Styling.cardTintColour);
+        JPanel card = new JPanel(new BorderLayout(0, 16));
+        card.setBackground(Styling.surfaceColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+                BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel header = new JPanel();
-        header.setLayout(new BoxLayout(header, BoxLayout.Y_AXIS));
+        JPanel header = new JPanel(new BorderLayout(12, 0));
         header.setOpaque(false);
+
+        JPanel headerText = new JPanel();
+        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
+        headerText.setOpaque(false);
 
         JLabel title = new JLabel(UiText.OptionsWindow.AUDIO_ENHANCEMENTS_TITLE);
         title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
         title.setForeground(accentColour);
 
-        JLabel helper = new JLabel(
-                "<html><body style='width: 520px'>" + UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER
-                        + "</body></html>");
+        JLabel helper = new JLabel("<html><body style='width: 520px'>"
+                + UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER
+                + "</body></html>");
         helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
         helper.setForeground(mutedText);
 
-        header.add(title);
-        header.add(Box.createVerticalStrut(4));
-        header.add(helper);
-
-        JPanel topRow = new JPanel(new BorderLayout(8, 0));
-        topRow.setOpaque(false);
-        topRow.add(header, BorderLayout.CENTER);
+        headerText.add(title);
+        headerText.add(Box.createVerticalStrut(4));
+        headerText.add(helper);
 
         JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         toggleWrap.setOpaque(false);
         toggleWrap.add(enhancementEnabledCheckBox);
-        topRow.add(toggleWrap, BorderLayout.EAST);
 
-        JPanel addCard = new JPanel(new BorderLayout(12, 0));
-        addCard.setOpaque(true);
-        addCard.setBackground(new Color(255, 255, 255, 135));
-        addCard.setBorder(BorderFactory.createCompoundBorder(
+        header.add(headerText, BorderLayout.CENTER);
+        header.add(toggleWrap, BorderLayout.EAST);
+
+        JPanel composer = new JPanel(new BorderLayout(10, 0));
+        composer.setOpaque(true);
+        composer.setBackground(Styling.sectionHighlightColour);
+        composer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(12, 12, 12, 12)));
-
-        JPanel addText = new JPanel();
-        addText.setLayout(new BoxLayout(addText, BoxLayout.Y_AXIS));
-        addText.setOpaque(false);
-
-        JLabel addTitle = new JLabel(UiText.OptionsWindow.ADD_PRESET_TITLE);
-        addTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-        addTitle.setForeground(accentColour);
 
         JComboBox<AudioEnhancementPreset> presetSelector = new JComboBox<>(AudioEnhancementPreset.values());
         presetSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
         presetSelector.setBackground(Styling.surfaceColour);
         presetSelector.setForeground(accentColour);
-        presetSelector.setMaximumSize(new Dimension(Integer.MAX_VALUE, 30));
+        presetSelector.setPreferredSize(new Dimension(0, 34));
 
         JLabel presetDescription = new JLabel();
         presetDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
@@ -1779,134 +1660,286 @@ public class OptionsWindow extends DuckWindow {
         updateAudioEnhancementDescription(presetSelector, presetDescription);
         presetSelector.addActionListener(event -> updateAudioEnhancementDescription(presetSelector, presetDescription));
 
-        addText.add(addTitle);
-        addText.add(Box.createVerticalStrut(8));
-        addText.add(presetSelector);
-        addText.add(Box.createVerticalStrut(8));
-        addText.add(presetDescription);
-
         JButton addButton = createSecondaryButton(UiText.OptionsWindow.ADD_TO_CHAIN_BUTTON);
+        addButton.setPreferredSize(new Dimension(116, 34));
         addButton.addActionListener(event -> {
             Object selectedPreset = presetSelector.getSelectedItem();
-            if (!(selectedPreset instanceof AudioEnhancementPreset enhancementPreset)) {
-                return;
-            }
-
-            enhancementChainModel.addElement(enhancementPreset);
-            applyAudioEnhancementModel(enhancementChainModel);
-        });
-
-        JPanel addButtonWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
-        addButtonWrap.setOpaque(false);
-        addButtonWrap.add(addButton);
-
-        addCard.add(addText, BorderLayout.CENTER);
-        addCard.add(addButtonWrap, BorderLayout.EAST);
-
-        JList<AudioEnhancementPreset> chainList = new JList<>(enhancementChainModel);
-        chainList.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
-        chainList.setBackground(Styling.surfaceColour);
-        chainList.setForeground(accentColour);
-        chainList.setSelectionBackground(Styling.listSelectionColour);
-        chainList.setSelectionForeground(accentColour);
-        chainList.setFixedCellHeight(30);
-        chainList.setBorder(BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true));
-        chainList.setCellRenderer(new DefaultListCellRenderer() {
-            @Override
-            public Component getListCellRendererComponent(JList<?> list, Object value, int index,
-                    boolean isSelected, boolean cellHasFocus) {
-                JLabel label = (JLabel) super.getListCellRendererComponent(list, value, index, isSelected,
-                        cellHasFocus);
-                if (value instanceof AudioEnhancementPreset preset) {
-                    label.setText(UiText.OptionsWindow.AudioChainItemLabel(index, preset.Label()));
-                }
-                label.setBorder(BorderFactory.createEmptyBorder(0, 8, 0, 8));
-                return label;
+            if (selectedPreset instanceof AudioEnhancementPreset enhancementPreset) {
+                enhancementChainModel.addElement(AudioEnhancementSetting.Default(enhancementPreset));
+                applyAudioEnhancementModel(enhancementChainModel);
             }
         });
 
-        JScrollPane chainScrollPane = new JScrollPane(chainList);
-        chainScrollPane.setBorder(BorderFactory.createEmptyBorder());
-        chainScrollPane.getViewport().setBackground(Styling.surfaceColour);
-        chainScrollPane.setPreferredSize(new Dimension(0, 128));
+        JPanel composerText = new JPanel();
+        composerText.setLayout(new BoxLayout(composerText, BoxLayout.Y_AXIS));
+        composerText.setOpaque(false);
 
-        JPanel chainControls = new JPanel(new GridLayout(4, 1, 0, 8));
-        chainControls.setOpaque(false);
+        JLabel composerTitle = new JLabel(UiText.OptionsWindow.ADD_PRESET_TITLE);
+        composerTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        composerTitle.setForeground(accentColour);
+        composerText.add(composerTitle);
+        composerText.add(Box.createVerticalStrut(6));
+        composerText.add(presetDescription);
 
-        JButton moveUpButton = createSecondaryButton(UiText.OptionsWindow.MOVE_UP_BUTTON);
-        moveUpButton.addActionListener(event -> moveAudioEnhancement(enhancementChainModel, chainList, -1));
+        JPanel composerControls = new JPanel(new BorderLayout(10, 0));
+        composerControls.setOpaque(false);
+        composerControls.add(presetSelector, BorderLayout.CENTER);
+        composerControls.add(addButton, BorderLayout.EAST);
 
-        JButton moveDownButton = createSecondaryButton(UiText.OptionsWindow.MOVE_DOWN_BUTTON);
-        moveDownButton.addActionListener(event -> moveAudioEnhancement(enhancementChainModel, chainList, 1));
+        composer.add(composerText, BorderLayout.CENTER);
+        composer.add(composerControls, BorderLayout.SOUTH);
 
-        JButton removeButton = createSecondaryButton(UiText.OptionsWindow.REMOVE_BUTTON);
-        removeButton.addActionListener(event -> {
-            int selectedIndex = chainList.getSelectedIndex();
-            if (selectedIndex < 0) {
-                return;
-            }
+        JPanel chainCard = new JPanel(new BorderLayout(0, 10));
+        chainCard.setOpaque(true);
+        chainCard.setBackground(Styling.surfaceColour);
+        chainCard.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
-            enhancementChainModel.remove(selectedIndex);
-            if (!enhancementChainModel.isEmpty()) {
-                chainList.setSelectedIndex(Math.min(selectedIndex, enhancementChainModel.size() - 1));
-            }
-            applyAudioEnhancementModel(enhancementChainModel);
-        });
+        JPanel chainHeader = new JPanel(new BorderLayout(8, 0));
+        chainHeader.setOpaque(false);
 
-        JButton clearButton = createSecondaryButton(UiText.OptionsWindow.CLEAR_CHAIN_BUTTON);
-        clearButton.addActionListener(event -> {
-            if (enhancementChainModel.isEmpty()) {
-                return;
-            }
-
-            enhancementChainModel.clear();
-            applyAudioEnhancementModel(enhancementChainModel);
-        });
-
-        chainControls.add(moveUpButton);
-        chainControls.add(moveDownButton);
-        chainControls.add(removeButton);
-        chainControls.add(clearButton);
-
-        JPanel chainCard = new JPanel(new BorderLayout(12, 0));
-        chainCard.setOpaque(false);
-
-        JPanel chainText = new JPanel();
-        chainText.setLayout(new BoxLayout(chainText, BoxLayout.Y_AXIS));
-        chainText.setOpaque(false);
+        JPanel chainHeaderText = new JPanel();
+        chainHeaderText.setLayout(new BoxLayout(chainHeaderText, BoxLayout.Y_AXIS));
+        chainHeaderText.setOpaque(false);
 
         JLabel chainTitle = new JLabel(UiText.OptionsWindow.ACTIVE_CHAIN_TITLE);
         chainTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
         chainTitle.setForeground(accentColour);
+        chainHeaderText.add(chainTitle);
 
-        JLabel chainHelper = new JLabel(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER);
-        chainHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        chainHelper.setForeground(mutedText);
-
-        chainText.add(chainTitle);
         if (shouldRenderUiText(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER)) {
-            chainText.add(Box.createVerticalStrut(4));
-            chainText.add(chainHelper);
+            JLabel chainHelper = new JLabel(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER);
+            chainHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+            chainHelper.setForeground(mutedText);
+            chainHeaderText.add(Box.createVerticalStrut(4));
+            chainHeaderText.add(chainHelper);
         }
 
-        JPanel chainPanel = new JPanel(new BorderLayout(0, 8));
-        chainPanel.setOpaque(false);
-        chainPanel.add(chainText, BorderLayout.NORTH);
-        chainPanel.add(chainScrollPane, BorderLayout.CENTER);
+        JButton clearButton = createSecondaryButton(UiText.OptionsWindow.CLEAR_CHAIN_BUTTON);
+        clearButton.setPreferredSize(new Dimension(108, 32));
+        clearButton.addActionListener(event -> {
+            if (!enhancementChainModel.isEmpty()) {
+                enhancementChainModel.clear();
+                applyAudioEnhancementModel(enhancementChainModel);
+            }
+        });
 
-        chainCard.add(chainPanel, BorderLayout.CENTER);
-        chainCard.add(chainControls, BorderLayout.EAST);
+        chainHeader.add(chainHeaderText, BorderLayout.CENTER);
+        chainHeader.add(clearButton, BorderLayout.EAST);
 
-        JPanel body = new JPanel();
-        body.setLayout(new BoxLayout(body, BoxLayout.Y_AXIS));
+        JPanel chainStack = new JPanel();
+        chainStack.setLayout(new BoxLayout(chainStack, BoxLayout.Y_AXIS));
+        chainStack.setOpaque(false);
+
+        JScrollPane chainScrollPane = new JScrollPane(chainStack);
+        chainScrollPane.setBorder(BorderFactory.createEmptyBorder());
+        chainScrollPane.getViewport().setBackground(Styling.surfaceColour);
+        chainScrollPane.setPreferredSize(new Dimension(0, 330));
+        chainScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+
+        Runnable rebuildCards = () -> rebuildAudioEnhancementCards(enhancementChainModel, chainStack, chainScrollPane);
+        enhancementChainModel.addListDataListener(new ListDataListener() {
+            @Override
+            public void intervalAdded(ListDataEvent event) {
+                rebuildCards.run();
+            }
+
+            @Override
+            public void intervalRemoved(ListDataEvent event) {
+                rebuildCards.run();
+            }
+
+            @Override
+            public void contentsChanged(ListDataEvent event) {
+                chainStack.repaint();
+            }
+        });
+
+        rebuildCards.run();
+
+        chainCard.add(chainHeader, BorderLayout.NORTH);
+        chainCard.add(chainScrollPane, BorderLayout.CENTER);
+
+        JPanel body = new JPanel(new BorderLayout(0, 14));
         body.setOpaque(false);
-        body.add(addCard);
-        body.add(Box.createVerticalStrut(12));
-        body.add(chainCard);
+        body.add(composer, BorderLayout.NORTH);
+        body.add(chainCard, BorderLayout.CENTER);
 
-        card.add(topRow, BorderLayout.NORTH);
+        card.add(header, BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
         return card;
+    }
+
+    private void rebuildAudioEnhancementCards(DefaultListModel<AudioEnhancementSetting> enhancementChainModel,
+            JPanel chainStack, JScrollPane chainScrollPane) {
+        chainStack.removeAll();
+
+        if (enhancementChainModel.isEmpty()) {
+            JPanel emptyCard = new JPanel(new BorderLayout());
+            emptyCard.setOpaque(true);
+            emptyCard.setBackground(Styling.cardTintColour);
+            emptyCard.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                    BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+
+            JLabel emptyLabel = new JLabel(UiText.OptionsWindow.AUDIO_ENHANCEMENTS_EMPTY_STATE, SwingConstants.CENTER);
+            emptyLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+            emptyLabel.setForeground(mutedText);
+            emptyCard.add(emptyLabel, BorderLayout.CENTER);
+
+            chainStack.add(emptyCard);
+        } else {
+            for (int index = 0; index < enhancementChainModel.size(); index++) {
+                chainStack.add(createAudioEnhancementEffectCard(enhancementChainModel, index, chainStack));
+            }
+        }
+
+        chainStack.revalidate();
+        chainStack.repaint();
+        chainScrollPane.revalidate();
+        chainScrollPane.repaint();
+    }
+
+    private JComponent createAudioEnhancementEffectCard(DefaultListModel<AudioEnhancementSetting> enhancementChainModel,
+            int index, JPanel chainStack) {
+        AudioEnhancementSetting setting = enhancementChainModel.getElementAt(index);
+
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        wrapper.setBorder(BorderFactory.createEmptyBorder(0, 0,
+                index == enhancementChainModel.size() - 1 ? 0 : 10, 0));
+
+        JPanel card = new JPanel(new BorderLayout(0, 14));
+        card.setOpaque(true);
+        card.setBackground(Styling.cardTintColour);
+        card.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+        wrapper.add(card, BorderLayout.CENTER);
+
+        JPanel header = new JPanel(new BorderLayout(10, 0));
+        header.setOpaque(false);
+
+        JLabel dragHandle = new JLabel(":::");
+        dragHandle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
+        dragHandle.setForeground(mutedText);
+        dragHandle.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
+        dragHandle.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 6));
+
+        JPanel textPanel = new JPanel();
+        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
+        textPanel.setOpaque(false);
+
+        JLabel effectTitle = new JLabel(setting.preset().Label());
+        effectTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        effectTitle.setForeground(accentColour);
+        textPanel.add(effectTitle);
+
+        JLabel effectDescription = new JLabel("<html><body style='width: 360px'>"
+                + escapeHtml(setting.preset().Description())
+                + "</body></html>");
+        effectDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        effectDescription.setForeground(mutedText);
+        effectDescription.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        textPanel.add(effectDescription);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        actions.setOpaque(false);
+        actions.add(createBadgeLabel("#" + (index + 1)));
+
+        JButton removeButton = createSecondaryButton("-");
+        removeButton.setToolTipText(UiText.OptionsWindow.REMOVE_BUTTON);
+        removeButton.setPreferredSize(new Dimension(42, 32));
+        removeButton.addActionListener(event -> {
+            if (index >= 0 && index < enhancementChainModel.size()) {
+                enhancementChainModel.remove(index);
+                applyAudioEnhancementModel(enhancementChainModel);
+            }
+        });
+        actions.add(removeButton);
+
+        header.add(dragHandle, BorderLayout.WEST);
+        header.add(textPanel, BorderLayout.CENTER);
+        header.add(actions, BorderLayout.EAST);
+
+        AudioEnhancementPreset.ParameterSpec primaryParameter = setting.preset().PrimaryParameter();
+        AudioEnhancementPreset.ParameterSpec secondaryParameter = setting.preset().SecondaryParameter();
+        int knobCount = 1 + (primaryParameter == null ? 0 : 1) + (secondaryParameter == null ? 0 : 1);
+
+        JPanel knobRow = new JPanel(new GridLayout(1, knobCount, 10, 0));
+        knobRow.setOpaque(false);
+
+        knobRow.add(new AudioKnob(
+                UiText.OptionsWindow.EFFECT_INTENSITY_TITLE,
+                UiText.OptionsWindow.EFFECT_INTENSITY_HELPER,
+                setting.intensityPercent(),
+                (newValue, adjusting) -> updateAudioEnhancementSetting(
+                        enhancementChainModel,
+                        index,
+                        current -> current.WithIntensity(newValue),
+                        !adjusting)));
+
+        if (primaryParameter != null) {
+            knobRow.add(new AudioKnob(
+                    primaryParameter.label(),
+                    primaryParameter.description(),
+                    setting.primaryPercent(),
+                    (newValue, adjusting) -> updateAudioEnhancementSetting(
+                            enhancementChainModel,
+                            index,
+                            current -> current.WithPrimary(newValue),
+                            !adjusting)));
+        }
+
+        if (secondaryParameter != null) {
+            knobRow.add(new AudioKnob(
+                    secondaryParameter.label(),
+                    secondaryParameter.description(),
+                    setting.secondaryPercent(),
+                    (newValue, adjusting) -> updateAudioEnhancementSetting(
+                            enhancementChainModel,
+                            index,
+                            current -> current.WithSecondary(newValue),
+                            !adjusting)));
+        }
+
+        final int sourceIndex = index;
+        MouseAdapter dragListener = new MouseAdapter() {
+            @Override
+            public void mousePressed(MouseEvent event) {
+                dragHandle.setForeground(accentColour);
+            }
+
+            @Override
+            public void mouseReleased(MouseEvent event) {
+                dragHandle.setForeground(mutedText);
+                if (sourceIndex < 0 || sourceIndex >= enhancementChainModel.size()) {
+                    return;
+                }
+
+                Point dropPoint = SwingUtilities.convertPoint(dragHandle, event.getPoint(), chainStack);
+                int insertionIndex = audioEnhancementDropIndex(chainStack, dropPoint.y);
+                if (insertionIndex == sourceIndex || insertionIndex == sourceIndex + 1) {
+                    return;
+                }
+                int targetIndex = insertionIndex > sourceIndex ? insertionIndex - 1 : insertionIndex;
+
+                AudioEnhancementSetting movedSetting = enhancementChainModel.getElementAt(sourceIndex);
+                enhancementChainModel.remove(sourceIndex);
+                if (targetIndex >= enhancementChainModel.size()) {
+                    enhancementChainModel.addElement(movedSetting);
+                } else {
+                    enhancementChainModel.add(targetIndex, movedSetting);
+                }
+                applyAudioEnhancementModel(enhancementChainModel);
+            }
+        };
+        dragHandle.addMouseListener(dragListener);
+
+        card.add(header, BorderLayout.NORTH);
+        card.add(knobRow, BorderLayout.CENTER);
+        return wrapper;
     }
 
     private JComponent createChannelMixerRow(int channelIndex, JCheckBox[] channelMuteCheckBoxes,
@@ -2002,32 +2035,191 @@ public class OptionsWindow extends DuckWindow {
         }
     }
 
-    private void applyAudioEnhancementModel(DefaultListModel<AudioEnhancementPreset> enhancementChainModel) {
-        List<AudioEnhancementPreset> chain = new ArrayList<>();
+    private void applyAudioEnhancementModel(DefaultListModel<AudioEnhancementSetting> enhancementChainModel) {
+        applyAudioEnhancementModel(enhancementChainModel, true);
+    }
+
+    private void applyAudioEnhancementModel(DefaultListModel<AudioEnhancementSetting> enhancementChainModel,
+            boolean persist) {
+        List<AudioEnhancementSetting> chain = new ArrayList<>();
         for (int index = 0; index < enhancementChainModel.size(); index++) {
             chain.add(enhancementChainModel.getElementAt(index));
         }
         Settings.SetAudioEnhancementChain(chain);
-        Config.Save();
+        if (persist) {
+            Config.Save();
+        }
     }
 
-    private void moveAudioEnhancement(DefaultListModel<AudioEnhancementPreset> enhancementChainModel,
-            JList<AudioEnhancementPreset> chainList, int direction) {
-        int selectedIndex = chainList.getSelectedIndex();
-        if (selectedIndex < 0) {
+    private void updateAudioEnhancementSetting(DefaultListModel<AudioEnhancementSetting> enhancementChainModel,
+            int index, UnaryOperator<AudioEnhancementSetting> updater, boolean persist) {
+        if (index < 0 || index >= enhancementChainModel.size()) {
             return;
         }
 
-        int targetIndex = selectedIndex + direction;
-        if (targetIndex < 0 || targetIndex >= enhancementChainModel.size()) {
+        AudioEnhancementSetting currentSetting = enhancementChainModel.getElementAt(index);
+        AudioEnhancementSetting updatedSetting = updater.apply(currentSetting);
+        if (updatedSetting == null || updatedSetting.equals(currentSetting)) {
             return;
         }
 
-        AudioEnhancementPreset selectedPreset = enhancementChainModel.getElementAt(selectedIndex);
-        enhancementChainModel.remove(selectedIndex);
-        enhancementChainModel.add(targetIndex, selectedPreset);
-        chainList.setSelectedIndex(targetIndex);
-        applyAudioEnhancementModel(enhancementChainModel);
+        enhancementChainModel.set(index, updatedSetting);
+        applyAudioEnhancementModel(enhancementChainModel, persist);
+    }
+
+    private int audioEnhancementDropIndex(JPanel chainStack, int y) {
+        int childCount = chainStack.getComponentCount();
+        for (int index = 0; index < childCount; index++) {
+            Rectangle bounds = chainStack.getComponent(index).getBounds();
+            if (y < bounds.y + (bounds.height / 2)) {
+                return index;
+            }
+        }
+        return childCount;
+    }
+
+    @FunctionalInterface
+    private interface AudioKnobListener {
+        void valueChanged(int newValue, boolean adjusting);
+    }
+
+    private static final class AudioKnob extends JComponent {
+        private final String label;
+        private final AudioKnobListener listener;
+        private int value;
+        private boolean dragging;
+        private int dragStartValue;
+        private int dragStartY;
+
+        private AudioKnob(String label, String helperText, int value, AudioKnobListener listener) {
+            this.label = label;
+            this.listener = listener;
+            this.value = clampValue(value);
+            setOpaque(false);
+            setFocusable(false);
+            setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+            setToolTipText(helperText);
+            setPreferredSize(new Dimension(112, 118));
+            setMinimumSize(new Dimension(96, 108));
+
+            MouseAdapter mouseHandler = new MouseAdapter() {
+                @Override
+                public void mousePressed(MouseEvent event) {
+                    dragging = true;
+                    dragStartValue = AudioKnob.this.value;
+                    dragStartY = event.getYOnScreen();
+                }
+
+                @Override
+                public void mouseDragged(MouseEvent event) {
+                    if (!dragging) {
+                        return;
+                    }
+                    int delta = dragStartY - event.getYOnScreen();
+                    setValueInternal(dragStartValue + delta, true);
+                }
+
+                @Override
+                public void mouseReleased(MouseEvent event) {
+                    if (!dragging) {
+                        return;
+                    }
+                    dragging = false;
+                    int delta = dragStartY - event.getYOnScreen();
+                    setValueInternal(dragStartValue + delta, false);
+                }
+            };
+            addMouseListener(mouseHandler);
+            addMouseMotionListener(mouseHandler);
+            addMouseWheelListener(event -> setValueInternal(
+                    AudioKnob.this.value - (int) Math.round(event.getPreciseWheelRotation() * 4.0),
+                    false));
+        }
+
+        @Override
+        protected void paintComponent(Graphics graphics) {
+            super.paintComponent(graphics);
+            Graphics2D graphics2d = (Graphics2D) graphics.create();
+            graphics2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            graphics2d.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+            int width = getWidth();
+            int height = getHeight();
+            int tileX = 4;
+            int tileY = 4;
+            int tileWidth = width - 8;
+            int tileHeight = height - 8;
+
+            graphics2d.setColor(Styling.sectionHighlightColour);
+            graphics2d.fillRoundRect(tileX, tileY, tileWidth, tileHeight, 22, 22);
+            graphics2d.setColor(Styling.sectionHighlightBorderColour);
+            graphics2d.drawRoundRect(tileX, tileY, tileWidth, tileHeight, 22, 22);
+
+            graphics2d.setFont(Styling.menuFont.deriveFont(Font.BOLD, 11f));
+            FontMetrics labelMetrics = graphics2d.getFontMetrics();
+            graphics2d.setColor(Styling.mutedTextColour);
+            int labelWidth = labelMetrics.stringWidth(label);
+            graphics2d.drawString(label, (width - labelWidth) / 2, 20);
+
+            int dialDiameter = Math.min(50, Math.min(tileWidth - 28, tileHeight - 56));
+            int dialX = (width - dialDiameter) / 2;
+            int dialY = 28;
+            int strokeInset = 5;
+
+            graphics2d.setStroke(new BasicStroke(4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            graphics2d.setColor(new Color(
+                    Styling.accentColour.getRed(),
+                    Styling.accentColour.getGreen(),
+                    Styling.accentColour.getBlue(),
+                    48));
+            graphics2d.drawArc(dialX - strokeInset, dialY - strokeInset,
+                    dialDiameter + (strokeInset * 2), dialDiameter + (strokeInset * 2),
+                    225, -270);
+
+            int sweep = (int) Math.round((value / 100.0) * 270.0);
+            graphics2d.setColor(Styling.accentColour);
+            graphics2d.drawArc(dialX - strokeInset, dialY - strokeInset,
+                    dialDiameter + (strokeInset * 2), dialDiameter + (strokeInset * 2),
+                    225, -sweep);
+
+            graphics2d.setColor(Styling.surfaceColour);
+            graphics2d.fill(new Ellipse2D.Double(dialX, dialY, dialDiameter, dialDiameter));
+            graphics2d.setColor(Styling.cardTintBorderColour);
+            graphics2d.draw(new Ellipse2D.Double(dialX, dialY, dialDiameter, dialDiameter));
+
+            double angleRadians = Math.toRadians(225.0 - (270.0 * (value / 100.0)));
+            double centreX = dialX + (dialDiameter / 2.0);
+            double centreY = dialY + (dialDiameter / 2.0);
+            double pointerLength = dialDiameter * 0.28;
+            double pointerEndX = centreX + Math.cos(angleRadians) * pointerLength;
+            double pointerEndY = centreY - Math.sin(angleRadians) * pointerLength;
+
+            graphics2d.setStroke(new BasicStroke(3f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            graphics2d.setColor(Styling.accentColour);
+            graphics2d.draw(new Line2D.Double(centreX, centreY, pointerEndX, pointerEndY));
+            graphics2d.fill(new Ellipse2D.Double(centreX - 3, centreY - 3, 6, 6));
+
+            String valueText = value + "%";
+            graphics2d.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+            FontMetrics valueMetrics = graphics2d.getFontMetrics();
+            graphics2d.drawString(valueText, (width - valueMetrics.stringWidth(valueText)) / 2, height - 18);
+
+            graphics2d.dispose();
+        }
+
+        private void setValueInternal(int newValue, boolean adjusting) {
+            int clampedValue = clampValue(newValue);
+            if (clampedValue == value && adjusting) {
+                return;
+            }
+            value = clampedValue;
+            repaint();
+            listener.valueChanged(value, adjusting);
+        }
+
+        private static int clampValue(int value) {
+            return Math.max(0, Math.min(100, value));
+        }
     }
 
     private JComponent createWindowPanel() {
@@ -3367,12 +3559,6 @@ public class OptionsWindow extends DuckWindow {
             int index = role.ordinal();
             if (themeStripPreviews[index] != null) {
                 themeStripPreviews[index].setBackground(theme.CoreColour(role));
-            }
-            if (themeColorPreviews[index] != null) {
-                themeColorPreviews[index].setBackground(theme.CoreColour(role));
-            }
-            if (themeColorHexLabels[index] != null) {
-                themeColorHexLabels[index].setText(theme.CoreHex(role));
             }
         }
     }

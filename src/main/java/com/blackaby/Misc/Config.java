@@ -6,11 +6,9 @@ import com.blackaby.Backend.Emulation.Peripherals.DuckJoypad;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.List;
 import java.util.Properties;
 
@@ -34,8 +32,6 @@ public final class Config {
     private static final String savedPalettePrefix = "palette.saved.";
     private static final String savedGbcPaletteListKey = "palette.gbc.saved.names";
     private static final String savedGbcPalettePrefix = "palette.gbc.saved.";
-    private static final String savedThemeListKey = "theme.saved.names";
-    private static final String savedThemePrefix = "theme.saved.";
     private static final String inputPrefix = "input.";
     private static final String controllerInputPrefix = "controller.input.";
     private static final String shortcutPrefix = "shortcut.";
@@ -657,37 +653,6 @@ public final class Config {
         properties.setProperty(loadRecentMenuLimitKey, String.valueOf(Settings.loadRecentMenuLimit));
     }
 
-    private static List<String> GetSavedThemeNamesInternal() {
-        String stored = properties.getProperty(savedThemeListKey, "");
-        List<String> names = new ArrayList<>();
-        if (stored.isBlank()) {
-            return names;
-        }
-
-        for (String encodedName : stored.split(",")) {
-            if (!encodedName.isBlank()) {
-                names.add(DecodeName(encodedName));
-            }
-        }
-        return names;
-    }
-
-    private static List<String> EncodeNames(List<String> names) {
-        List<String> encodedNames = new ArrayList<>();
-        for (String name : names) {
-            encodedNames.add(EncodeName(name));
-        }
-        return encodedNames;
-    }
-
-    private static String EncodeName(String name) {
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(name.getBytes(StandardCharsets.UTF_8));
-    }
-
-    private static String DecodeName(String encodedName) {
-        return new String(Base64.getUrlDecoder().decode(encodedName), StandardCharsets.UTF_8);
-    }
-
     private static void EnsureLoaded() {
         if (!loaded) {
             Load();
@@ -737,30 +702,30 @@ public final class Config {
         }
     }
 
-    private static List<AudioEnhancementPreset> ParseAudioEnhancementChain(String storedValue) {
-        List<AudioEnhancementPreset> chain = new ArrayList<>();
+    private static List<AudioEnhancementSetting> ParseAudioEnhancementChain(String storedValue) {
+        List<AudioEnhancementSetting> chain = new ArrayList<>();
         if (storedValue == null || storedValue.isBlank()) {
             return chain;
         }
 
         for (String token : storedValue.split(",")) {
-            AudioEnhancementPreset preset = AudioEnhancementPreset.FromConfigValue(token);
-            if (preset != null) {
-                chain.add(preset);
+            AudioEnhancementSetting setting = AudioEnhancementSetting.FromConfigValue(token);
+            if (setting != null) {
+                chain.add(setting);
             }
         }
         return chain;
     }
 
-    private static String EncodeAudioEnhancementChain(List<AudioEnhancementPreset> chain) {
+    private static String EncodeAudioEnhancementChain(List<AudioEnhancementSetting> chain) {
         if (chain == null || chain.isEmpty()) {
             return "";
         }
 
         List<String> encoded = new ArrayList<>();
-        for (AudioEnhancementPreset preset : chain) {
-            if (preset != null) {
-                encoded.add(preset.name());
+        for (AudioEnhancementSetting setting : chain) {
+            if (setting != null) {
+                encoded.add(setting.ToConfigValue());
             }
         }
         return String.join(",", encoded);

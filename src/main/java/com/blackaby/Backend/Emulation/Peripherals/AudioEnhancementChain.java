@@ -1,6 +1,7 @@
 package com.blackaby.Backend.Emulation.Peripherals;
 
 import com.blackaby.Misc.AudioEnhancementPreset;
+import com.blackaby.Misc.AudioEnhancementSetting;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -43,13 +44,13 @@ public final class AudioEnhancementChain {
      *
      * @param presets active preset order
      */
-    public void SetPresets(List<AudioEnhancementPreset> presets) {
+    public void SetPresets(List<AudioEnhancementSetting> presets) {
         List<Processor> rebuilt = new ArrayList<>();
-        for (AudioEnhancementPreset preset : presets == null ? List.<AudioEnhancementPreset>of() : presets) {
-            if (preset == null) {
+        for (AudioEnhancementSetting setting : presets == null ? List.<AudioEnhancementSetting>of() : presets) {
+            if (setting == null || setting.intensityPercent() <= 0) {
                 continue;
             }
-            rebuilt.addAll(ProcessorsFor(preset));
+            rebuilt.add(ProcessorsFor(setting));
         }
         processors = List.copyOf(rebuilt);
     }
@@ -72,28 +73,80 @@ public final class AudioEnhancementChain {
         return workingFrame;
     }
 
-    private List<Processor> ProcessorsFor(AudioEnhancementPreset preset) {
-        return switch (preset) {
-            case SOFT_LOW_PASS -> List.of(new OnePoleLowPassProcessor(3_600.0, sampleRate));
+    private Processor ProcessorsFor(AudioEnhancementSetting setting) {
+        List<Processor> processorsForPreset = switch (setting.preset()) {
+            case SOFT_LOW_PASS -> List.of(new OnePoleLowPassProcessor(
+                    Interpolate(setting.primaryPercent(), 1_600.0, 5_600.0),
+                    sampleRate));
             case POCKET_SPEAKER -> List.of(
-                    new OnePoleHighPassProcessor(180.0, sampleRate),
-                    new OnePoleLowPassProcessor(2_400.0, sampleRate),
-                    new SoftClipProcessor(1.20));
-            case SOFT_CLIP -> List.of(new SoftClipProcessor(1.55));
-            case STEREO_WIDEN -> List.of(new StereoWidthProcessor(1.20));
-            case ROOM_REVERB -> List.of(new RoomReverbProcessor(sampleRate, 0.26, 0.32, 0.12, 4_200.0));
+                    new OnePoleHighPassProcessor(Interpolate(setting.primaryPercent(), 80.0, 280.0), sampleRate),
+                    new OnePoleLowPassProcessor(Interpolate(setting.primaryPercent(), 3_000.0, 1_800.0), sampleRate),
+                    new SoftClipProcessor(Interpolate(setting.secondaryPercent(), 1.0, 1.4)));
+            case SOFT_CLIP -> List.of(new SoftClipProcessor(Interpolate(setting.primaryPercent(), 1.1, 2.0)));
+            case STEREO_WIDEN -> List.of(new StereoWidthProcessor(Interpolate(setting.primaryPercent(), 0.8, 1.6)));
+            case ROOM_REVERB -> List.of(new RoomReverbProcessor(
+                    sampleRate,
+                    Interpolate(setting.primaryPercent(), 0.14, 0.38),
+                    Interpolate(setting.primaryPercent(), 0.20, 0.44),
+                    0.12,
+                    Interpolate(setting.secondaryPercent(), 2_400.0, 6_000.0)));
             case SHIMMER_CHORUS -> List.of(
-                    new ChorusProcessor(sampleRate, 11.0, 5.0, 0.32, 0.10, 0.27),
-                    new StereoWidthProcessor(1.12));
+                    new ChorusProcessor(
+                            sampleRate,
+                            11.0,
+                            Interpolate(setting.primaryPercent(), 2.0, 8.0),
+                            Interpolate(setting.primaryPercent(), 0.20, 0.44),
+                            0.10,
+                            Interpolate(setting.secondaryPercent(), 0.12, 0.42)),
+                    new StereoWidthProcessor(Interpolate(setting.secondaryPercent(), 1.0, 1.24)));
             case DUB_ECHO -> List.of(
-                    new PingPongDelayProcessor(sampleRate, 0.245, 0.38, 0.44, 2_600.0),
+                    new PingPongDelayProcessor(
+                            sampleRate,
+                            Interpolate(setting.secondaryPercent(), 0.16, 0.33),
+                            Interpolate(setting.primaryPercent(), 0.22, 0.54),
+                            Interpolate(setting.primaryPercent(), 0.28, 0.60),
+                            Interpolate(setting.secondaryPercent(), 1_600.0, 3_600.0)),
                     new OnePoleLowPassProcessor(5_200.0, sampleRate));
             case UNDERWATER -> List.of(
-                    new OnePoleLowPassProcessor(920.0, sampleRate),
-                    new ChorusProcessor(sampleRate, 14.0, 6.0, 0.38, 0.08, 0.18),
-                    new StereoWidthProcessor(0.88),
-                    new SoftClipProcessor(1.10));
+                    new OnePoleLowPassProcessor(Interpolate(setting.primaryPercent(), 500.0, 1_340.0), sampleRate),
+                    new ChorusProcessor(
+                            sampleRate,
+                            Interpolate(setting.secondaryPercent(), 10.0, 18.0),
+                            Interpolate(setting.secondaryPercent(), 3.0, 9.0),
+                            Interpolate(setting.secondaryPercent(), 0.26, 0.50),
+                            Interpolate(setting.secondaryPercent(), 0.02, 0.14),
+                            Interpolate(setting.secondaryPercent(), 0.08, 0.28)),
+                    new StereoWidthProcessor(Interpolate(setting.secondaryPercent(), 1.0, 0.76)),
+                    new SoftClipProcessor(Interpolate(setting.primaryPercent(), 0.9, 1.3)));
         };
+        return new IntensityProcessor(processorsForPreset, setting.intensityPercent() / 100.0);
+    }
+
+    private static double Interpolate(int percent, double minimum, double maximum) {
+        return minimum + ((maximum - minimum) * (Math.max(0, Math.min(100, percent)) / 100.0));
+    }
+
+    private static final class IntensityProcessor implements Processor {
+        private final List<Processor> processors;
+        private final double mix;
+
+        private IntensityProcessor(List<Processor> processors, double mix) {
+            this.processors = processors;
+            this.mix = Math.max(0.0, Math.min(1.0, mix));
+        }
+
+        @Override
+        public void Process(StereoFrame frame) {
+            double dryLeft = frame.left;
+            double dryRight = frame.right;
+
+            for (Processor processor : processors) {
+                processor.Process(frame);
+            }
+
+            frame.left = dryLeft + ((frame.left - dryLeft) * mix);
+            frame.right = dryRight + ((frame.right - dryRight) * mix);
+        }
     }
 
     private static final class OnePoleLowPassProcessor implements Processor {

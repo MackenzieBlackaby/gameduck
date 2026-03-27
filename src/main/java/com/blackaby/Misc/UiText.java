@@ -737,10 +737,6 @@ public final class UiText {
         public static final String SECTION_LIBRARY_DESCRIPTION = "Control displayed game names and how much recent-play history appears in the Game menu";
         public static final String SECTION_THEME_LIBRARY_TITLE = "Theme Library";
         public static final String SECTION_THEME_LIBRARY_DESCRIPTION = "Save the active theme, browse saved JSON themes, or restore the bundled defaults";
-        public static final String SECTION_THEME_PRESETS_TITLE = "Theme Presets";
-        public static final String SECTION_THEME_PRESETS_DESCRIPTION = "Built-in palette presets";
-        public static final String SECTION_THEME_COLORS_TITLE = "Theme Colors";
-        public static final String SECTION_THEME_COLORS_DESCRIPTION = "Click each colour to customise";
 
         // -----------------------------------------------------------------
         // Palette tab: DMG palette editor.
@@ -784,9 +780,6 @@ public final class UiText {
         public static final String SAVE_CURRENT_THEME_HELPER = "Save the active window theme or reopen a saved JSON theme";
         public static final String SAVE_THEME_BUTTON = "Save Theme";
         public static final String RESET_THEME_BUTTON = "Reset Theme";
-        public static final String CHOOSE_COLOR_BUTTON = "Choose Color";
-        public static final String APPLY_THEME_BUTTON = "Apply Theme";
-        public static final String CHOOSE_BUTTON = "Choose";
 
         // -----------------------------------------------------------------
         // Controls tab: player inputs and app shortcut rebinding.
@@ -866,17 +859,21 @@ public final class UiText {
         // Sound tab: enhancement chain builder.
         // -----------------------------------------------------------------
         public static final String AUDIO_ENHANCEMENTS_TITLE = "Audio Enhancements";
-        public static final String AUDIO_ENHANCEMENTS_HELPER = "Apply stackable audio enhancements. The FX chain is read from top to bottom";
+        public static final String AUDIO_ENHANCEMENTS_HELPER = "Apply stackable audio enhancements. Drag cards to reorder the chain and turn the knobs to shape each effect";
         public static final String AUDIO_ENHANCEMENTS_ENABLED_CHECKBOX = "Enable Effects Chain";
         public static final String ADD_PRESET_TITLE = "Add Effect";
         public static final String ACTIVE_CHAIN_TITLE = "Active Chain";
-        public static final String ACTIVE_CHAIN_HELPER = "";
+        public static final String ACTIVE_CHAIN_HELPER = "Drag by the handle, remove with -, and use the knobs for blend and tone";
+        public static final String EFFECT_INTENSITY_TITLE = "Blend";
+        public static final String EFFECT_INTENSITY_HELPER = "Blend the selected effect from subtle to full strength";
+        public static final String EFFECT_INTENSITY_NONE = "Add an effect to adjust its blend";
         public static final String PRESET_DESCRIPTION_PLACEHOLDER = "Effect description will show here";
         public static final String ADD_TO_CHAIN_BUTTON = "Add to Chain";
         public static final String MOVE_UP_BUTTON = "Move Up";
         public static final String MOVE_DOWN_BUTTON = "Move Down";
         public static final String REMOVE_BUTTON = "Remove";
         public static final String CLEAR_CHAIN_BUTTON = "Clear Chain";
+        public static final String AUDIO_ENHANCEMENTS_EMPTY_STATE = "Add an effect to start building a chain";
 
         // -----------------------------------------------------------------
         // Window tab: main window layout and library naming controls.
@@ -1111,6 +1108,10 @@ public final class UiText {
         // -----------------------------------------------------------------
         public static String AudioChainItemLabel(int index, String presetLabel) {
             return (index + 1) + ". " + presetLabel;
+        }
+
+        public static String AudioChainItemLabel(int index, String presetLabel, int intensityPercent) {
+            return (index + 1) + ". " + presetLabel + " (" + intensityPercent + "%)";
         }
 
         public static String ChannelVolumeLabel(int volume) {

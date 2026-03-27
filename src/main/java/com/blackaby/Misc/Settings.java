@@ -115,7 +115,7 @@ public final class Settings {
     public static int[] channelVolume = new int[] { 100, 100, 100, 100 };
 
     /** Ordered host-side enhancement chain applied after APU mixing. */
-    public static volatile List<AudioEnhancementPreset> audioEnhancementChain = List.of();
+    public static volatile List<AudioEnhancementSetting> audioEnhancementChain = List.of();
 
     /** Whether the host-side enhancement chain should be applied to audio output. */
     public static boolean audioEnhancementChainEnabled = true;
@@ -331,7 +331,7 @@ public final class Settings {
      *
      * @return immutable enhancement chain
      */
-    public static List<AudioEnhancementPreset> CurrentAudioEnhancementChain() {
+    public static List<AudioEnhancementSetting> CurrentAudioEnhancementChain() {
         return audioEnhancementChain;
     }
 
@@ -358,7 +358,7 @@ public final class Settings {
      *
      * @param chain new enhancement order
      */
-    public static void SetAudioEnhancementChain(List<AudioEnhancementPreset> chain) {
+    public static void SetAudioEnhancementChain(List<AudioEnhancementSetting> chain) {
         SetAudioEnhancementChainInternal(chain, true);
     }
 
@@ -512,7 +512,7 @@ public final class Settings {
         }
     }
 
-    private static void SetAudioEnhancementChainInternal(List<AudioEnhancementPreset> chain, boolean syncLegacyFields) {
+    private static void SetAudioEnhancementChainInternal(List<AudioEnhancementSetting> chain, boolean syncLegacyFields) {
         audioEnhancementChain = chain == null ? List.of() : List.copyOf(chain);
         audioEnhancementChainVersion++;
         if (syncLegacyFields) {
