@@ -230,17 +230,17 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent buildHeader() {
-        JPanel header = new JPanel(new BorderLayout(0, 8));
+        JPanel header = new JPanel(new BorderLayout(0, 6));
         header.setBackground(panelBackground);
-        header.setBorder(BorderFactory.createEmptyBorder(24, 28, 12, 28));
+        header.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(58, 92, 132, 24)),
+                BorderFactory.createEmptyBorder(20, 22, 12, 22)));
 
         JLabel titleLabel = new JLabel(UiText.OptionsWindow.HEADER_TITLE);
         titleLabel.setFont(Styling.titleFont);
         titleLabel.setForeground(accentColour);
 
-        JLabel subtitleLabel = new JLabel(UiText.OptionsWindow.HEADER_SUBTITLE);
-        subtitleLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 14f));
-        subtitleLabel.setForeground(mutedText);
+        JTextArea subtitleLabel = createBodyTextArea(UiText.OptionsWindow.HEADER_SUBTITLE, 13f);
 
         header.add(titleLabel, BorderLayout.NORTH);
         header.add(subtitleLabel, BorderLayout.CENTER);
@@ -271,10 +271,12 @@ public class OptionsWindow extends DuckWindow {
             if (isControlsTabSelected()) {
                 refreshControllerStatus();
             }
+            resetSelectedTabScrollPosition();
         });
         if (initialTabIndex >= 0 && initialTabIndex < tabs.getTabCount()) {
             tabs.setSelectedIndex(initialTabIndex);
         }
+        SwingUtilities.invokeLater(() -> SwingUtilities.invokeLater(this::resetSelectedTabScrollPosition));
         return tabs;
     }
 
@@ -285,6 +287,22 @@ public class OptionsWindow extends DuckWindow {
         scrollPane.getVerticalScrollBar().setUnitIncrement(16);
         scrollPane.getViewport().setBackground(panelBackground);
         return scrollPane;
+    }
+
+    private void resetSelectedTabScrollPosition() {
+        if (tabs == null) {
+            return;
+        }
+
+        Component selectedComponent = tabs.getSelectedComponent();
+        if (!(selectedComponent instanceof JScrollPane scrollPane)) {
+            return;
+        }
+
+        SwingUtilities.invokeLater(() -> {
+            scrollPane.getViewport().setViewPosition(new Point(0, 0));
+            scrollPane.getVerticalScrollBar().setValue(0);
+        });
     }
 
     private JComponent buildPaletteTab() {
@@ -375,35 +393,81 @@ public class OptionsWindow extends DuckWindow {
         JPanel content = new VerticalScrollPanel();
         content.setLayout(new BoxLayout(content, BoxLayout.Y_AXIS));
         content.setBackground(panelBackground);
-        content.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        content.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
         return content;
     }
 
     private JPanel createSectionCard(String title, String description, JComponent body) {
-        JPanel card = new JPanel(new BorderLayout(0, 18));
+        JPanel card = new JPanel(new BorderLayout(0, 14));
         card.setBackground(cardBackground);
         card.setBorder(createCardBorder());
         card.setAlignmentX(Component.LEFT_ALIGNMENT);
         card.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
 
-        JPanel header = new JPanel(new BorderLayout(0, 6));
-        header.setOpaque(false);
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 22f));
-        titleLabel.setForeground(accentColour);
-
-        header.add(titleLabel, BorderLayout.NORTH);
-        if (shouldRenderUiText(description)) {
-            JLabel descriptionLabel = new JLabel(description);
-            descriptionLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-            descriptionLabel.setForeground(mutedText);
-            header.add(descriptionLabel, BorderLayout.CENTER);
-        }
+        JPanel header = createInfoTextBlock(title, description, 20f);
+        header.setBorder(BorderFactory.createEmptyBorder(0, 0, 2, 0));
 
         card.add(header, BorderLayout.NORTH);
         card.add(body, BorderLayout.CENTER);
         return card;
+    }
+
+    private JTextArea createBodyTextArea(String text, float fontSize) {
+        JTextArea area = createWrappingTextArea(text == null ? "" : text);
+        area.setFont(Styling.menuFont.deriveFont(Font.PLAIN, fontSize));
+        area.setForeground(mutedText);
+        area.setAlignmentX(Component.LEFT_ALIGNMENT);
+        return area;
+    }
+
+    private JPanel createInfoTextBlock(String titleText, String helperText, float titleFontSize) {
+        JPanel textBlock = new JPanel();
+        textBlock.setLayout(new BoxLayout(textBlock, BoxLayout.Y_AXIS));
+        textBlock.setOpaque(false);
+
+        JLabel titleLabel = new JLabel(titleText);
+        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, titleFontSize));
+        titleLabel.setForeground(accentColour);
+        titleLabel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        textBlock.add(titleLabel);
+
+        if (shouldRenderUiText(helperText)) {
+            textBlock.add(Box.createVerticalStrut(4));
+            textBlock.add(createBodyTextArea(helperText, 12f));
+        }
+
+        return textBlock;
+    }
+
+    private JPanel createResponsiveGroup(int minTileWidth, int maxColumns, JComponent... components) {
+        JPanel panel = new ResponsiveTileGridPanel(minTileWidth, maxColumns);
+        panel.setOpaque(false);
+        panel.setAlignmentX(Component.LEFT_ALIGNMENT);
+        panel.setMaximumSize(new Dimension(Integer.MAX_VALUE, Integer.MAX_VALUE));
+        for (JComponent component : components) {
+            if (component == null) {
+                continue;
+            }
+            panel.add(component);
+        }
+        return panel;
+    }
+
+    private JPanel createFillStackPanel() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setOpaque(false);
+        return panel;
+    }
+
+    private void addFillStackRow(JPanel panel, JComponent component, int row, int topInset) {
+        GridBagConstraints constraints = new GridBagConstraints();
+        constraints.gridx = 0;
+        constraints.gridy = row;
+        constraints.weightx = 1.0;
+        constraints.fill = GridBagConstraints.HORIZONTAL;
+        constraints.anchor = GridBagConstraints.NORTHWEST;
+        constraints.insets = new Insets(topInset, 0, 0, 0);
+        panel.add(component, constraints);
     }
 
     private JComponent createPaletteLibraryPanel() {
@@ -431,20 +495,16 @@ public class OptionsWindow extends DuckWindow {
                 dmgPaletteModeSelector));
         content.add(Box.createVerticalStrut(12));
 
-        JPanel actionCard = new JPanel(new BorderLayout(14, 0));
-        actionCard.setOpaque(false);
+        JPanel actionCard = new JPanel(new BorderLayout());
+        actionCard.setBackground(Styling.cardTintColour);
         actionCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
 
-        JPanel textColumn = new JPanel();
-        textColumn.setLayout(new BoxLayout(textColumn, BoxLayout.Y_AXIS));
-        textColumn.setOpaque(false);
-
-        JLabel paletteLabel = createFieldLabel(UiText.OptionsWindow.SAVE_CURRENT_PALETTE);
-        JLabel helperLabel = new JLabel(UiText.OptionsWindow.SAVE_CURRENT_PALETTE_HELPER);
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
+        JPanel textColumn = createInfoTextBlock(
+                UiText.OptionsWindow.SAVE_CURRENT_PALETTE,
+                UiText.OptionsWindow.SAVE_CURRENT_PALETTE_HELPER,
+                13f);
 
         JTextField paletteNameField = new JTextField();
         paletteNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
@@ -454,18 +514,8 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(cardBorder, 1, true),
                 BorderFactory.createEmptyBorder(8, 12, 8, 12)));
 
-        textColumn.add(paletteLabel);
-        if (shouldRenderUiText(UiText.OptionsWindow.SAVE_CURRENT_PALETTE_HELPER)) {
-            textColumn.add(Box.createVerticalStrut(4));
-            textColumn.add(helperLabel);
-            textColumn.add(Box.createVerticalStrut(8));
-        } else {
-            textColumn.add(Box.createVerticalStrut(8));
-        }
+        textColumn.add(Box.createVerticalStrut(8));
         textColumn.add(paletteNameField);
-
-        JPanel buttonColumn = new JPanel(new GridLayout(1, 2, 8, 0));
-        buttonColumn.setOpaque(false);
 
         JButton savePaletteButton = createPrimaryButton(UiText.OptionsWindow.SAVE_PALETTE_BUTTON);
         savePaletteButton.addActionListener(event -> {
@@ -484,11 +534,8 @@ public class OptionsWindow extends DuckWindow {
         JButton loadPaletteButton = createSecondaryButton(UiText.OptionsWindow.BROWSE_BUTTON);
         loadPaletteButton.addActionListener(event -> new PaletteManager(this::refreshPaletteDetails));
 
-        buttonColumn.add(savePaletteButton);
-        buttonColumn.add(loadPaletteButton);
-
-        actionCard.add(textColumn, BorderLayout.CENTER);
-        actionCard.add(buttonColumn, BorderLayout.EAST);
+        JPanel buttonColumn = createResponsiveGroup(120, 2, savePaletteButton, loadPaletteButton);
+        actionCard.add(createResponsiveGroup(280, 2, textColumn, buttonColumn), BorderLayout.CENTER);
 
         content.add(actionCard);
         content.add(Box.createVerticalStrut(12));
@@ -533,9 +580,7 @@ public class OptionsWindow extends DuckWindow {
                 gbcCompatiblePaletteModeSelector));
         toggleStack.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel paletteGrid = new JPanel(new GridLayout(1, 3, 10, 0));
-        paletteGrid.setOpaque(false);
-        paletteGrid.setAlignmentX(Component.LEFT_ALIGNMENT);
+        JPanel paletteGrid = createResponsiveGroup(220, 3);
         paletteGrid.add(createGbcPaletteRow(0, UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_TITLE,
                 UiText.OptionsWindow.GBC_BACKGROUND_PALETTE_HELPER,
                 Settings.CurrentGbcBackgroundPalette()));
@@ -546,21 +591,17 @@ public class OptionsWindow extends DuckWindow {
                 UiText.OptionsWindow.GBC_SPRITE1_PALETTE_HELPER,
                 Settings.CurrentGbcSpritePalette1()));
 
-        JPanel actionCard = new JPanel(new BorderLayout(14, 0));
-        actionCard.setOpaque(false);
+        JPanel actionCard = new JPanel(new BorderLayout());
+        actionCard.setBackground(Styling.cardTintColour);
         actionCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
         actionCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel textColumn = new JPanel();
-        textColumn.setLayout(new BoxLayout(textColumn, BoxLayout.Y_AXIS));
-        textColumn.setOpaque(false);
-
-        JLabel paletteLabel = createFieldLabel(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE);
-        JLabel helperLabel = new JLabel(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE_HELPER);
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
+        JPanel textColumn = createInfoTextBlock(
+                UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE,
+                UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE_HELPER,
+                13f);
 
         JTextField paletteNameField = new JTextField();
         paletteNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
@@ -570,18 +611,8 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(cardBorder, 1, true),
                 BorderFactory.createEmptyBorder(8, 12, 8, 12)));
 
-        textColumn.add(paletteLabel);
-        if (shouldRenderUiText(UiText.OptionsWindow.SAVE_CURRENT_GBC_PALETTE_HELPER)) {
-            textColumn.add(Box.createVerticalStrut(4));
-            textColumn.add(helperLabel);
-            textColumn.add(Box.createVerticalStrut(8));
-        } else {
-            textColumn.add(Box.createVerticalStrut(8));
-        }
+        textColumn.add(Box.createVerticalStrut(8));
         textColumn.add(paletteNameField);
-
-        JPanel buttonColumn = new JPanel(new GridLayout(1, 2, 8, 0));
-        buttonColumn.setOpaque(false);
 
         JButton savePaletteButton = createPrimaryButton(UiText.OptionsWindow.SAVE_PALETTE_BUTTON);
         savePaletteButton.addActionListener(event -> {
@@ -601,11 +632,8 @@ public class OptionsWindow extends DuckWindow {
         loadPaletteButton.addActionListener(
                 event -> new PaletteManager(PaletteManager.PaletteKind.GBC, this::refreshPaletteDetails));
 
-        buttonColumn.add(savePaletteButton);
-        buttonColumn.add(loadPaletteButton);
-
-        actionCard.add(textColumn, BorderLayout.CENTER);
-        actionCard.add(buttonColumn, BorderLayout.EAST);
+        JPanel buttonColumn = createResponsiveGroup(120, 2, savePaletteButton, loadPaletteButton);
+        actionCard.add(createResponsiveGroup(280, 2, textColumn, buttonColumn), BorderLayout.CENTER);
 
         JButton resetGbcPaletteButton = createSecondaryButton(UiText.OptionsWindow.RESET_GBC_SETTINGS_BUTTON);
         resetGbcPaletteButton.addActionListener(event -> {
@@ -638,40 +666,23 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createPaletteModeSelectorCard(String titleText, String helperText, JComboBox<?> selector) {
-        JPanel toggleCard = new JPanel(new BorderLayout(14, 0));
+        JPanel toggleCard = new JPanel(new BorderLayout());
         toggleCard.setBackground(Styling.sectionHighlightColour);
         toggleCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(14, 14, 14, 14)));
 
-        JPanel toggleText = new JPanel();
-        toggleText.setLayout(new BoxLayout(toggleText, BoxLayout.Y_AXIS));
-        toggleText.setOpaque(false);
-
-        JLabel toggleTitle = new JLabel(titleText);
-        toggleTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        toggleTitle.setForeground(accentColour);
-        toggleTitle.setHorizontalAlignment(SwingConstants.LEFT);
-        toggleTitle.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JTextArea toggleHelper = createWrappingTextArea(helperText);
-        toggleHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        toggleHelper.setForeground(mutedText);
-        toggleHelper.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        toggleText.add(toggleTitle);
-        toggleText.add(Box.createVerticalStrut(6));
-        toggleText.add(toggleHelper);
+        JPanel toggleText = createInfoTextBlock(titleText, helperText, 16f);
 
         JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         toggleWrap.setOpaque(false);
         selector.setPreferredSize(new Dimension(220, 34));
+        selector.setMaximumSize(new Dimension(Integer.MAX_VALUE, 34));
         selector.setBackground(Color.WHITE);
         selector.setForeground(accentColour);
         toggleWrap.add(selector);
 
-        toggleCard.add(toggleText, BorderLayout.CENTER);
-        toggleCard.add(toggleWrap, BorderLayout.EAST);
+        toggleCard.add(createResponsiveGroup(260, 2, toggleText, toggleWrap), BorderLayout.CENTER);
         return toggleCard;
     }
 
@@ -716,11 +727,8 @@ public class OptionsWindow extends DuckWindow {
 
         text.add(title);
         if (shouldRenderUiText(helperText)) {
-            JLabel helper = new JLabel(helperText);
-            helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-            helper.setForeground(mutedText);
             text.add(Box.createVerticalStrut(3));
-            text.add(helper);
+            text.add(createBodyTextArea(helperText, 12f));
         }
 
         JPanel swatchGrid = new JPanel(new GridLayout(2, 2, 8, 8));
@@ -802,21 +810,17 @@ public class OptionsWindow extends DuckWindow {
         content.add(previewBanner);
         content.add(Box.createVerticalStrut(12));
 
-        JPanel actionCard = new JPanel(new BorderLayout(14, 0));
-        actionCard.setOpaque(false);
+        JPanel actionCard = new JPanel(new BorderLayout());
+        actionCard.setBackground(Styling.cardTintColour);
         actionCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 14, 12, 14)));
+                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
         actionCard.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JPanel textColumn = new JPanel();
-        textColumn.setLayout(new BoxLayout(textColumn, BoxLayout.Y_AXIS));
-        textColumn.setOpaque(false);
-
-        JLabel themeLabel = createFieldLabel(UiText.OptionsWindow.SAVE_CURRENT_THEME);
-        JLabel helperLabel = new JLabel(UiText.OptionsWindow.SAVE_CURRENT_THEME_HELPER);
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
+        JPanel textColumn = createInfoTextBlock(
+                UiText.OptionsWindow.SAVE_CURRENT_THEME,
+                UiText.OptionsWindow.SAVE_CURRENT_THEME_HELPER,
+                13f);
 
         JTextField themeNameField = new JTextField();
         themeNameField.setMaximumSize(new Dimension(Integer.MAX_VALUE, 38));
@@ -826,14 +830,8 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(cardBorder, 1, true),
                 BorderFactory.createEmptyBorder(8, 12, 8, 12)));
 
-        textColumn.add(themeLabel);
         textColumn.add(Box.createVerticalStrut(4));
-        textColumn.add(helperLabel);
-        textColumn.add(Box.createVerticalStrut(8));
         textColumn.add(themeNameField);
-
-        JPanel buttonColumn = new JPanel(new GridLayout(1, 2, 8, 0));
-        buttonColumn.setOpaque(false);
 
         JButton saveThemeButton = createPrimaryButton(UiText.OptionsWindow.SAVE_THEME_BUTTON);
         saveThemeButton.addActionListener(event -> {
@@ -863,11 +861,8 @@ public class OptionsWindow extends DuckWindow {
             reopenWithCurrentTab();
         }));
 
-        buttonColumn.add(saveThemeButton);
-        buttonColumn.add(browseThemesButton);
-
-        actionCard.add(textColumn, BorderLayout.CENTER);
-        actionCard.add(buttonColumn, BorderLayout.EAST);
+        JPanel buttonColumn = createResponsiveGroup(120, 2, saveThemeButton, browseThemesButton);
+        actionCard.add(createResponsiveGroup(280, 2, textColumn, buttonColumn), BorderLayout.CENTER);
 
         content.add(actionCard);
         content.add(Box.createVerticalStrut(12));
@@ -914,29 +909,16 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createInputMapperLauncherCard() {
-        JPanel card = new JPanel(new BorderLayout(16, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.sectionHighlightColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(18, 18, 18, 18)));
+                BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel textBlock = new JPanel();
-        textBlock.setOpaque(false);
-        textBlock.setLayout(new BoxLayout(textBlock, BoxLayout.Y_AXIS));
-
-        JLabel titleLabel = new JLabel(UiText.OptionsWindow.INPUT_MAPPER_LAUNCH_TITLE);
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 18f));
-        titleLabel.setForeground(accentColour);
-
-        JLabel descriptionLabel = new JLabel("<html><body style='width: 460px'>"
-                + WindowUiSupport.escapeHtml(UiText.OptionsWindow.INPUT_MAPPER_LAUNCH_DESCRIPTION)
-                + "</body></html>");
-        descriptionLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        descriptionLabel.setForeground(mutedText);
-
-        textBlock.add(titleLabel);
-        textBlock.add(Box.createVerticalStrut(6));
-        textBlock.add(descriptionLabel);
+        JPanel textBlock = createInfoTextBlock(
+                UiText.OptionsWindow.INPUT_MAPPER_LAUNCH_TITLE,
+                UiText.OptionsWindow.INPUT_MAPPER_LAUNCH_DESCRIPTION,
+                18f);
 
         JPanel actionColumn = new JPanel();
         actionColumn.setOpaque(false);
@@ -953,8 +935,7 @@ public class OptionsWindow extends DuckWindow {
         actionColumn.add(Box.createVerticalStrut(10));
         actionColumn.add(openMapperButton);
 
-        card.add(textBlock, BorderLayout.CENTER);
-        card.add(actionColumn, BorderLayout.EAST);
+        card.add(createResponsiveGroup(280, 2, textBlock, actionColumn), BorderLayout.CENTER);
         return card;
     }
 
@@ -985,10 +966,7 @@ public class OptionsWindow extends DuckWindow {
             refreshControllerStatus();
         });
 
-        JPanel topRow = new JPanel(new BorderLayout());
-        topRow.setOpaque(false);
-        topRow.add(controllerEnabledCheckBox, BorderLayout.WEST);
-        topRow.add(refreshControllerButton, BorderLayout.EAST);
+        JPanel topRow = createResponsiveGroup(220, 2, controllerEnabledCheckBox, refreshControllerButton);
 
         controllerSelector = new JComboBox<>();
         controllerSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
@@ -1028,8 +1006,7 @@ public class OptionsWindow extends DuckWindow {
         });
         controllerDeadzoneValueLabel = createValueLabel(UiText.OptionsWindow.PercentValue(Settings.controllerDeadzonePercent));
 
-        JPanel grid = new JPanel(new GridLayout(0, 2, 12, 12));
-        grid.setOpaque(false);
+        JPanel grid = createResponsiveGroup(240, 2);
         grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_SELECTION_LABEL, controllerSelector));
         grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_ACTIVE_LABEL, controllerActiveValueLabel));
         grid.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_DEADZONE_LABEL, wrapControllerDeadzoneControls()));
@@ -1041,7 +1018,7 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createControllerLiveTesterCard() {
-        JPanel card = new JPanel(new GridLayout(1, 2, 12, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.cardTintColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
@@ -1050,8 +1027,12 @@ public class OptionsWindow extends DuckWindow {
         controllerLiveInputsArea = createCompactReadoutLabel(UiText.OptionsWindow.CONTROLLER_LIVE_NONE);
         controllerMappedButtonsArea = createCompactReadoutLabel(UiText.OptionsWindow.CONTROLLER_MAPPED_NONE);
 
-        card.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_LIVE_INPUTS_LABEL, controllerLiveInputsArea));
-        card.add(createFieldCard(UiText.OptionsWindow.CONTROLLER_MAPPED_BUTTONS_LABEL, controllerMappedButtonsArea));
+        card.add(createResponsiveGroup(
+                260,
+                2,
+                createFieldCard(UiText.OptionsWindow.CONTROLLER_LIVE_INPUTS_LABEL, controllerLiveInputsArea),
+                createFieldCard(UiText.OptionsWindow.CONTROLLER_MAPPED_BUTTONS_LABEL, controllerMappedButtonsArea)),
+                BorderLayout.CENTER);
         return card;
     }
 
@@ -1074,24 +1055,19 @@ public class OptionsWindow extends DuckWindow {
         JPanel container = new JPanel(new BorderLayout(0, 18));
         container.setOpaque(false);
 
-        JPanel stack = new JPanel();
-        stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
-        stack.setOpaque(false);
-
-        stack.add(createBindingIntroCard(
+        JPanel stack = createFillStackPanel();
+        addFillStackRow(stack, createBindingIntroCard(
                 UiText.OptionsWindow.WINDOW_SHORTCUTS_TITLE,
                 UiText.OptionsWindow.WINDOW_SHORTCUTS_DESCRIPTION,
-                UiText.OptionsWindow.WINDOW_SHORTCUTS_BADGE));
-        stack.add(Box.createVerticalStrut(10));
+                UiText.OptionsWindow.WINDOW_SHORTCUTS_BADGE), 0, 0);
 
-        JPanel grid = new JPanel(new GridLayout(0, 2, 8, 8));
-        grid.setOpaque(false);
+        JPanel grid = createResponsiveGroup(280, AppShortcut.values().length);
 
         for (AppShortcut shortcut : AppShortcut.values()) {
             grid.add(createShortcutCard(shortcut));
         }
 
-        stack.add(grid);
+        addFillStackRow(stack, grid, 1, 10);
         container.add(stack, BorderLayout.CENTER);
 
         JButton resetShortcutsButton = createSecondaryButton(UiText.OptionsWindow.RESET_SHORTCUTS_BUTTON);
@@ -1128,63 +1104,67 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createShortcutCard(AppShortcut shortcut) {
-        JPanel card = new JPanel(new BorderLayout(12, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.cardTintColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(10, 12, 10, 12)));
+                BorderFactory.createEmptyBorder(8, 10, 8, 10)));
 
         JLabel titleLabel = new JLabel(shortcut.Label());
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
+        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
         titleLabel.setForeground(accentColour);
 
-        JLabel helperLabel = new JLabel("<html><body style='width: 132px'>" + shortcut.Description() + "</body></html>");
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
-
-        JPanel labelPanel = new JPanel(new BorderLayout(0, 4));
+        JPanel labelPanel = new JPanel(new BorderLayout(0, 3));
         labelPanel.setOpaque(false);
         JPanel titleRow = new JPanel(new BorderLayout());
         titleRow.setOpaque(false);
         titleRow.add(titleLabel, BorderLayout.WEST);
         titleRow.add(createBadgeLabel(UiText.OptionsWindow.APP_BADGE), BorderLayout.EAST);
         labelPanel.add(titleRow, BorderLayout.NORTH);
-        labelPanel.add(helperLabel, BorderLayout.CENTER);
+        labelPanel.add(createBodyTextArea(shortcut.Description(), 11f), BorderLayout.CENTER);
 
         JButton keyboardButton = createPrimaryButton(Settings.appShortcutBindings.GetKeyText(shortcut));
-        keyboardButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-        keyboardButton.setPreferredSize(new Dimension(124, 34));
+        keyboardButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
+        keyboardButton.setPreferredSize(new Dimension(108, 30));
         keyboardButton.addActionListener(event -> captureShortcut(shortcut));
         shortcutButtons.put(shortcut, keyboardButton);
 
         JButton controllerButton = createSecondaryButton(Settings.appShortcutControllerBindings.GetBindingText(shortcut));
-        controllerButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
-        controllerButton.setPreferredSize(new Dimension(124, 32));
+        controllerButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, 11f));
+        controllerButton.setPreferredSize(new Dimension(108, 28));
         controllerButton.addActionListener(event -> captureControllerShortcut(shortcut));
         controllerShortcutButtons.put(shortcut, controllerButton);
 
-        JPanel buttonColumn = new JPanel();
-        buttonColumn.setLayout(new BoxLayout(buttonColumn, BoxLayout.Y_AXIS));
-        buttonColumn.setOpaque(false);
-        buttonColumn.add(createShortcutBindingRow(UiText.OptionsWindow.SHORTCUT_KEYBOARD_LABEL, keyboardButton));
-        buttonColumn.add(Box.createVerticalStrut(8));
-        buttonColumn.add(createShortcutBindingRow(UiText.OptionsWindow.SHORTCUT_CONTROLLER_LABEL, controllerButton));
+        JPanel bindingsStack = new JPanel();
+        bindingsStack.setLayout(new BoxLayout(bindingsStack, BoxLayout.Y_AXIS));
+        bindingsStack.setOpaque(false);
+        bindingsStack.add(createShortcutBindingRow(UiText.OptionsWindow.SHORTCUT_KEYBOARD_LABEL, keyboardButton));
+        bindingsStack.add(Box.createVerticalStrut(6));
+        bindingsStack.add(createShortcutBindingRow(UiText.OptionsWindow.SHORTCUT_CONTROLLER_LABEL, controllerButton));
 
-        card.add(labelPanel, BorderLayout.CENTER);
-        card.add(buttonColumn, BorderLayout.EAST);
+        card.add(createResponsiveGroup(240, 2, labelPanel, bindingsStack), BorderLayout.CENTER);
         return card;
     }
 
     private JComponent createShortcutBindingRow(String labelText, JButton actionButton) {
-        JPanel row = new JPanel(new BorderLayout(0, 4));
-        row.setOpaque(false);
+        JPanel row = new JPanel(new BorderLayout(8, 0));
+        row.setOpaque(true);
+        row.setBackground(Styling.sectionHighlightColour);
+        row.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
+                BorderFactory.createEmptyBorder(6, 8, 6, 8)));
 
-        JLabel rowLabel = new JLabel(labelText, SwingConstants.CENTER);
-        rowLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 11f));
+        JLabel rowLabel = new JLabel(labelText);
+        rowLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 9f));
         rowLabel.setForeground(mutedText);
+        rowLabel.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 4));
 
-        row.add(rowLabel, BorderLayout.NORTH);
-        row.add(actionButton, BorderLayout.CENTER);
+        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        buttonWrap.setOpaque(false);
+        buttonWrap.add(actionButton);
+
+        row.add(rowLabel, BorderLayout.WEST);
+        row.add(buttonWrap, BorderLayout.CENTER);
         return row;
     }
 
@@ -1192,7 +1172,7 @@ public class OptionsWindow extends DuckWindow {
                                                boolean wrapHelperText, String buttonText, Dimension buttonSize,
                                                float buttonFontSize, int verticalPadding, int horizontalPadding,
                                                Runnable action, Consumer<JButton> buttonRegistrar) {
-        JPanel card = new JPanel(new BorderLayout(12, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.cardTintColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
@@ -1201,12 +1181,6 @@ public class OptionsWindow extends DuckWindow {
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         titleLabel.setForeground(accentColour);
-
-        JLabel helperLabel = new JLabel(wrapHelperText
-                ? "<html><body style='width: 132px'>" + helperText + "</body></html>"
-                : helperText);
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
 
         JPanel labelPanel = new JPanel(new BorderLayout(0, 4));
         labelPanel.setOpaque(false);
@@ -1219,7 +1193,7 @@ public class OptionsWindow extends DuckWindow {
             titleRow.add(createBadgeLabel(badgeText), BorderLayout.EAST);
             labelPanel.add(titleRow, BorderLayout.NORTH);
         }
-        labelPanel.add(helperLabel, BorderLayout.CENTER);
+        labelPanel.add(createBodyTextArea(helperText, wrapHelperText ? 11f : 12f), BorderLayout.CENTER);
 
         JButton actionButton = createPrimaryButton(buttonText);
         actionButton.setFont(Styling.menuFont.deriveFont(Font.BOLD, buttonFontSize));
@@ -1227,70 +1201,44 @@ public class OptionsWindow extends DuckWindow {
         actionButton.addActionListener(event -> action.run());
         buttonRegistrar.accept(actionButton);
 
-        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        JPanel buttonWrap = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
         buttonWrap.setOpaque(false);
         buttonWrap.add(actionButton);
 
-        card.add(labelPanel, BorderLayout.CENTER);
-        card.add(buttonWrap, BorderLayout.EAST);
+        card.add(createResponsiveGroup(240, 2, labelPanel, buttonWrap), BorderLayout.CENTER);
         return card;
     }
 
     private JComponent createBindingIntroCard(String title, String description, String badgeText) {
-        JPanel card = new JPanel(new BorderLayout(14, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.sectionHighlightColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel textBlock = new JPanel(new BorderLayout(0, 6));
-        textBlock.setOpaque(false);
-
-        JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        titleLabel.setForeground(accentColour);
-
-        JLabel descriptionLabel = new JLabel("<html><body style='width: 360px'>" + description + "</body></html>");
-        descriptionLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        descriptionLabel.setForeground(mutedText);
-
-        textBlock.add(titleLabel, BorderLayout.NORTH);
-        textBlock.add(descriptionLabel, BorderLayout.CENTER);
+        JPanel textBlock = createInfoTextBlock(title, description, 16f);
 
         JPanel badgeWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         badgeWrap.setOpaque(false);
         badgeWrap.add(createBadgeLabel(badgeText));
 
-        card.add(textBlock, BorderLayout.CENTER);
-        card.add(badgeWrap, BorderLayout.EAST);
+        card.add(createResponsiveGroup(260, 2, textBlock, badgeWrap), BorderLayout.CENTER);
         return card;
     }
 
     private JComponent createPalettePreviewBanner() {
-        JPanel card = new JPanel(new BorderLayout(18, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.sectionHighlightColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)));
 
-        JPanel textBlock = new JPanel();
-        textBlock.setLayout(new BoxLayout(textBlock, BoxLayout.Y_AXIS));
-        textBlock.setOpaque(false);
+        JPanel textBlock = createInfoTextBlock(
+                UiText.OptionsWindow.ACTIVE_DMG_PALETTE_TITLE,
+                UiText.OptionsWindow.ACTIVE_DMG_PALETTE_HELPER,
+                16f);
 
-        JLabel title = new JLabel(UiText.OptionsWindow.ACTIVE_DMG_PALETTE_TITLE);
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        title.setForeground(accentColour);
-
-        JLabel helper = new JLabel(UiText.OptionsWindow.ACTIVE_DMG_PALETTE_HELPER);
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        textBlock.add(title);
-        textBlock.add(Box.createVerticalStrut(4));
-        textBlock.add(helper);
-
-        JPanel swatchStrip = new JPanel(new GridLayout(1, 4, 8, 0));
-        swatchStrip.setOpaque(false);
+        JPanel swatchStrip = createResponsiveGroup(52, 4);
 
         GBColor[] palette = Settings.CurrentPalette();
         String[] toneNames = UiText.OptionsWindow.DMG_TONE_NAMES;
@@ -1314,36 +1262,23 @@ public class OptionsWindow extends DuckWindow {
             swatchStrip.add(swatch);
         }
 
-        card.add(textBlock, BorderLayout.CENTER);
-        card.add(swatchStrip, BorderLayout.EAST);
+        card.add(createResponsiveGroup(260, 2, textBlock, swatchStrip), BorderLayout.CENTER);
         return card;
     }
 
     private JComponent createThemePreviewBanner() {
-        JPanel card = new JPanel(new BorderLayout(18, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.sectionHighlightColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(12, 14, 12, 14)));
 
-        JPanel textBlock = new JPanel();
-        textBlock.setLayout(new BoxLayout(textBlock, BoxLayout.Y_AXIS));
-        textBlock.setOpaque(false);
+        JPanel textBlock = createInfoTextBlock(
+                UiText.OptionsWindow.ACTIVE_APP_THEME_TITLE,
+                UiText.OptionsWindow.ACTIVE_APP_THEME_HELPER,
+                16f);
 
-        JLabel title = new JLabel(UiText.OptionsWindow.ACTIVE_APP_THEME_TITLE);
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        title.setForeground(accentColour);
-
-        JLabel helper = new JLabel(UiText.OptionsWindow.ACTIVE_APP_THEME_HELPER);
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        textBlock.add(title);
-        textBlock.add(Box.createVerticalStrut(4));
-        textBlock.add(helper);
-
-        JPanel swatchStrip = new JPanel(new GridLayout(1, AppThemeColorRole.values().length, 6, 0));
-        swatchStrip.setOpaque(false);
+        JPanel swatchStrip = createResponsiveGroup(44, AppThemeColorRole.values().length);
 
         AppTheme currentTheme = Settings.CurrentAppTheme();
         for (AppThemeColorRole role : AppThemeColorRole.values()) {
@@ -1366,8 +1301,7 @@ public class OptionsWindow extends DuckWindow {
             swatchStrip.add(swatch);
         }
 
-        card.add(textBlock, BorderLayout.CENTER);
-        card.add(swatchStrip, BorderLayout.EAST);
+        card.add(createResponsiveGroup(260, 2, textBlock, swatchStrip), BorderLayout.CENTER);
         return card;
     }
 
@@ -1397,35 +1331,22 @@ public class OptionsWindow extends DuckWindow {
             Config.Save();
         });
 
-        JPanel outputCard = new JPanel(new BorderLayout(14, 0));
+        JPanel outputCard = new JPanel(new BorderLayout());
         outputCard.setBackground(Styling.sectionHighlightColour);
         outputCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel outputText = new JPanel();
-        outputText.setLayout(new BoxLayout(outputText, BoxLayout.Y_AXIS));
-        outputText.setOpaque(false);
-
-        JLabel outputTitle = new JLabel(UiText.OptionsWindow.PLAYBACK_TITLE);
-        outputTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        outputTitle.setForeground(accentColour);
-
-        JLabel outputHelper = new JLabel(
-                "<html><body style='width: 360px'>" + UiText.OptionsWindow.PLAYBACK_HELPER + "</body></html>");
-        outputHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        outputHelper.setForeground(mutedText);
-
-        outputText.add(outputTitle);
-        outputText.add(Box.createVerticalStrut(6));
-        outputText.add(outputHelper);
+        JPanel outputText = createInfoTextBlock(
+                UiText.OptionsWindow.PLAYBACK_TITLE,
+                UiText.OptionsWindow.PLAYBACK_HELPER,
+                16f);
 
         JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         toggleWrap.setOpaque(false);
         toggleWrap.add(soundEnabledCheckBox);
 
-        outputCard.add(outputText, BorderLayout.CENTER);
-        outputCard.add(toggleWrap, BorderLayout.EAST);
+        outputCard.add(createResponsiveGroup(280, 2, outputText, toggleWrap), BorderLayout.CENTER);
         stack.add(outputCard);
         stack.add(Box.createVerticalStrut(10));
 
@@ -1435,28 +1356,15 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel volumeHeader = new JPanel(new BorderLayout(12, 0));
-        volumeHeader.setOpaque(false);
-
-        JPanel volumeText = new JPanel();
-        volumeText.setLayout(new BoxLayout(volumeText, BoxLayout.Y_AXIS));
-        volumeText.setOpaque(false);
-
-        JLabel volumeTitle = new JLabel(UiText.OptionsWindow.MASTER_VOLUME_TITLE);
-        volumeTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
-        volumeTitle.setForeground(accentColour);
-
-        JLabel volumeHelper = new JLabel(UiText.OptionsWindow.MASTER_VOLUME_HELPER);
-        volumeHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        volumeHelper.setForeground(mutedText);
-
-        volumeText.add(volumeTitle);
-        volumeText.add(Box.createVerticalStrut(4));
-        volumeText.add(volumeHelper);
-
-        volumeHeader.add(volumeText, BorderLayout.CENTER);
         JLabel masterValueBadge = createBadgeLabel(UiText.OptionsWindow.PercentValue(Settings.masterVolume));
-        volumeHeader.add(masterValueBadge, BorderLayout.EAST);
+        JPanel volumeHeader = createResponsiveGroup(
+                260,
+                2,
+                createInfoTextBlock(
+                        UiText.OptionsWindow.MASTER_VOLUME_TITLE,
+                        UiText.OptionsWindow.MASTER_VOLUME_HELPER,
+                        15f),
+                masterValueBadge);
 
         JComponent masterKnobTile = createMixerKnobTile(
                 UiText.OptionsWindow.MASTER_VOLUME_TITLE,
@@ -1484,27 +1392,12 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(14, 14, 14, 14)));
 
-        JPanel channelHeader = new JPanel(new BorderLayout());
-        channelHeader.setOpaque(false);
+        JPanel channelHeader = createInfoTextBlock(
+                UiText.OptionsWindow.CHANNEL_MIXER_TITLE,
+                UiText.OptionsWindow.CHANNEL_MIXER_HELPER,
+                15f);
 
-        JLabel channelTitle = new JLabel(UiText.OptionsWindow.CHANNEL_MIXER_TITLE);
-        channelTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
-        channelTitle.setForeground(accentColour);
-
-        JLabel channelHelper = new JLabel(UiText.OptionsWindow.CHANNEL_MIXER_HELPER);
-        channelHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        channelHelper.setForeground(mutedText);
-
-        JPanel channelText = new JPanel();
-        channelText.setLayout(new BoxLayout(channelText, BoxLayout.Y_AXIS));
-        channelText.setOpaque(false);
-        channelText.add(channelTitle);
-        channelText.add(Box.createVerticalStrut(4));
-        channelText.add(channelHelper);
-
-        channelHeader.add(channelText, BorderLayout.CENTER);
-
-        JPanel channelGrid = new ResponsiveTileGridPanel(116);
+        JPanel channelGrid = new ResponsiveTileGridPanel(116, 4);
         channelGrid.setOpaque(false);
 
         for (int channelIndex = 0; channelIndex < 4; channelIndex++) {
@@ -1554,9 +1447,7 @@ public class OptionsWindow extends DuckWindow {
             Config.Save();
         });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 0, 0));
-        actions.setOpaque(false);
-        actions.add(resetSoundButton);
+        JPanel actions = createResponsiveGroup(180, 1, resetSoundButton);
         container.add(actions, BorderLayout.SOUTH);
 
         return container;
@@ -1570,54 +1461,38 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel header = new JPanel(new BorderLayout(12, 0));
-        header.setOpaque(false);
-
-        JPanel headerText = new JPanel();
-        headerText.setLayout(new BoxLayout(headerText, BoxLayout.Y_AXIS));
-        headerText.setOpaque(false);
-
-        JLabel title = new JLabel(UiText.OptionsWindow.AUDIO_ENHANCEMENTS_TITLE);
-        title.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
-        title.setForeground(accentColour);
-
-        JTextArea helper = createWrappingTextArea(UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER);
-        helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helper.setForeground(mutedText);
-
-        headerText.add(title);
-        headerText.add(Box.createVerticalStrut(4));
-        headerText.add(helper);
-
         JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         toggleWrap.setOpaque(false);
         toggleWrap.add(enhancementEnabledCheckBox);
 
-        header.add(headerText, BorderLayout.CENTER);
-        header.add(toggleWrap, BorderLayout.EAST);
-        installResponsiveTrailingLayout(header, toggleWrap, 520);
+        JPanel header = createResponsiveGroup(
+                280,
+                2,
+                createInfoTextBlock(
+                        UiText.OptionsWindow.AUDIO_ENHANCEMENTS_TITLE,
+                        UiText.OptionsWindow.AUDIO_ENHANCEMENTS_HELPER,
+                        15f),
+                toggleWrap);
 
-        JPanel composer = new JPanel(new BorderLayout(10, 10));
+        JPanel composer = new JPanel(new BorderLayout(8, 8));
         composer.setOpaque(true);
         composer.setBackground(Styling.sectionHighlightColour);
         composer.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 
         JComboBox<AudioEnhancementPreset> presetSelector = new JComboBox<>(AudioEnhancementPreset.values());
         presetSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
         presetSelector.setBackground(Styling.surfaceColour);
         presetSelector.setForeground(accentColour);
-        presetSelector.setPreferredSize(new Dimension(0, 34));
+        presetSelector.setPreferredSize(new Dimension(0, 32));
 
-        JLabel presetDescription = new JLabel();
-        presetDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        presetDescription.setForeground(mutedText);
+        JTextArea presetDescription = createBodyTextArea("", 11f);
         updateAudioEnhancementDescription(presetSelector, presetDescription);
         presetSelector.addActionListener(event -> updateAudioEnhancementDescription(presetSelector, presetDescription));
 
         JButton addButton = createSecondaryButton(UiText.OptionsWindow.ADD_TO_CHAIN_BUTTON);
-        addButton.setPreferredSize(new Dimension(116, 34));
+        addButton.setPreferredSize(new Dimension(108, 32));
         addButton.addActionListener(event -> {
             Object selectedPreset = presetSelector.getSelectedItem();
             if (selectedPreset instanceof AudioEnhancementPreset enhancementPreset) {
@@ -1626,55 +1501,22 @@ public class OptionsWindow extends DuckWindow {
             }
         });
 
-        JPanel composerText = new JPanel();
-        composerText.setLayout(new BoxLayout(composerText, BoxLayout.Y_AXIS));
-        composerText.setOpaque(false);
-
-        JLabel composerTitle = new JLabel(UiText.OptionsWindow.ADD_PRESET_TITLE);
-        composerTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-        composerTitle.setForeground(accentColour);
-        composerText.add(composerTitle);
-        composerText.add(Box.createVerticalStrut(6));
+        JPanel composerText = createInfoTextBlock(UiText.OptionsWindow.ADD_PRESET_TITLE, "", 13f);
+        composerText.add(Box.createVerticalStrut(4));
         composerText.add(presetDescription);
 
-        JPanel composerControls = new JPanel(new BorderLayout(10, 10));
-        composerControls.setOpaque(false);
-        composerControls.add(presetSelector, BorderLayout.CENTER);
-        composerControls.add(addButton, BorderLayout.EAST);
-        installResponsiveTrailingLayout(composerControls, addButton, 500);
+        JPanel composerControls = createResponsiveGroup(168, 2, presetSelector, addButton);
+        composer.add(createResponsiveGroup(280, 2, composerText, composerControls), BorderLayout.CENTER);
 
-        composer.add(composerText, BorderLayout.CENTER);
-        composer.add(composerControls, BorderLayout.SOUTH);
-
-        JPanel chainCard = new JPanel(new BorderLayout(0, 10));
+        JPanel chainCard = new JPanel(new BorderLayout(0, 8));
         chainCard.setOpaque(true);
         chainCard.setBackground(Styling.surfaceColour);
         chainCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(12, 12, 12, 12)));
-
-        JPanel chainHeader = new JPanel(new BorderLayout(8, 0));
-        chainHeader.setOpaque(false);
-
-        JPanel chainHeaderText = new JPanel();
-        chainHeaderText.setLayout(new BoxLayout(chainHeaderText, BoxLayout.Y_AXIS));
-        chainHeaderText.setOpaque(false);
-
-        JLabel chainTitle = new JLabel(UiText.OptionsWindow.ACTIVE_CHAIN_TITLE);
-        chainTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
-        chainTitle.setForeground(accentColour);
-        chainHeaderText.add(chainTitle);
-
-        if (shouldRenderUiText(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER)) {
-            JLabel chainHelper = new JLabel(UiText.OptionsWindow.ACTIVE_CHAIN_HELPER);
-            chainHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-            chainHelper.setForeground(mutedText);
-            chainHeaderText.add(Box.createVerticalStrut(4));
-            chainHeaderText.add(chainHelper);
-        }
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
 
         JButton clearButton = createSecondaryButton(UiText.OptionsWindow.CLEAR_CHAIN_BUTTON);
-        clearButton.setPreferredSize(new Dimension(108, 32));
+        clearButton.setPreferredSize(new Dimension(102, 30));
         clearButton.addActionListener(event -> {
             if (!enhancementChainModel.isEmpty()) {
                 enhancementChainModel.clear();
@@ -1682,11 +1524,16 @@ public class OptionsWindow extends DuckWindow {
             }
         });
 
-        chainHeader.add(chainHeaderText, BorderLayout.CENTER);
-        chainHeader.add(clearButton, BorderLayout.EAST);
-        installResponsiveTrailingLayout(chainHeader, clearButton, 520);
+        JPanel chainHeader = createResponsiveGroup(
+                280,
+                2,
+                createInfoTextBlock(
+                        UiText.OptionsWindow.ACTIVE_CHAIN_TITLE,
+                        UiText.OptionsWindow.ACTIVE_CHAIN_HELPER,
+                        13f),
+                clearButton);
 
-        JPanel chainStack = new JPanel();
+        JPanel chainStack = new VerticalScrollPanel();
         chainStack.setLayout(new BoxLayout(chainStack, BoxLayout.Y_AXIS));
         chainStack.setOpaque(false);
 
@@ -1719,7 +1566,7 @@ public class OptionsWindow extends DuckWindow {
         chainCard.add(chainHeader, BorderLayout.NORTH);
         chainCard.add(chainScrollPane, BorderLayout.CENTER);
 
-        JPanel body = new JPanel(new BorderLayout(0, 14));
+        JPanel body = new JPanel(new BorderLayout(0, 12));
         body.setOpaque(false);
         body.add(composer, BorderLayout.NORTH);
         body.add(chainCard, BorderLayout.CENTER);
@@ -1769,51 +1616,57 @@ public class OptionsWindow extends DuckWindow {
                 Dimension preferredSize = getPreferredSize();
                 return new Dimension(Integer.MAX_VALUE, preferredSize.height);
             }
+
+            @Override
+            public Dimension getMinimumSize() {
+                Dimension minimumSize = super.getMinimumSize();
+                return new Dimension(0, minimumSize.height);
+            }
         };
         wrapper.setOpaque(false);
         wrapper.setAlignmentX(Component.LEFT_ALIGNMENT);
         wrapper.setBorder(BorderFactory.createEmptyBorder(0, 0,
-                index == enhancementChainModel.size() - 1 ? 0 : 10, 0));
+                index == enhancementChainModel.size() - 1 ? 0 : 8, 0));
 
-        JPanel card = new JPanel(new BorderLayout(0, 14));
+        JPanel card = new JPanel(new BorderLayout(0, 10));
         card.setOpaque(true);
         card.setBackground(Styling.cardTintColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                BorderFactory.createEmptyBorder(14, 14, 14, 14)));
+                BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         wrapper.add(card, BorderLayout.CENTER);
 
-        JPanel header = new JPanel(new BorderLayout(10, 0));
+        JPanel header = new JPanel(new BorderLayout(8, 0));
         header.setOpaque(false);
 
         JLabel dragHandle = new JLabel(":::");
-        dragHandle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
+        dragHandle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 14f));
         dragHandle.setForeground(mutedText);
         dragHandle.setCursor(Cursor.getPredefinedCursor(Cursor.MOVE_CURSOR));
-        dragHandle.setBorder(BorderFactory.createEmptyBorder(4, 4, 4, 6));
+        dragHandle.setBorder(BorderFactory.createEmptyBorder(2, 2, 2, 4));
 
         JPanel textPanel = new JPanel();
         textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
         textPanel.setOpaque(false);
 
         JLabel effectTitle = new JLabel(setting.preset().Label());
-        effectTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
+        effectTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 12f));
         effectTitle.setForeground(accentColour);
         textPanel.add(effectTitle);
 
         JTextArea effectDescription = createWrappingTextArea(setting.preset().Description());
-        effectDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
+        effectDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 11f));
         effectDescription.setForeground(mutedText);
-        effectDescription.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
+        effectDescription.setBorder(BorderFactory.createEmptyBorder(2, 0, 0, 0));
         textPanel.add(effectDescription);
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 6, 0));
         actions.setOpaque(false);
         actions.add(createBadgeLabel("#" + (index + 1)));
 
         JButton removeButton = createSecondaryButton("-");
         removeButton.setToolTipText(UiText.OptionsWindow.REMOVE_BUTTON);
-        removeButton.setPreferredSize(new Dimension(42, 32));
+        removeButton.setPreferredSize(new Dimension(38, 28));
         removeButton.addActionListener(event -> {
             if (index >= 0 && index < enhancementChainModel.size()) {
                 enhancementChainModel.remove(index);
@@ -1961,17 +1814,18 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private void updateAudioEnhancementDescription(JComboBox<AudioEnhancementPreset> presetSelector,
-            JLabel descriptionLabel) {
+            JTextArea descriptionLabel) {
         Object selectedPreset = presetSelector.getSelectedItem();
         if (descriptionLabel == null) {
             return;
         }
 
         if (selectedPreset instanceof AudioEnhancementPreset enhancementPreset) {
-            descriptionLabel.setText("<html>" + enhancementPreset.Description() + "</html>");
+            descriptionLabel.setText(enhancementPreset.Description());
         } else {
-            descriptionLabel.setText("<html>" + UiText.OptionsWindow.PRESET_DESCRIPTION_PLACEHOLDER + "</html>");
+            descriptionLabel.setText(UiText.OptionsWindow.PRESET_DESCRIPTION_PLACEHOLDER);
         }
+        descriptionLabel.setCaretPosition(0);
     }
 
     private void applyAudioEnhancementModel(DefaultListModel<AudioEnhancementSetting> enhancementChainModel) {
@@ -2017,50 +1871,46 @@ public class OptionsWindow extends DuckWindow {
         return childCount;
     }
 
-    private void installResponsiveTrailingLayout(JPanel panel, Component trailingComponent, int compactWidth) {
-        final boolean[] compact = { false };
-        Runnable applyLayout = () -> {
-            int width = panel.getWidth();
-            boolean nextCompact = width > 0 && width < compactWidth;
-            if (compact[0] == nextCompact) {
-                return;
-            }
-
-            compact[0] = nextCompact;
-            panel.remove(trailingComponent);
-            panel.add(trailingComponent, nextCompact ? BorderLayout.SOUTH : BorderLayout.EAST);
-            panel.revalidate();
-            panel.repaint();
-        };
-
-        panel.addComponentListener(new ComponentAdapter() {
-            @Override
-            public void componentResized(ComponentEvent event) {
-                applyLayout.run();
-            }
-        });
-        SwingUtilities.invokeLater(applyLayout);
-    }
-
     private void installResponsiveAudioEffectCardLayout(JPanel card, JPanel header, JPanel actions, JLabel effectTitle,
             JTextArea effectDescription, JButton removeButton) {
         final boolean[] compact = { false };
+        final boolean[] ultraCompact = { false };
+        JLabel indexBadge = null;
+        if (actions.getComponentCount() > 0 && actions.getComponent(0) instanceof JLabel label) {
+            indexBadge = label;
+        }
+        JLabel badgeLabel = indexBadge;
         Runnable applyLayout = () -> {
             int width = card.getWidth();
-            boolean nextCompact = width > 0 && width < 500;
+            boolean nextCompact = width > 0 && width < 560;
+            boolean nextUltraCompact = width > 0 && width < 380;
             if (compact[0] != nextCompact) {
                 compact[0] = nextCompact;
                 header.remove(actions);
                 header.add(actions, nextCompact ? BorderLayout.SOUTH : BorderLayout.EAST);
             }
+            ultraCompact[0] = nextUltraCompact;
+
+            if (actions.getLayout() instanceof FlowLayout flowLayout) {
+                flowLayout.setAlignment(nextCompact ? FlowLayout.LEFT : FlowLayout.RIGHT);
+                flowLayout.setHgap(nextUltraCompact ? 4 : 6);
+            }
 
             card.setBorder(BorderFactory.createCompoundBorder(
                     BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
-                    BorderFactory.createEmptyBorder(nextCompact ? 10 : 14, nextCompact ? 10 : 14,
-                            nextCompact ? 10 : 14, nextCompact ? 10 : 14)));
-            effectTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, nextCompact ? 12f : 13f));
-            effectDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, nextCompact ? 11f : 12f));
-            removeButton.setPreferredSize(nextCompact ? new Dimension(36, 28) : new Dimension(42, 32));
+                    BorderFactory.createEmptyBorder(
+                            nextUltraCompact ? 8 : nextCompact ? 10 : 14,
+                            nextUltraCompact ? 8 : nextCompact ? 10 : 14,
+                            nextUltraCompact ? 8 : nextCompact ? 10 : 14,
+                            nextUltraCompact ? 8 : nextCompact ? 10 : 14)));
+            effectTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, nextUltraCompact ? 11f : nextCompact ? 12f : 13f));
+            effectDescription.setFont(Styling.menuFont.deriveFont(Font.PLAIN, nextUltraCompact ? 10f : nextCompact ? 11f : 12f));
+            removeButton.setPreferredSize(nextUltraCompact ? new Dimension(32, 24)
+                    : nextCompact ? new Dimension(36, 28)
+                    : new Dimension(42, 32));
+            if (badgeLabel != null) {
+                badgeLabel.setVisible(!nextUltraCompact);
+            }
             card.revalidate();
             card.repaint();
         };
@@ -2081,11 +1931,17 @@ public class OptionsWindow extends DuckWindow {
 
     private static final class ResponsiveTileGridPanel extends JPanel {
         private final int minTileWidth;
+        private final int maxColumns;
         private final int gap = 10;
 
         private ResponsiveTileGridPanel(int minTileWidth) {
+            this(minTileWidth, Integer.MAX_VALUE);
+        }
+
+        private ResponsiveTileGridPanel(int minTileWidth, int maxColumns) {
             super(null);
             this.minTileWidth = Math.max(72, minTileWidth);
+            this.maxColumns = Math.max(1, maxColumns);
             setOpaque(false);
             addComponentListener(new ComponentAdapter() {
                 @Override
@@ -2116,7 +1972,10 @@ public class OptionsWindow extends DuckWindow {
                 int rowEnd = Math.min(componentCount, rowStart + columns);
                 int rowHeight = 0;
                 for (int rowIndex = rowStart; rowIndex < rowEnd; rowIndex++) {
-                    rowHeight = Math.max(rowHeight, getComponent(rowIndex).getPreferredSize().height);
+                    int column = rowIndex - rowStart;
+                    int x = column * (cellWidth + gap);
+                    int width = column == columns - 1 ? Math.max(0, availableWidth - x) : cellWidth;
+                    rowHeight = Math.max(rowHeight, preferredSizeForWidth(getComponent(rowIndex), width).height);
                 }
 
                 for (int rowIndex = rowStart; rowIndex < rowEnd; rowIndex++) {
@@ -2138,31 +1997,73 @@ public class OptionsWindow extends DuckWindow {
                 return new Dimension(0, 0);
             }
 
-            int availableWidth = getParent() == null ? 0 : getParent().getWidth();
+            int availableWidth = preferredLayoutWidth();
             int columns = computeColumns(availableWidth);
             int rows = (int) Math.ceil(componentCount / (double) columns);
+            int cellWidth = columns <= 0
+                    ? 0
+                    : Math.max(0, (availableWidth - (gap * (columns - 1))) / columns);
             int height = 0;
             for (int row = 0; row < rows; row++) {
                 int rowStart = row * columns;
                 int rowEnd = Math.min(componentCount, rowStart + columns);
                 int rowHeight = 0;
                 for (int index = rowStart; index < rowEnd; index++) {
-                    rowHeight = Math.max(rowHeight, getComponent(index).getPreferredSize().height);
+                    int column = index - rowStart;
+                    int x = column * (cellWidth + gap);
+                    int width = column == columns - 1 ? Math.max(0, availableWidth - x) : cellWidth;
+                    rowHeight = Math.max(rowHeight, preferredSizeForWidth(getComponent(index), width).height);
                 }
                 height += rowHeight;
                 if (row < rows - 1) {
                     height += gap;
                 }
             }
-            return new Dimension(0, height);
+            return new Dimension(Math.max(minimumPreferredWidth(columns), availableWidth), height);
         }
 
         private int computeColumns(int availableWidth) {
             if (availableWidth <= 0) {
-                return Math.min(Math.max(1, getComponentCount()), 3);
+                return Math.min(Math.max(1, getComponentCount()), Math.min(maxColumns, 3));
             }
             int columns = Math.max(1, (availableWidth + gap) / (minTileWidth + gap));
-            return Math.max(1, Math.min(getComponentCount(), columns));
+            return Math.max(1, Math.min(getComponentCount(), Math.min(maxColumns, columns)));
+        }
+
+        @Override
+        public Dimension getMinimumSize() {
+            int columns = Math.min(Math.max(1, getComponentCount()), Math.min(maxColumns, 1));
+            return new Dimension(minimumPreferredWidth(columns), super.getMinimumSize().height);
+        }
+
+        private int preferredLayoutWidth() {
+            if (getWidth() > 0) {
+                return getWidth();
+            }
+            if (getParent() != null && getParent().getWidth() > 0) {
+                return getParent().getWidth();
+            }
+            int fallbackColumns = Math.min(Math.max(1, getComponentCount()), Math.min(maxColumns, 2));
+            return minimumPreferredWidth(fallbackColumns);
+        }
+
+        private int minimumPreferredWidth(int columns) {
+            if (columns <= 0) {
+                return minTileWidth;
+            }
+            return (columns * minTileWidth) + ((columns - 1) * gap);
+        }
+
+        private Dimension preferredSizeForWidth(Component component, int width) {
+            if (width <= 0) {
+                return component.getPreferredSize();
+            }
+
+            Dimension originalSize = component.getSize();
+            component.setSize(width, Short.MAX_VALUE);
+            Dimension preferredSize = component.getPreferredSize();
+            component.setSize(originalSize);
+            return preferredSize;
         }
     }
 
@@ -2233,12 +2134,12 @@ public class OptionsWindow extends DuckWindow {
             }
 
             int minCellWidth;
-            if (availableWidth < 320) {
-                minCellWidth = 72;
-            } else if (availableWidth < 460) {
-                minCellWidth = 84;
+            if (availableWidth < 300) {
+                minCellWidth = 64;
+            } else if (availableWidth < 420) {
+                minCellWidth = 76;
             } else {
-                minCellWidth = 104;
+                minCellWidth = 96;
             }
 
             int fittingColumns = Math.max(1, (availableWidth + gap) / (minCellWidth + gap));
@@ -2246,16 +2147,16 @@ public class OptionsWindow extends DuckWindow {
         }
 
         private int computeRowHeight(int cellWidth) {
-            if (cellWidth <= 84) {
+            if (cellWidth <= 72) {
+                return 76;
+            }
+            if (cellWidth <= 92) {
                 return 88;
             }
-            if (cellWidth <= 108) {
+            if (cellWidth <= 116) {
                 return 98;
             }
-            if (cellWidth <= 132) {
-                return 108;
-            }
-            return 122;
+            return 112;
         }
     }
 
@@ -2326,8 +2227,9 @@ public class OptionsWindow extends DuckWindow {
             int tileY = 4;
             int tileWidth = width - 8;
             int tileHeight = height - 8;
-            float labelFontSize = compactVisuals ? 9f : 11f;
-            float valueFontSize = compactVisuals ? 10f : 13f;
+            boolean ultraCompactVisuals = width < 84 || height < 84;
+            float labelFontSize = ultraCompactVisuals ? 8f : compactVisuals ? 9f : 11f;
+            float valueFontSize = ultraCompactVisuals ? 9f : compactVisuals ? 10f : 13f;
 
             graphics2d.setColor(Styling.sectionHighlightColour);
             graphics2d.fillRoundRect(tileX, tileY, tileWidth, tileHeight, 22, 22);
@@ -2338,15 +2240,20 @@ public class OptionsWindow extends DuckWindow {
             FontMetrics labelMetrics = graphics2d.getFontMetrics();
             graphics2d.setColor(Styling.mutedTextColour);
             int labelWidth = labelMetrics.stringWidth(label);
-            graphics2d.drawString(label, (width - labelWidth) / 2, compactVisuals ? 16 : 20);
+            graphics2d.drawString(label, (width - labelWidth) / 2, ultraCompactVisuals ? 14 : compactVisuals ? 16 : 20);
 
-            int dialDiameter = Math.min(compactVisuals ? 40 : 50, Math.min(tileWidth - (compactVisuals ? 18 : 28),
-                    tileHeight - (compactVisuals ? 42 : 56)));
+            int dialDiameter = Math.min(
+                    ultraCompactVisuals ? 30 : compactVisuals ? 40 : 50,
+                    Math.min(tileWidth - (ultraCompactVisuals ? 12 : compactVisuals ? 18 : 28),
+                            tileHeight - (ultraCompactVisuals ? 32 : compactVisuals ? 42 : 56)));
             int dialX = (width - dialDiameter) / 2;
-            int dialY = compactVisuals ? 20 : 28;
-            int strokeInset = compactVisuals ? 4 : 5;
+            int dialY = ultraCompactVisuals ? 16 : compactVisuals ? 20 : 28;
+            int strokeInset = ultraCompactVisuals ? 3 : compactVisuals ? 4 : 5;
 
-            graphics2d.setStroke(new BasicStroke(compactVisuals ? 3f : 4f, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+            graphics2d.setStroke(new BasicStroke(
+                    ultraCompactVisuals ? 2.5f : compactVisuals ? 3f : 4f,
+                    BasicStroke.CAP_ROUND,
+                    BasicStroke.JOIN_ROUND));
             graphics2d.setColor(new Color(
                     Styling.accentColour.getRed(),
                     Styling.accentColour.getGreen(),
@@ -2374,24 +2281,27 @@ public class OptionsWindow extends DuckWindow {
             double pointerEndX = centreX + Math.cos(angleRadians) * pointerLength;
             double pointerEndY = centreY - Math.sin(angleRadians) * pointerLength;
 
-            graphics2d.setStroke(new BasicStroke(compactVisuals ? 2.5f : 3f, BasicStroke.CAP_ROUND,
+            graphics2d.setStroke(new BasicStroke(ultraCompactVisuals ? 2f : compactVisuals ? 2.5f : 3f, BasicStroke.CAP_ROUND,
                     BasicStroke.JOIN_ROUND));
             graphics2d.setColor(Styling.accentColour);
             graphics2d.draw(new Line2D.Double(centreX, centreY, pointerEndX, pointerEndY));
-            graphics2d.fill(new Ellipse2D.Double(centreX - (compactVisuals ? 2.5 : 3),
-                    centreY - (compactVisuals ? 2.5 : 3), compactVisuals ? 5 : 6, compactVisuals ? 5 : 6));
+            graphics2d.fill(new Ellipse2D.Double(
+                    centreX - (ultraCompactVisuals ? 2 : compactVisuals ? 2.5 : 3),
+                    centreY - (ultraCompactVisuals ? 2 : compactVisuals ? 2.5 : 3),
+                    ultraCompactVisuals ? 4 : compactVisuals ? 5 : 6,
+                    ultraCompactVisuals ? 4 : compactVisuals ? 5 : 6));
 
             String valueText = value + "%";
             graphics2d.setFont(Styling.menuFont.deriveFont(Font.BOLD, valueFontSize));
             FontMetrics valueMetrics = graphics2d.getFontMetrics();
             graphics2d.drawString(valueText, (width - valueMetrics.stringWidth(valueText)) / 2,
-                    height - (compactVisuals ? 12 : 18));
+                    height - (ultraCompactVisuals ? 10 : compactVisuals ? 12 : 18));
 
             graphics2d.dispose();
         }
 
         private void SetCompactWidth(int width, int height) {
-            compactVisuals = width < 108 || height < 104;
+            compactVisuals = width < 116 || height < 98;
         }
 
         private void SetValue(int newValue) {
@@ -2418,9 +2328,8 @@ public class OptionsWindow extends DuckWindow {
         JPanel container = new JPanel(new BorderLayout(0, 14));
         container.setOpaque(false);
 
-        JPanel stack = new JPanel();
-        stack.setLayout(new BoxLayout(stack, BoxLayout.Y_AXIS));
-        stack.setOpaque(false);
+        JPanel stack = createFillStackPanel();
+        int stackRow = 0;
 
         JCheckBox fillWindowCheckBox = new JCheckBox(UiText.OptionsWindow.WINDOW_FILL_CHECKBOX, Settings.fillWindowOutput);
         fillWindowCheckBox.setOpaque(false);
@@ -2433,8 +2342,6 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.ApplyWindowMode();
             }
         });
-        stack.add(createSimpleWindowOptionCard(fillWindowCheckBox));
-        stack.add(Box.createVerticalStrut(10));
 
         JCheckBox integerScaleCheckBox = new JCheckBox(
                 UiText.OptionsWindow.WINDOW_INTEGER_SCALE_CHECKBOX,
@@ -2449,8 +2356,6 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.RefreshDisplayBorder();
             }
         });
-        stack.add(createSimpleWindowOptionCard(integerScaleCheckBox));
-        stack.add(Box.createVerticalStrut(10));
 
         JCheckBox serialOutputCheckBox = new JCheckBox(UiText.OptionsWindow.SERIAL_OUTPUT_CHECKBOX,
                 Settings.showSerialOutput);
@@ -2464,8 +2369,12 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.RefreshWindowPanels();
             }
         });
-        stack.add(createSimpleWindowOptionCard(serialOutputCheckBox));
-        stack.add(Box.createVerticalStrut(10));
+
+        JPanel optionStack = createFillStackPanel();
+        addFillStackRow(optionStack, createSimpleWindowOptionCard(fillWindowCheckBox), 0, 0);
+        addFillStackRow(optionStack, createSimpleWindowOptionCard(integerScaleCheckBox), 1, 10);
+        addFillStackRow(optionStack, createSimpleWindowOptionCard(serialOutputCheckBox), 2, 10);
+        addFillStackRow(stack, optionStack, stackRow++, 0);
 
         JComboBox<GameArtDisplayMode> gameArtModeSelector = new JComboBox<>(GameArtDisplayMode.values());
         gameArtModeSelector.setSelectedItem(Settings.gameArtDisplayMode);
@@ -2482,8 +2391,8 @@ public class OptionsWindow extends DuckWindow {
                 mainWindow.RefreshWindowPanels();
             }
         });
-        stack.add(createSelectorWindowOptionCard(UiText.OptionsWindow.GAME_ART_MODE_LABEL, gameArtModeSelector));
-        stack.add(Box.createVerticalStrut(10));
+        addFillStackRow(stack, createSelectorWindowOptionCard(UiText.OptionsWindow.GAME_ART_MODE_LABEL, gameArtModeSelector),
+                stackRow++, 10);
 
         JComboBox<DisplayBorderChoice> borderSelector = new JComboBox<>();
         borderSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
@@ -2566,26 +2475,22 @@ public class OptionsWindow extends DuckWindow {
             }
         });
 
-        stack.add(createSelectorWindowOptionCard(UiText.OptionsWindow.DISPLAY_BORDER_LABEL, borderSelector));
-        stack.add(Box.createVerticalStrut(10));
+        addFillStackRow(stack, createSelectorWindowOptionCard(UiText.OptionsWindow.DISPLAY_BORDER_LABEL, borderSelector),
+                stackRow++, 10);
 
-        JPanel borderPreviewCard = new JPanel(new BorderLayout(10, 0));
-        borderPreviewCard.setOpaque(false);
-        borderPreviewCard.add(createFieldCard(UiText.OptionsWindow.BORDER_PREVIEW_LABEL, borderPreviewSurface),
-                BorderLayout.WEST);
-
-        JPanel borderDetailStack = new JPanel();
-        borderDetailStack.setLayout(new BoxLayout(borderDetailStack, BoxLayout.Y_AXIS));
-        borderDetailStack.setOpaque(false);
-        borderDetailStack.add(createFieldCard(UiText.OptionsWindow.BORDER_SOURCE_LABEL, borderSourceValueLabel));
-        borderDetailStack.add(Box.createVerticalStrut(8));
-        borderDetailStack.add(createFieldCard(UiText.OptionsWindow.BORDER_PATH_LABEL, borderPathValueLabel));
-        borderDetailStack.add(Box.createVerticalStrut(8));
-        borderDetailStack.add(createFieldCard(UiText.OptionsWindow.BORDER_CUTOUT_LABEL, borderCutoutValueLabel));
-        borderDetailStack.add(Box.createVerticalStrut(8));
-        borderDetailStack.add(createFieldCard(UiText.OptionsWindow.BORDER_STATUS_LABEL, borderStatusValueLabel));
-        borderPreviewCard.add(borderDetailStack, BorderLayout.CENTER);
-        stack.add(createSimpleWindowOptionCard(borderPreviewCard));
+        JPanel borderDetailGrid = createResponsiveGroup(
+                220,
+                2,
+                createFieldCard(UiText.OptionsWindow.BORDER_SOURCE_LABEL, borderSourceValueLabel),
+                createFieldCard(UiText.OptionsWindow.BORDER_PATH_LABEL, borderPathValueLabel),
+                createFieldCard(UiText.OptionsWindow.BORDER_CUTOUT_LABEL, borderCutoutValueLabel),
+                createFieldCard(UiText.OptionsWindow.BORDER_STATUS_LABEL, borderStatusValueLabel));
+        JPanel borderPreviewCard = createResponsiveGroup(
+                300,
+                2,
+                createFieldCard(UiText.OptionsWindow.BORDER_PREVIEW_LABEL, borderPreviewSurface),
+                borderDetailGrid);
+        addFillStackRow(stack, createSimpleWindowOptionCard(borderPreviewCard), stackRow, 10);
 
         container.add(stack, BorderLayout.CENTER);
 
@@ -2617,10 +2522,7 @@ public class OptionsWindow extends DuckWindow {
             }
         });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
-        actions.setOpaque(false);
-        actions.add(borderManagerButton);
-        actions.add(resetWindowButton);
+        JPanel actions = createResponsiveGroup(180, 2, borderManagerButton, resetWindowButton);
         container.add(actions, BorderLayout.SOUTH);
         refreshBorderSelector.run();
         return container;
@@ -2716,17 +2618,14 @@ public class OptionsWindow extends DuckWindow {
         stack.add(createSelectorWindowOptionCard(UiText.OptionsWindow.DISPLAY_SHADER_LABEL, shaderSelector));
         stack.add(Box.createVerticalStrut(10));
 
-        JPanel detailStack = new JPanel();
-        detailStack.setLayout(new BoxLayout(detailStack, BoxLayout.Y_AXIS));
-        detailStack.setOpaque(false);
-        detailStack.add(createFieldCard(UiText.OptionsWindow.SHADER_DESCRIPTION_LABEL, descriptionArea));
-        detailStack.add(Box.createVerticalStrut(8));
-        detailStack.add(createFieldCard(UiText.OptionsWindow.SHADER_SOURCE_LABEL, sourceValueLabel));
-        detailStack.add(Box.createVerticalStrut(8));
-        detailStack.add(createFieldCard(UiText.OptionsWindow.SHADER_PATH_LABEL, pathValueLabel));
-        detailStack.add(Box.createVerticalStrut(8));
-        detailStack.add(createFieldCard(UiText.OptionsWindow.SHADER_STATUS_LABEL, statusValueLabel));
-        stack.add(createSimpleWindowOptionCard(detailStack));
+        JPanel detailGrid = createResponsiveGroup(
+                220,
+                2,
+                createFieldCard(UiText.OptionsWindow.SHADER_DESCRIPTION_LABEL, descriptionArea),
+                createFieldCard(UiText.OptionsWindow.SHADER_SOURCE_LABEL, sourceValueLabel),
+                createFieldCard(UiText.OptionsWindow.SHADER_PATH_LABEL, pathValueLabel),
+                createFieldCard(UiText.OptionsWindow.SHADER_STATUS_LABEL, statusValueLabel));
+        stack.add(createSimpleWindowOptionCard(detailGrid));
 
         container.add(stack, BorderLayout.CENTER);
 
@@ -2761,12 +2660,13 @@ public class OptionsWindow extends DuckWindow {
             }
         });
 
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.CENTER, 8, 0));
-        actions.setOpaque(false);
-        actions.add(shaderEditorButton);
-        actions.add(reloadShadersButton);
-        actions.add(openFolderButton);
-        actions.add(resetShaderButton);
+        JPanel actions = createResponsiveGroup(
+                180,
+                4,
+                shaderEditorButton,
+                reloadShadersButton,
+                openFolderButton,
+                resetShaderButton);
         container.add(actions, BorderLayout.SOUTH);
 
         refreshShaderSelector.run();
@@ -2774,58 +2674,27 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent createLibraryPanel() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel();
+        panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
         panel.setOpaque(false);
 
-        GridBagConstraints gbc = baseConstraints();
-        gbc.fill = GridBagConstraints.HORIZONTAL;
-        gbc.weightx = 1.0;
-
-        JLabel modeLabel = createFieldLabel(UiText.OptionsWindow.LIBRARY_MODE_LABEL);
-        panel.add(modeLabel, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(8, 0, 12, 0);
         JComboBox<GameNameBracketDisplayMode> modeSelector = new JComboBox<>(GameNameBracketDisplayMode.values());
         modeSelector.setSelectedItem(Settings.gameNameBracketDisplayMode);
         modeSelector.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        modeSelector.addActionListener(event -> {
-            Object selectedItem = modeSelector.getSelectedItem();
-            if (!(selectedItem instanceof GameNameBracketDisplayMode selectedMode)) {
-                return;
-            }
-
-            Settings.gameNameBracketDisplayMode = selectedMode;
-            Config.Save();
-            if (mainWindow != null) {
-                mainWindow.RefreshLoadedRomDisplay();
-            }
-        });
-        panel.add(modeSelector, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 16, 0);
-        JLabel helperLabel = new JLabel("<html>" + Settings.gameNameBracketDisplayMode.Description() + "</html>");
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        helperLabel.setForeground(mutedText);
-        panel.add(helperLabel, gbc);
+        JTextArea helperLabel = createBodyTextArea(Settings.gameNameBracketDisplayMode.Description(), 12f);
 
         modeSelector.addActionListener(event -> {
             Object selectedItem = modeSelector.getSelectedItem();
             if (selectedItem instanceof GameNameBracketDisplayMode selectedMode) {
-                helperLabel.setText("<html>" + selectedMode.Description() + "</html>");
+                helperLabel.setText(selectedMode.Description());
+                Settings.gameNameBracketDisplayMode = selectedMode;
+                Config.Save();
+                if (mainWindow != null) {
+                    mainWindow.RefreshLoadedRomDisplay();
+                }
             }
         });
 
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 8, 0);
-        gbc.anchor = GridBagConstraints.WEST;
-        gbc.weightx = 1.0;
-        JLabel recentMenuLimitLabel = createFieldLabel(UiText.OptionsWindow.RECENT_MENU_LIMIT_LABEL);
-        panel.add(recentMenuLimitLabel, gbc);
-
-        gbc.gridy++;
-        gbc.insets = new Insets(8, 0, 12, 0);
         JSpinner recentMenuLimitSpinner = new JSpinner(new SpinnerNumberModel(Settings.loadRecentMenuLimit, 1, 25, 1));
         recentMenuLimitSpinner.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
         recentMenuLimitSpinner.addChangeListener(event -> {
@@ -2837,31 +2706,35 @@ public class OptionsWindow extends DuckWindow {
             Settings.loadRecentMenuLimit = Math.max(1, Math.min(25, numberValue.intValue()));
             Config.Save();
         });
-        panel.add(recentMenuLimitSpinner, gbc);
+        JTextArea recentMenuHelperLabel = createBodyTextArea(UiText.OptionsWindow.RECENT_MENU_LIMIT_HELPER, 12f);
 
-        gbc.gridy++;
-        gbc.insets = new Insets(0, 0, 16, 0);
-        JLabel recentMenuHelperLabel = new JLabel(UiText.OptionsWindow.RECENT_MENU_LIMIT_HELPER);
-        recentMenuHelperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 13f));
-        recentMenuHelperLabel.setForeground(mutedText);
-        panel.add(recentMenuHelperLabel, gbc);
+        JPanel modeCard = new JPanel(new BorderLayout(0, 10));
+        modeCard.setOpaque(false);
+        modeCard.add(createFieldCard(UiText.OptionsWindow.LIBRARY_MODE_LABEL, modeSelector), BorderLayout.NORTH);
+        modeCard.add(helperLabel, BorderLayout.CENTER);
+        panel.add(createSimpleWindowOptionCard(modeCard));
+        panel.add(Box.createVerticalStrut(10));
 
-        gbc.gridy++;
-        gbc.insets = new Insets(12, 0, 0, 0);
-        gbc.anchor = GridBagConstraints.CENTER;
-        gbc.weightx = 0.0;
+        JPanel recentMenuCard = new JPanel(new BorderLayout(0, 10));
+        recentMenuCard.setOpaque(false);
+        recentMenuCard.add(createFieldCard(UiText.OptionsWindow.RECENT_MENU_LIMIT_LABEL, recentMenuLimitSpinner),
+                BorderLayout.NORTH);
+        recentMenuCard.add(recentMenuHelperLabel, BorderLayout.CENTER);
+        panel.add(createSimpleWindowOptionCard(recentMenuCard));
+        panel.add(Box.createVerticalStrut(10));
+
         JButton resetLibraryButton = createSecondaryButton(UiText.OptionsWindow.RESET_LIBRARY_BUTTON);
         resetLibraryButton.addActionListener(event -> {
             Settings.ResetLibrary();
             modeSelector.setSelectedItem(Settings.gameNameBracketDisplayMode);
-            helperLabel.setText("<html>" + Settings.gameNameBracketDisplayMode.Description() + "</html>");
+            helperLabel.setText(Settings.gameNameBracketDisplayMode.Description());
             recentMenuLimitSpinner.setValue(Settings.loadRecentMenuLimit);
             Config.Save();
             if (mainWindow != null) {
                 mainWindow.RefreshLoadedRomDisplay();
             }
         });
-        panel.add(resetLibraryButton, gbc);
+        panel.add(createResponsiveGroup(180, 1, resetLibraryButton));
 
         return panel;
     }
@@ -2872,33 +2745,20 @@ public class OptionsWindow extends DuckWindow {
 
         int trackedGameCount = ManagedGameRegistry.GetKnownGames().size();
 
-        JPanel titleCard = new JPanel(new BorderLayout(14, 0));
+        JPanel titleCard = new JPanel(new BorderLayout());
         titleCard.setBackground(Styling.sectionHighlightColour);
         titleCard.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel titleText = new JPanel();
-        titleText.setLayout(new BoxLayout(titleText, BoxLayout.Y_AXIS));
-        titleText.setOpaque(false);
-
-        JLabel titleLabel = new JLabel(UiText.OptionsWindow.SAVE_DATA_TITLE);
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        titleLabel.setForeground(accentColour);
-
-        JLabel helperLabel = new JLabel(
-                "<html><body style='width: 360px'>" + UiText.OptionsWindow.SAVE_DATA_DESCRIPTION + "</body></html>");
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
-
-        titleText.add(titleLabel);
-        titleText.add(Box.createVerticalStrut(6));
-        titleText.add(helperLabel);
+        JPanel titleText = createInfoTextBlock(
+                UiText.OptionsWindow.SAVE_DATA_TITLE,
+                UiText.OptionsWindow.SAVE_DATA_DESCRIPTION,
+                16f);
 
         JLabel badgeLabel = createBadgeLabel(UiText.OptionsWindow.SaveManagerTrackedGamesBadge(trackedGameCount));
 
-        titleCard.add(titleText, BorderLayout.CENTER);
-        titleCard.add(badgeLabel, BorderLayout.EAST);
+        titleCard.add(createResponsiveGroup(260, 2, titleText, badgeLabel), BorderLayout.CENTER);
 
         JPanel detailsCard = new JPanel(new BorderLayout(0, 14));
         detailsCard.setBackground(Styling.cardTintColour);
@@ -2906,35 +2766,28 @@ public class OptionsWindow extends DuckWindow {
                 BorderFactory.createLineBorder(Styling.cardTintBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel detailsStack = new JPanel();
-        detailsStack.setLayout(new BoxLayout(detailsStack, BoxLayout.Y_AXIS));
-        detailsStack.setOpaque(false);
-
-        detailsStack.add(createSaveDataDetailCard(
+        JPanel detailsGrid = createResponsiveGroup(
+                240,
+                2,
+                createSaveDataDetailCard(
                 UiText.OptionsWindow.SAVE_MANAGER_LAUNCH_TITLE,
                 UiText.OptionsWindow.SAVE_MANAGER_LAUNCH_HELPER,
                 trackedGameCount == 0
                         ? UiText.OptionsWindow.SAVE_MANAGER_EMPTY_TITLE
-                        : UiText.OptionsWindow.SaveManagerTrackedGamesBadge(trackedGameCount)));
-        detailsStack.add(Box.createVerticalStrut(10));
-
-        detailsStack.add(createSaveDataDetailCard(
+                        : UiText.OptionsWindow.SaveManagerTrackedGamesBadge(trackedGameCount)),
+                createSaveDataDetailCard(
                 UiText.OptionsWindow.SAVE_DATA_MANAGED_PATH_TITLE,
                 UiText.OptionsWindow.SAVE_MANAGER_SUBTITLE,
                 SaveFileManager.SaveDirectoryPath().toString()));
 
-        detailsCard.add(detailsStack, BorderLayout.CENTER);
-
-        JPanel actions = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        actions.setOpaque(false);
+        detailsCard.add(detailsGrid, BorderLayout.CENTER);
 
         JButton openManagerButton = createPrimaryButton(UiText.OptionsWindow.SAVE_MANAGER_OPEN_BUTTON);
         openManagerButton.addActionListener(event -> new SaveDataManagerWindow(mainWindow));
-        actions.add(openManagerButton);
 
         container.add(titleCard, BorderLayout.NORTH);
         container.add(detailsCard, BorderLayout.CENTER);
-        container.add(actions, BorderLayout.SOUTH);
+        container.add(createResponsiveGroup(180, 1, openManagerButton), BorderLayout.SOUTH);
         return container;
     }
 
@@ -2955,16 +2808,14 @@ public class OptionsWindow extends DuckWindow {
         valueStack.setLayout(new BoxLayout(valueStack, BoxLayout.Y_AXIS));
         valueStack.setOpaque(false);
 
-        JLabel value = new JLabel("<html>" + escapeHtml(valueText) + "</html>");
+        JTextArea value = createWrappingTextArea(valueText);
         value.setFont(Styling.menuFont.deriveFont(Font.BOLD, 13f));
         value.setForeground(accentColour);
         valueStack.add(value);
 
         if (helperText != null && !helperText.isBlank()) {
             valueStack.add(Box.createVerticalStrut(4));
-            JLabel helper = new JLabel("<html>" + helperText + "</html>");
-            helper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-            helper.setForeground(mutedText);
+            JTextArea helper = createBodyTextArea(helperText, 12f);
             valueStack.add(helper);
         }
 
@@ -3071,34 +2922,19 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JPanel createBootRomIntroCard(BootRomSectionSpec spec, JCheckBox useBootRomCheckBox) {
-        JPanel card = new JPanel(new BorderLayout(14, 0));
+        JPanel card = new JPanel(new BorderLayout());
         card.setBackground(Styling.sectionHighlightColour);
         card.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createLineBorder(Styling.sectionHighlightBorderColour, 1, true),
                 BorderFactory.createEmptyBorder(16, 16, 16, 16)));
 
-        JPanel textPanel = new JPanel();
-        textPanel.setLayout(new BoxLayout(textPanel, BoxLayout.Y_AXIS));
-        textPanel.setOpaque(false);
-
-        JLabel titleLabel = new JLabel(spec.bootTitle());
-        titleLabel.setFont(Styling.menuFont.deriveFont(Font.BOLD, 16f));
-        titleLabel.setForeground(accentColour);
-
-        JLabel helperLabel = new JLabel("<html><body style='width: 360px'>" + spec.bootHelper() + "</body></html>");
-        helperLabel.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-        helperLabel.setForeground(mutedText);
-
-        textPanel.add(titleLabel);
-        textPanel.add(Box.createVerticalStrut(6));
-        textPanel.add(helperLabel);
+        JPanel textPanel = createInfoTextBlock(spec.bootTitle(), spec.bootHelper(), 16f);
 
         JPanel toggleWrap = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         toggleWrap.setOpaque(false);
         toggleWrap.add(useBootRomCheckBox);
 
-        card.add(textPanel, BorderLayout.CENTER);
-        card.add(toggleWrap, BorderLayout.EAST);
+        card.add(createResponsiveGroup(260, 2, textPanel, toggleWrap), BorderLayout.CENTER);
         return card;
     }
 
@@ -3114,27 +2950,12 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JPanel createBootRomStatusRow(String title, String helper, boolean installed) {
-        JPanel statusRow = new JPanel(new BorderLayout(12, 0));
+        JPanel statusRow = new JPanel(new BorderLayout());
         statusRow.setOpaque(false);
 
-        JPanel statusText = new JPanel();
-        statusText.setLayout(new BoxLayout(statusText, BoxLayout.Y_AXIS));
-        statusText.setOpaque(false);
-
-        JLabel statusTitle = new JLabel(title);
-        statusTitle.setFont(Styling.menuFont.deriveFont(Font.BOLD, 15f));
-        statusTitle.setForeground(accentColour);
-        statusText.add(statusTitle);
-        if (shouldRenderUiText(helper)) {
-            JLabel statusHelper = new JLabel(helper);
-            statusHelper.setFont(Styling.menuFont.deriveFont(Font.PLAIN, 12f));
-            statusHelper.setForeground(mutedText);
-            statusText.add(Box.createVerticalStrut(4));
-            statusText.add(statusHelper);
-        }
-
-        statusRow.add(statusText, BorderLayout.CENTER);
-        statusRow.add(createInstallStatusBadge(installed), BorderLayout.EAST);
+        JPanel statusText = createInfoTextBlock(title, helper, 15f);
+        statusRow.add(createResponsiveGroup(240, 2, statusText, createInstallStatusBadge(installed)),
+                BorderLayout.CENTER);
         return statusRow;
     }
 
@@ -3175,17 +2996,12 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JPanel createBootRomButtonRow(BootRomSectionSpec spec) {
-        JPanel buttonRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 0));
-        buttonRow.setOpaque(false);
-
         JButton insertButton = createPrimaryButton(spec.insertButtonText());
         insertButton.addActionListener(event -> installBootRom(spec));
-        buttonRow.add(insertButton);
 
         JButton removeButton = createSecondaryButton(spec.removeButtonText());
         removeButton.addActionListener(event -> removeBootRom(spec));
-        buttonRow.add(removeButton);
-        return buttonRow;
+        return createResponsiveGroup(180, 2, insertButton, removeButton);
     }
 
     private void installBootRom(BootRomSectionSpec spec) {
@@ -3220,23 +3036,17 @@ public class OptionsWindow extends DuckWindow {
     }
 
     private JComponent buildFooter() {
-        JPanel footer = new JPanel(new FlowLayout(FlowLayout.RIGHT, 12, 16));
+        JPanel footer = new JPanel(new BorderLayout());
         footer.setBackground(panelBackground);
-        footer.setBorder(BorderFactory.createEmptyBorder(0, 20, 8, 20));
+        footer.setBorder(BorderFactory.createEmptyBorder(0, 16, 8, 16));
 
         JButton closeButton = createPrimaryButton(UiText.OptionsWindow.CLOSE_BUTTON);
         closeButton.addActionListener(event -> dispose());
-        footer.add(closeButton);
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
+        actions.setOpaque(false);
+        actions.add(closeButton);
+        footer.add(actions, BorderLayout.EAST);
         return footer;
-    }
-
-    private GridBagConstraints baseConstraints() {
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.insets = new Insets(0, 0, 12, 12);
-        gbc.anchor = GridBagConstraints.WEST;
-        return gbc;
     }
 
     private Border createCardBorder() {
