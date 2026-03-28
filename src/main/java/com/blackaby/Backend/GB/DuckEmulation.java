@@ -53,7 +53,7 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
     private DuckMemory memory;
     private DuckTimer timer;
     private DuckPPU ppu;
-    private DuckJoypad joypad;
+    private volatile DuckJoypad joypad;
     private DuckAPU apu;
     private final DuckDisplay display;
     private ROM rom;
@@ -295,10 +295,9 @@ public class DuckEmulation implements Runnable, EmulatorRuntime {
         if (button == null) {
             return;
         }
-        synchronized (stateLock) {
-            if (joypad != null) {
-                joypad.SetButtonPressed(button, pressed);
-            }
+        DuckJoypad activeJoypad = joypad;
+        if (activeJoypad != null) {
+            activeJoypad.SetButtonPressed(button, pressed);
         }
     }
 

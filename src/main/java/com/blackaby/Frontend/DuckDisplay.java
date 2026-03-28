@@ -487,9 +487,14 @@ public class DuckDisplay extends JPanel {
                 : activeShader;
         EnsureRenderBuffersForShader(shader);
         if (ShouldRenderShaderAsync(shader)) {
+            QueueAsyncShaderRenderLocked();
+            synchronized (shaderQueueLock) {
+                if (displayedShaderFrameVersion > 0) {
+                    return false;
+                }
+            }
             prepareShaderSource(frontBuffer, imageBuffer);
             CopyVisibleImageBufferLocked();
-            QueueAsyncShaderRenderLocked();
             return true;
         }
 
